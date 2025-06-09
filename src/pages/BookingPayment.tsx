@@ -160,3 +160,10 @@ const BookingPayment = () => {
 
 export default BookingPayment; 
  
+ 
+ 
+ 
+ 
+ 
+ 
+ 

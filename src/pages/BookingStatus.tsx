@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle, XCircle, ArrowLeft, Calendar, Clock, MapPin, Car, Banknote } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowLeft, Calendar, Clock, MapPin, Car, Banknote, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatExistingBookingId } from '@/utils/booking';
 
 const BookingStatus = () => {
   const navigate = useNavigate();
@@ -75,6 +76,16 @@ const BookingStatus = () => {
             : `There was an issue with your booking: ${displayError}`
           }
         </p>
+        
+        {/* Display booking ID if available */}
+        {isSuccess && bookingDetails?.id && (
+          <div className="mt-4 flex items-center justify-center">
+            <FileText className="h-5 w-5 mr-2 text-fleet-red" />
+            <p className="font-medium">
+              Booking ID: {bookingDetails.formattedId || formatExistingBookingId(bookingDetails.id, new Date())}
+            </p>
+          </div>
+        )}
       </div>
       
       {isSuccess && displayBookingDetails && (
@@ -85,6 +96,19 @@ const BookingStatus = () => {
           </h2>
           
           <div className="space-y-4">
+            {/* Add Booking ID row */}
+            {bookingDetails?.id && (
+              <div className="flex items-start">
+                <FileText className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
+                <div>
+                  <h3 className="font-medium">Booking ID</h3>
+                  <p className="text-gray-700">
+                    {bookingDetails.formattedId || formatExistingBookingId(bookingDetails.id, new Date())}
+                  </p>
+                </div>
+              </div>
+            )}
+            
             <div className="flex items-start">
               <Car className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
               <div>

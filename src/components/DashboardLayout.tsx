@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
   CreditCard,
   Users,
   LogOut,
+  AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,7 +31,7 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { userData } = useAuth();
+  const { userData, loading, isAdmin, isDriver, userRole } = useAuth();
   
   // Function to handle logout
   const handleLogout = async () => {
@@ -41,15 +42,57 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
       console.error('Error logging out:', error);
     }
   };
+  
+  // Check if user has appropriate role to access this dashboard
+  useEffect(() => {
+    if (!loading && userData) {
+      if (userType === 'admin' && !isAdmin) {
+        console.log('Unauthorized access: User is not an admin');
+        navigate('/');
+      } else if (userType === 'driver' && !isDriver) {
+        console.log('Unauthorized access: User is not a driver');
+        navigate('/');
+      }
+    } else if (!loading && !userData) {
+      // If not loading and no user data, redirect to login
+      console.log('No user logged in, redirecting to login');
+      navigate('/login');
+    }
+  }, [loading, userData, isAdmin, isDriver, userType, navigate]);
 
   // Get user initials for avatar
   const getUserInitials = () => {
     if (!userData) return userType === 'admin' ? 'A' : 'D';
     
+    if (userData.name) {
+      const nameParts = userData.name.split(' ');
+      if (nameParts.length >= 2) {
+        return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
+      }
+      return userData.name.substring(0, 2).toUpperCase();
+    }
+    
     const firstInitial = userData.firstName ? userData.firstName.charAt(0) : '';
     const lastInitial = userData.lastName ? userData.lastName.charAt(0) : '';
     
     return (firstInitial + lastInitial).toUpperCase();
+  };
+  
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (!userData) return '';
+    
+    if (userData.name) {
+      return userData.name;
+    }
+    
+    return `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+  };
+  
+  // Get user email
+  const getUserEmail = () => {
+    if (!userData) return '';
+    return userData.email || '';
   };
   
   const navigation = userType === 'admin' 
@@ -73,6 +116,28 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
         { name: 'Bank Details', href: '/driver/bank-details', icon: CreditCard },
         { name: 'Settings', href: '/driver/settings', icon: Settings },
       ];
+
+  // If still loading or user doesn't have the right role, show loading
+  if (loading || (userData && ((userType === 'admin' && !isAdmin) || (userType === 'driver' && !isDriver)))) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fleet-red mb-4"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  // If no user is logged in, redirect happens in useEffect
+  if (!userData && !loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <AlertCircle className="text-fleet-red h-12 w-12 mb-4" />
+        <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+        <p className="mb-4">Please log in to access this page</p>
+        <Button onClick={() => navigate('/login')}>Go to Login</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -143,8 +208,8 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
               <div className="flex items-center space-x-2">
                 {userData && (
                   <div className="hidden md:block text-right mr-2">
-                    <p className="text-sm font-medium">{userData.firstName} {userData.lastName}</p>
-                    <p className="text-xs text-gray-500">{userData.email}</p>
+                    <p className="text-sm font-medium">{getUserDisplayName()}</p>
+                    <p className="text-xs text-gray-500">{getUserEmail()}</p>
                   </div>
                 )}
               <div className="h-8 w-8 rounded-full bg-fleet-red flex items-center justify-center text-white">

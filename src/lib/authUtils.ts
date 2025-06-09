@@ -69,6 +69,51 @@ export const saveUserData = async (userId: string, userData: any) => {
   }
 };
 
+// Create a driver user account
+export const createDriverUserAccount = async (driverId: string, driverData: any) => {
+  try {
+    // Create a userId from phone number
+    const userId = `user_${driverData.phone.replace(/\D/g, '')}`;
+    
+    // Check if user already exists
+    const userExists = await checkUserExists(userId);
+    if (userExists) {
+      console.log(`User with ID ${userId} already exists`);
+      return userId;
+    }
+    
+    // Generate a temporary password
+    const tempPassword = generateDriverPassword();
+    
+    // Create user data in Firestore
+    await setDoc(doc(firestore, 'users', userId), {
+      name: driverData.name,
+      email: driverData.email,
+      phone: driverData.phone,
+      phoneNumber: driverData.phone, // Add phoneNumber for compatibility
+      role: 'driver',
+      isDriver: true,
+      isAdmin: false,
+      driverId: driverId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      vehicleInfo: {
+        vehicleTypeId: driverData.vehicleTypeId,
+        vehicleNumber: driverData.vehicleNumber
+      },
+      status: driverData.status,
+      isVerified: true, // Mark as verified so they can log in immediately
+      tempPassword: tempPassword // Store temporary password for first login
+    });
+    
+    console.log(`Created driver user account with ID: ${userId}`);
+    return userId;
+  } catch (error) {
+    console.error('Error creating driver user account:', error);
+    throw error;
+  }
+};
+
 // Check if user exists
 export const checkUserExists = async (userId: string) => {
   try {
@@ -123,6 +168,25 @@ export const logout = async (): Promise<void> => {
     console.error('Error signing out:', error);
     throw error;
   }
+};
+
+// Generate temporary password for drivers
+export const generateDriverPassword = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let password = '';
+  
+  // Add a random character from each group to ensure complexity
+  password += chars.charAt(Math.floor(Math.random() * 26)); // Uppercase
+  password += chars.charAt(26 + Math.floor(Math.random() * 26)); // Lowercase
+  password += chars.charAt(52 + Math.floor(Math.random() * 10)); // Number
+  
+  // Add more random characters to reach 8 character length
+  for (let i = 0; i < 5; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  // Shuffle the password
+  return password.split('').sort(() => 0.5 - Math.random()).join('');
 };
 
 // Declare global types for window object

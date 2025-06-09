@@ -224,15 +224,26 @@ const Login = () => {
       // Set login success state
       setLoginSuccess(true);
       
+      // Fetch the complete user data to check role
+      const userData = await getUserData(userCredential.uid);
+      
       // Wait a moment before redirecting
       setTimeout(() => {
-        // Navigate to admin dashboard if admin, otherwise home page
-        if (isAdmin) {
+        // Determine where to redirect based on user role
+        if (userData && (userData.isDriver || userData.role === 'driver')) {
+          console.log('Redirecting to driver dashboard');
+          // Check if this is the driver's first login (has tempPassword)
+          if (userData.tempPassword) {
+            navigate('/driver/welcome');
+          } else {
+            navigate('/driver');
+          }
+        } else if (isAdmin) {
           console.log('Redirecting to admin dashboard');
-        navigate('/admin');
+          navigate('/admin');
         } else {
           console.log('Redirecting to home page');
-        navigate('/');
+          navigate('/');
         }
       }, 1000);
     } catch (error: any) {

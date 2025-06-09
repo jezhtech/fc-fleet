@@ -6,33 +6,39 @@ import { isAdmin } from '@/lib/authUtils';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  requireDriver?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false }) => {
-  const { currentUser, loading } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  requireAdmin = false,
+  requireDriver = false
+}) => {
+  const { currentUser, loading, isDriver, isAdmin: isAdminUser, userData } = useAuth();
   const location = useLocation();
-  const [isAdminUser, setIsAdminUser] = useState(false);
-  const [adminCheckComplete, setAdminCheckComplete] = useState(false);
+  const [roleCheckComplete, setRoleCheckComplete] = useState(false);
 
-  // Check if user is admin when needed
+  // Check if user has correct role permissions
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (requireAdmin && currentUser) {
-        const adminStatus = await isAdmin(currentUser.uid);
-        setIsAdminUser(adminStatus);
-      }
-      setAdminCheckComplete(true);
-    };
-
-    if (currentUser && requireAdmin) {
-      checkAdminStatus();
-    } else {
-      setAdminCheckComplete(true);
+    if (!currentUser) {
+      setRoleCheckComplete(true);
+      return;
     }
-  }, [currentUser, requireAdmin]);
+    
+    if (!requireAdmin && !requireDriver) {
+      // No special role required
+      setRoleCheckComplete(true);
+      return;
+    }
+    
+    // Set role check as complete once userData is loaded
+    if (userData) {
+      setRoleCheckComplete(true);
+    }
+  }, [currentUser, requireAdmin, requireDriver, userData]);
 
   // Show loading state while checking authentication
-  if (loading || (requireAdmin && !adminCheckComplete)) {
+  if (loading || !roleCheckComplete) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -53,8 +59,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin 
     console.log('Non-admin user attempting to access admin route');
     return <Navigate to="/" replace />;
   }
+  
+  // If driver access required but user is not a driver, redirect to home
+  if (requireDriver && !isDriver) {
+    console.log('Non-driver user attempting to access driver route');
+    return <Navigate to="/" replace />;
+  }
 
-  // If authenticated and passes admin check when needed, render children
+  // If authenticated and passes role checks, render children
   return <>{children}</>;
 };
 

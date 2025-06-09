@@ -14,7 +14,7 @@ const Layout = ({ children }: LayoutProps) => {
       <main className="flex-1 w-full transition-all">
         {children}
       </main>
-      <Toaster position="top-right" />
+      <Toaster position="bottom-right" />
       <Footer />
     </div>
   );

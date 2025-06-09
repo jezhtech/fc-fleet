@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, Languages } from 'lucide-react';
+import { Menu, X, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import BookTaxiForm from './home/BookTaxiForm';
 import RentCarForm from './home/RentCarForm';
@@ -12,8 +12,18 @@ import { useTranslation } from '@/contexts/TranslationContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { currentUser, userData } = useAuth();
   const { language, setLanguage, translate } = useTranslation();
+  
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   
   useEffect(() => {
     console.log('Navbar auth state:', { currentUser, userData });
@@ -24,43 +34,48 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-50 border-b border-white/20">
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+      scrolled ? 'bg-black/40 shadow-md backdrop-blur-md' : 'bg-transparent backdrop-blur-sm'
+    }`}>
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
           <Logo />
           
           {/* Desktop menu */}
           <div className="hidden md:flex items-center space-x-6">
-            <NavLinks />
+            <NavLinks scrolled={scrolled} />
             <Button 
-              variant="outline" 
+              variant="default" 
               size="sm" 
               onClick={toggleLanguage}
-              className="flex items-center gap-1 transition-colors hover:bg-slate-100"
-              title={`Switch to ${language === 'en' ? 'Arabic' : 'English'}`}
+              className={`${
+                scrolled ? 'bg-gray-200 text-fleet-dark' : 'bg-white/30 text-white'
+              } px-3 py-2`}
             >
-              <Languages size={16} />
-              <span className="text-xs font-medium">{language === 'en' ? 'EN' : 'AR'}</span>
+              {language === 'en' ? 'EN' : 'AR'}
             </Button>
-            <AuthButtons currentUser={currentUser} userData={userData} />
+            <AuthButtons currentUser={currentUser} userData={userData} scrolled={scrolled} />
           </div>
           
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
             <Button 
-              variant="outline" 
+              variant="default" 
               size="sm"
               onClick={toggleLanguage}
-              className="mr-2 flex items-center gap-1 transition-colors hover:bg-slate-100"
-              title={`Switch to ${language === 'en' ? 'Arabic' : 'English'}`}
+              className={`mr-2 ${
+                scrolled ? 'bg-gray-200 text-fleet-dark' : 'bg-white/30 text-white'
+              } px-3 py-2`}
             >
-              <Languages size={16} />
-              <span className="text-xs font-medium">{language === 'en' ? 'EN' : 'AR'}</span>
+              {language === 'en' ? 'EN' : 'AR'}
             </Button>
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="icon"
               onClick={() => setIsOpen(!isOpen)}
+              className={`border-2 ${
+                scrolled ? 'text-white border-white' : 'text-white border-white'
+              }`}
             >
               {isOpen ? <X /> : <Menu />}
             </Button>
@@ -69,7 +84,7 @@ const Navbar = () => {
         
         {/* Mobile menu */}
         {isOpen && (
-          <div className="md:hidden py-4 animate-fade-in bg-white/95 backdrop-blur-sm rounded-b-lg">
+          <div className="md:hidden py-4 animate-fade-in bg-white/95 backdrop-blur-md rounded-b-lg shadow-lg">
             <div className="flex flex-col space-y-4">
               <NavLinks mobile />
               <div className="flex flex-col space-y-2 pt-2 border-t">
@@ -83,10 +98,12 @@ const Navbar = () => {
   );
 };
 
-const NavLinks = ({ mobile = false }: { mobile?: boolean }) => {
+const NavLinks = ({ mobile = false, scrolled = false }: { mobile?: boolean, scrolled?: boolean }) => {
   const baseClass = mobile 
     ? "px-2 py-1 text-fleet-dark hover:text-fleet-red transition-colors" 
-    : "text-fleet-dark hover:text-fleet-red transition-colors";
+    : scrolled 
+      ? "text-white hover:text-fleet-red transition-colors font-medium"
+      : "text-white hover:text-fleet-red transition-colors font-medium";
   
   const { translate } = useTranslation();
   
@@ -125,11 +142,13 @@ const NavLinks = ({ mobile = false }: { mobile?: boolean }) => {
 const AuthButtons = ({ 
   mobile = false, 
   currentUser, 
-  userData 
+  userData,
+  scrolled = false
 }: { 
   mobile?: boolean, 
   currentUser: any, 
-  userData: any 
+  userData: any,
+  scrolled?: boolean
 }) => {
   const navigate = useNavigate();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -204,7 +223,7 @@ const AuthButtons = ({
       <div className="relative" ref={profileMenuRef}>
         <button 
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-          className="flex items-center gap-2"
+          className={`flex items-center gap-2 ${scrolled ? 'text-white' : 'text-white'}`}
           aria-label="User menu"
         >
           <div className="w-10 h-10 rounded-full bg-red-100 text-red-800 flex items-center justify-center font-medium">
@@ -259,10 +278,19 @@ const AuthButtons = ({
   return (
     <>
       <Link to="/login">
-        <Button variant="outline">{translate('nav.login')}</Button>
+        <Button 
+          variant="outline" 
+          className={`border-2 ${
+            scrolled 
+              ? 'bg-white/30 text-white border-white hover:bg-white/40' 
+              : 'bg-white/30 text-white border-white hover:bg-white/40'
+          } font-medium`}
+        >
+          {translate('nav.login')}
+        </Button>
       </Link>
       <Link to="/register">
-        <Button className="bg-fleet-red text-white hover:bg-fleet-red/90">{translate('nav.register')}</Button>
+        <Button className="bg-fleet-red text-white hover:bg-fleet-red/90 font-medium">{translate('nav.register')}</Button>
       </Link>
     </>
   );

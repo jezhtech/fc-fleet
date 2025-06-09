@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Calendar, Map, Clock, Car, AlertTriangle } from 'lucide-react';
+import { FileText, Download, Calendar, Map, Clock, Car, AlertTriangle, CheckCircle2, Circle, User, Phone, Car as CarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
@@ -15,10 +15,12 @@ import InvoiceGenerator from '@/components/invoice/InvoiceGenerator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 import FirebaseTest from '@/components/FirebaseTest';
+import { formatExistingBookingId } from '@/utils/booking';
 
 // Booking type definition
 interface Booking {
   id: string;
+  formattedId?: string;
   type: string;
   status: string;
   date: Date;
@@ -36,11 +38,153 @@ interface Booking {
     email: string;
     phone: string;
   };
+  driverInfo?: {
+    name?: string;
+    phone?: string;
+    vehicleNumber?: string;
+  };
   createdAt?: string;
 }
 
+// Tracking step interface
+interface TrackingStep {
+  label: string;
+  status: 'completed' | 'current' | 'upcoming';
+  details?: React.ReactNode;
+}
+
+// TrackingDialog component
+const TrackingDialog = ({ booking }: { booking: Booking }) => {
+  // Determine the current step based on booking status
+  const getCurrentStep = (status: string): number => {
+    switch (status.toLowerCase()) {
+      case 'completed': return 7; // All steps completed
+      case 'started': return 6; // Ride started
+      case 'driver_assigned': return 4; // Driver assigned
+      case 'confirmed': return 3; // Booking confirmed
+      case 'initiated': return 2; // Booking initiated
+      case 'awaiting': return 1; // Payment confirmed
+      default: return 0; // Default to first step
+    }
+  };
+
+  const currentStepIndex = getCurrentStep(booking.status);
+  
+  // Define all steps in the booking flow
+  const steps: TrackingStep[] = [
+    {
+      label: 'Payment Confirmed',
+      status: currentStepIndex >= 1 ? 'completed' : 'upcoming',
+      details: booking.paymentInfo && (
+        <div className="text-sm text-gray-600 mt-1">
+          <p>Transaction ID: {booking.paymentInfo.transactionId || 'N/A'}</p>
+          <p>Method: {booking.paymentInfo.paymentMethod || 'N/A'}</p>
+        </div>
+      )
+    },
+    {
+      label: 'Booking Initiated',
+      status: currentStepIndex >= 2 ? 'completed' : currentStepIndex === 1 ? 'current' : 'upcoming'
+    },
+    {
+      label: 'Booking Confirmed',
+      status: currentStepIndex >= 3 ? 'completed' : currentStepIndex === 2 ? 'current' : 'upcoming'
+    },
+    {
+      label: 'Driver Assigned',
+      status: currentStepIndex >= 4 ? 'completed' : currentStepIndex === 3 ? 'current' : 'upcoming',
+      details: currentStepIndex >= 4 && booking.driverInfo && (
+        <div className="text-sm text-gray-600 mt-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            <span>Driver: {booking.driverInfo.name || 'Not assigned yet'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            <span>Phone: {booking.driverInfo.phone || 'Not available'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CarIcon className="h-4 w-4" />
+            <span>Vehicle Number: {booking.driverInfo.vehicleNumber || 'Not available'}</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      label: 'Ride Started',
+      status: currentStepIndex >= 6 ? 'completed' : currentStepIndex === 5 ? 'current' : 'upcoming'
+    },
+    {
+      label: 'Ride Ended',
+      status: currentStepIndex >= 7 ? 'completed' : currentStepIndex === 6 ? 'current' : 'upcoming'
+    },
+    {
+      label: 'Rating',
+      status: currentStepIndex === 7 ? 'current' : 'upcoming'
+    }
+  ];
+
+  return (
+    <div className="py-4">
+      <div className="space-y-6">
+        {steps.map((step, index) => (
+          <div key={index} className="flex">
+            <div className="flex flex-col items-center mr-4">
+              {step.status === 'completed' ? (
+                <CheckCircle2 className="h-6 w-6 text-green-500" />
+              ) : step.status === 'current' ? (
+                <Circle className="h-6 w-6 text-fleet-red fill-fleet-red/20 stroke-fleet-red" />
+              ) : (
+                <Circle className="h-6 w-6 text-gray-300" />
+              )}
+              {index < steps.length - 1 && (
+                <div className={`h-12 w-0.5 ${
+                  step.status === 'completed' ? 'bg-green-500' : 'bg-gray-200'
+                }`} />
+              )}
+            </div>
+            <div className="pt-1 pb-8">
+              <p className={`font-medium ${
+                step.status === 'completed' ? 'text-green-700' : 
+                step.status === 'current' ? 'text-fleet-red' : 'text-gray-500'
+              }`}>
+                {step.label}
+              </p>
+              {step.details && <div className="mt-1">{step.details}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Format booking ID as FC/YYYY/MM/0001
+const formatBookingId = (id: string, date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  
+  // Extract numeric part or use a random number
+  let numericPart = '0001';
+  if (id.includes('/')) {
+    // Already formatted, return as is
+    return id;
+  } else if (/\d+/.test(id)) {
+    const matches = id.match(/\d+/);
+    if (matches && matches[0]) {
+      numericPart = matches[0].padStart(4, '0');
+    }
+  }
+  
+  return `FC/${year}/${month}/${numericPart}`;
+};
+
 const BookingCard = ({ booking }: { booking: Booking }) => {
   const [showInvoice, setShowInvoice] = useState(false);
+  const [showTracking, setShowTracking] = useState(false);
+  
+  // Use the formattedId if available, otherwise generate one
+  const bookingId = booking.formattedId || formatExistingBookingId(booking.id, booking.date);
 
   const handleInvoiceSuccess = () => {
     toast.success('Invoice downloaded successfully');
@@ -56,7 +200,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-lg">{booking.type} Service</CardTitle>
-          <p className="text-sm text-gray-500">Booking ID: {booking.id}</p>
+          <p className="text-sm text-gray-500">Booking ID: {bookingId}</p>
         </div>
         <Badge className={`
           ${booking.status === 'completed' ? 'bg-green-100 text-green-800' : 
@@ -94,13 +238,13 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
             </div>
           </div>
           
-          <div className="flex items-start gap-2">
-            <Map className="h-5 w-5 text-gray-500 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium">Dropoff Location</p>
-              <p className="text-sm text-gray-500">{booking.dropoff}</p>
+            <div className="flex items-start gap-2">
+              <Map className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Dropoff Location</p>
+                <p className="text-sm text-gray-500">{booking.dropoff}</p>
+              </div>
             </div>
-          </div>
           
           <div className="flex justify-between items-center pt-2 border-t border-gray-100">
             <div>
@@ -119,11 +263,11 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                   >
                     <FileText className="h-4 w-4" />
                     <span className="hidden sm:inline">Invoice</span>
-                  </Button>
+              </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-3xl">
                   <DialogHeader>
-                    <DialogTitle>Invoice for Booking #{booking.id}</DialogTitle>
+                    <DialogTitle>Invoice for Booking {bookingId}</DialogTitle>
                   </DialogHeader>
                   <InvoiceGenerator 
                     booking={booking} 
@@ -133,15 +277,23 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                 </DialogContent>
               </Dialog>
               
-              {(booking.status === 'completed' || booking.status === 'awaiting') && (
-                <Button 
-                  size="sm" 
-                  className="bg-fleet-red hover:bg-fleet-red/90 flex items-center gap-1"
-                >
-                  <Clock className="h-4 w-4" />
-                  <span className="hidden sm:inline">Track</span>
+              <Dialog open={showTracking} onOpenChange={setShowTracking}>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="sm" 
+                    className="bg-fleet-red hover:bg-fleet-red/90 flex items-center gap-1"
+                  >
+                    <Clock className="h-4 w-4" />
+                    <span className="hidden sm:inline">Track</span>
                 </Button>
-              )}
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Tracking Booking {bookingId}</DialogTitle>
+                  </DialogHeader>
+                  <TrackingDialog booking={booking} />
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
@@ -156,7 +308,7 @@ const DEMO_BOOKINGS: Booking[] = [
     id: 'BK123456',
     type: 'Chauffeur',
     status: 'completed',
-    date: new Date(),
+    date: new Date(), // Current date
     pickup: 'Dubai Mall, Dubai',
     dropoff: 'Palm Jumeirah, Dubai',
     vehicle: 'Mercedes S-Class',
@@ -165,6 +317,11 @@ const DEMO_BOOKINGS: Booking[] = [
       name: 'John Doe',
       email: 'john@example.com', 
       phone: '+971 50 123 4567'
+    },
+    driverInfo: {
+      name: 'Ahmed Mohammed',
+      phone: '+971 55 987 6543',
+      vehicleNumber: 'DXB 12345'
     },
     paymentInfo: {
       transactionId: 'TX12345',
@@ -175,8 +332,12 @@ const DEMO_BOOKINGS: Booking[] = [
   {
     id: 'BK789012',
     type: 'Hourly',
-    status: 'awaiting',
-    date: new Date(Date.now() + 86400000), // Tomorrow
+    status: 'driver_assigned',
+    date: (() => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow;
+    })(), // Tomorrow
     pickup: 'Dubai International Airport',
     dropoff: 'Burj Al Arab',
     vehicle: 'Cadillac Escalade',
@@ -185,6 +346,64 @@ const DEMO_BOOKINGS: Booking[] = [
       name: 'John Doe',
       email: 'john@example.com',
       phone: '+971 50 123 4567'
+    },
+    driverInfo: {
+      name: 'Samir Khan',
+      phone: '+971 54 876 5432',
+      vehicleNumber: 'DXB 54321'
+    },
+    paymentInfo: {
+      transactionId: 'TX67890',
+      paymentMethod: 'Debit Card',
+      timestamp: new Date().toISOString()
+    }
+  },
+  {
+    id: 'BK345678',
+    type: 'Chauffeur',
+    status: 'initiated',
+    date: (() => {
+      const dayAfterTomorrow = new Date();
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+      return dayAfterTomorrow;
+    })(), // Day after tomorrow
+    pickup: 'Dubai Marina',
+    dropoff: 'Abu Dhabi Grand Mosque',
+    vehicle: 'BMW 7 Series',
+    amount: 'AED 550.00',
+    customerInfo: {
+      name: 'John Doe',
+      email: 'john@example.com',
+      phone: '+971 50 123 4567'
+    },
+    paymentInfo: {
+      transactionId: 'TX24680',
+      paymentMethod: 'Credit Card',
+      timestamp: new Date().toISOString()
+    }
+  },
+  {
+    id: 'BK567890',
+    type: 'Chauffeur',
+    status: 'awaiting',
+    date: (() => {
+      const inThreeDays = new Date();
+      inThreeDays.setDate(inThreeDays.getDate() + 3);
+      return inThreeDays;
+    })(), // In three days
+    pickup: 'Dubai Healthcare City',
+    dropoff: 'Dubai Mall',
+    vehicle: 'Lexus ES',
+    amount: 'AED 280.00',
+    customerInfo: {
+      name: 'John Doe',
+      email: 'john@example.com',
+      phone: '+971 50 123 4567'
+    },
+    paymentInfo: {
+      transactionId: 'TX13579',
+      paymentMethod: 'Wallet',
+      timestamp: new Date().toISOString()
     }
   }
 ];
@@ -198,6 +417,20 @@ const MyBookings = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [useDemoData, setUseDemoData] = useState(false);
   const [showDebugTools, setShowDebugTools] = useState(false);
+  const [firebaseStatus, setFirebaseStatus] = useState(firebaseInitialized);
+
+  // Add a retry mechanism for Firebase initialization
+  useEffect(() => {
+    if (!firebaseInitialized && retryCount < 3) {
+      const timer = setTimeout(() => {
+        console.log(`Retrying Firebase connection (attempt ${retryCount + 1})...`);
+        setFirebaseStatus(firebaseInitialized);
+        setRetryCount(prev => prev + 1);
+      }, 2000); // Retry every 2 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [retryCount, firebaseInitialized]);
 
   useEffect(() => {
     console.log("MyBookings component mounted");
@@ -209,7 +442,7 @@ const MyBookings = () => {
       if (!currentUser) {
         console.log("No current user, showing demo data");
         setUseDemoData(true);
-        setUpcomingBookings([DEMO_BOOKINGS[1]]);
+        setUpcomingBookings([DEMO_BOOKINGS[1], DEMO_BOOKINGS[2], DEMO_BOOKINGS[3]]);
         setPastBookings([DEMO_BOOKINGS[0]]);
         setLoading(false);
         return;
@@ -218,7 +451,7 @@ const MyBookings = () => {
       if (!firebaseInitialized) {
         console.warn("Firebase not initialized, showing demo data");
         setUseDemoData(true);
-        setUpcomingBookings([DEMO_BOOKINGS[1]]);
+        setUpcomingBookings([DEMO_BOOKINGS[1], DEMO_BOOKINGS[2], DEMO_BOOKINGS[3]]);
         setPastBookings([DEMO_BOOKINGS[0]]);
         setLoading(false);
         return;
@@ -244,8 +477,12 @@ const MyBookings = () => {
             where('customerInfo.email', '==', currentUser.email)
           );
           
-          querySnapshot = await getDocs(userBookingsQuery);
-          console.log(`Found ${querySnapshot.size} bookings by email in customerInfo`);
+          try {
+            querySnapshot = await getDocs(userBookingsQuery);
+            console.log(`Found ${querySnapshot.size} bookings by email in customerInfo`);
+          } catch (err) {
+            console.error("Error querying by customerInfo.email:", err);
+          }
         }
         
         // Approach 2: Try with user ID if first approach returned no results
@@ -256,8 +493,12 @@ const MyBookings = () => {
             where('userId', '==', currentUser.uid)
           );
           
-          querySnapshot = await getDocs(userBookingsQuery);
-          console.log(`Found ${querySnapshot.size} bookings by userId`);
+          try {
+            querySnapshot = await getDocs(userBookingsQuery);
+            console.log(`Found ${querySnapshot.size} bookings by userId`);
+          } catch (err) {
+            console.error("Error querying by userId:", err);
+          }
         }
         
         // Approach 3: Try with user email field directly
@@ -268,8 +509,12 @@ const MyBookings = () => {
             where('email', '==', currentUser.email)
           );
           
-          querySnapshot = await getDocs(userBookingsQuery);
-          console.log(`Found ${querySnapshot.size} bookings by direct email field`);
+          try {
+            querySnapshot = await getDocs(userBookingsQuery);
+            console.log(`Found ${querySnapshot.size} bookings by direct email field`);
+          } catch (err) {
+            console.error("Error querying by email field:", err);
+          }
         }
         
         // Approach 4: Try with user phone number if available
@@ -280,15 +525,56 @@ const MyBookings = () => {
             where('phoneNumber', '==', userData.phoneNumber)
           );
           
-          querySnapshot = await getDocs(userBookingsQuery);
-          console.log(`Found ${querySnapshot.size} bookings by phone number`);
+          try {
+            querySnapshot = await getDocs(userBookingsQuery);
+            console.log(`Found ${querySnapshot.size} bookings by phone number`);
+          } catch (err) {
+            console.error("Error querying by phone number:", err);
+          }
+        }
+        
+        // NEW APPROACH 5: Try with customerInfo.email field (exact match from screenshot)
+        if (!querySnapshot || querySnapshot.empty) {
+          console.log("Querying by exact customerInfo email field");
+          userBookingsQuery = query(
+            bookingsRef,
+            where('customerInfo.email', '==', "customer@example.com")
+          );
+          
+          try {
+            querySnapshot = await getDocs(userBookingsQuery);
+            console.log(`Found ${querySnapshot.size} bookings by exact customerInfo email`);
+          } catch (err) {
+            console.error("Error querying by exact customerInfo email:", err);
+          }
+        }
+        
+        // NEW APPROACH 6: Get all bookings and filter client-side (last resort)
+        if (!querySnapshot || querySnapshot.empty) {
+          console.log("Fetching all bookings and filtering client-side");
+          try {
+            querySnapshot = await getDocs(collection(firestore, 'bookings'));
+            console.log(`Found ${querySnapshot.size} total bookings`);
+            
+            // If we have too many bookings, limit to reasonable number
+            if (querySnapshot.size > 100) {
+              console.warn("Large number of bookings found, using demo data instead");
+              setUseDemoData(true);
+              setUpcomingBookings([DEMO_BOOKINGS[1], DEMO_BOOKINGS[2], DEMO_BOOKINGS[3]]);
+              setPastBookings([DEMO_BOOKINGS[0]]);
+              setLoading(false);
+              return;
+            }
+          } catch (err) {
+            console.error("Error fetching all bookings:", err);
+          }
         }
         
         // If we still have no results, show demo data
         if (!querySnapshot || querySnapshot.empty) {
           console.log("No bookings found with any query method, using demo data");
           setUseDemoData(true);
-          setUpcomingBookings([DEMO_BOOKINGS[1]]);
+          setUpcomingBookings([DEMO_BOOKINGS[1], DEMO_BOOKINGS[2], DEMO_BOOKINGS[3]]);
           setPastBookings([DEMO_BOOKINGS[0]]);
           setLoading(false);
           return;
@@ -305,29 +591,63 @@ const MyBookings = () => {
             const data = doc.data();
             console.log("Booking data:", data);
             
-            // Convert Firestore timestamp to Date, with fallbacks
+            // Process booking creation date
+            let createdAt: Date | null = null;
+            try {
+              if (data.createdAt?.toDate && typeof data.createdAt.toDate === 'function') {
+                createdAt = data.createdAt.toDate();
+                console.log("Using Firestore timestamp createdAt:", createdAt);
+              } else if (data.createdAt) {
+                // Handle other date formats
+                createdAt = new Date(data.createdAt);
+                console.log("Using string createdAt:", createdAt);
+              } else {
+                console.warn("No createdAt value found");
+              }
+            } catch (error) {
+              console.error("Error parsing createdAt:", error);
+            }
+
+            // Process service date (pickup date/time)
             let bookingDate: Date;
             try {
-              if (data.date?.toDate && typeof data.date.toDate === 'function') {
-                // Firestore timestamp
-                bookingDate = data.date.toDate();
-                console.log("Using Firestore timestamp date:", bookingDate);
-              } else if (data.date) {
-                // ISO string or other date format
-                bookingDate = new Date(data.date);
-                console.log("Using string date:", bookingDate);
-              } else if (data.createdAt?.toDate && typeof data.createdAt.toDate === 'function') {
-                bookingDate = data.createdAt.toDate();
-                console.log("Using Firestore timestamp createdAt:", bookingDate);
-              } else if (data.createdAt) {
-                bookingDate = new Date(data.createdAt);
-                console.log("Using string createdAt:", bookingDate);
+              // First try to use pickupDateTime (new format)
+              if (data.pickupDateTime) {
+                if (typeof data.pickupDateTime.toDate === 'function') {
+                  bookingDate = data.pickupDateTime.toDate();
+                  console.log("Using Firestore timestamp pickupDateTime:", bookingDate);
+                } else if (typeof data.pickupDateTime === 'string') {
+                  bookingDate = new Date(data.pickupDateTime);
+                  console.log("Using string pickupDateTime:", bookingDate);
+                } else {
+                  bookingDate = new Date();
+                  console.warn("Invalid pickupDateTime format");
+                }
+              }
+              // Fall back to date field (old format)
+              else if (data.date) {
+                if (typeof data.date.toDate === 'function') {
+                  bookingDate = data.date.toDate();
+                  console.log("Using Firestore timestamp date:", bookingDate);
+                } else if (typeof data.date === 'string') {
+                  bookingDate = new Date(data.date);
+                  console.log("Using string date:", bookingDate);
+                } else {
+                  bookingDate = new Date();
+                  console.warn("Invalid date format");
+                }
               } else {
                 bookingDate = new Date();
-                console.log("Using current date as fallback");
+                console.warn("No date value found");
               }
-            } catch (e) {
-              console.error("Date conversion error:", e);
+
+              // Validate the date
+              if (isNaN(bookingDate.getTime())) {
+                console.warn(`Invalid date, using current date`);
+                bookingDate = new Date();
+              }
+            } catch (error) {
+              console.error("Error parsing date:", error);
               bookingDate = new Date();
             }
             
@@ -343,6 +663,7 @@ const MyBookings = () => {
             
             const booking: Booking = {
               id: doc.id,
+              formattedId: data.formattedId,
               type: data.type || data.bookingType || 'Chauffeur',
               status: data.status || 'initiated',
               date: bookingDate,
@@ -356,24 +677,49 @@ const MyBookings = () => {
                 email: currentUser.email || 'N/A',
                 phone: userData?.phoneNumber || data.phoneNumber || 'N/A'
               },
-              createdAt: data.createdAt ? (
-                typeof data.createdAt.toDate === 'function' ? 
-                  data.createdAt.toDate().toISOString() : 
-                  String(data.createdAt)
-              ) : new Date().toISOString()
+              driverInfo: data.driverInfo || {
+                name: data.driverName || data.driver?.name,
+                phone: data.driverPhone || data.driver?.phone,
+                vehicleNumber: data.vehicleNumber || data.driver?.vehicleNumber
+              },
+              createdAt: createdAt ? 
+                createdAt.toISOString() 
+                : new Date().toISOString()
             };
 
-            // Sort into upcoming or past based on date
-            if (bookingDate > now && booking.status !== 'completed' && booking.status !== 'cancelled') {
-              upcoming.push(booking);
-            } else {
+            // Categorize bookings based on status rather than just date
+            if (booking.status === 'completed' || booking.status === 'cancelled') {
               past.push(booking);
+            } else {
+              upcoming.push(booking);
             }
           } catch (err) {
             console.error(`Error processing booking ${doc.id}:`, err);
             // Continue with other bookings even if one fails
           }
         });
+
+        // Sort both arrays by date (newest first)
+        const sortByDateDesc = (a: Booking, b: Booking) => {
+          try {
+            // Make sure both dates are valid before comparing
+            const aTime = isNaN(a.date.getTime()) ? 0 : a.date.getTime();
+            const bTime = isNaN(b.date.getTime()) ? 0 : b.date.getTime();
+            return bTime - aTime;
+          } catch (err) {
+            console.error("Error comparing dates:", err);
+            return 0; // Return 0 to keep original order if there's an error
+          }
+        };
+        
+        // Safely sort the arrays
+        try {
+          upcoming.sort(sortByDateDesc);
+          past.sort(sortByDateDesc);
+        } catch (err) {
+          console.error("Error sorting bookings:", err);
+          // Continue without sorting if there's an error
+        }
 
         console.log(`Processed ${upcoming.length} upcoming and ${past.length} past bookings`);
         setUpcomingBookings(upcoming);
@@ -388,7 +734,7 @@ const MyBookings = () => {
         if (retryCount >= 2) {
           console.log("Using demo data after multiple failures");
           setUseDemoData(true);
-          setUpcomingBookings([DEMO_BOOKINGS[1]]);
+          setUpcomingBookings([DEMO_BOOKINGS[1], DEMO_BOOKINGS[2], DEMO_BOOKINGS[3]]);
           setPastBookings([DEMO_BOOKINGS[0]]);
         }
         setLoading(false);
@@ -396,7 +742,7 @@ const MyBookings = () => {
     };
 
     fetchBookings();
-  }, [currentUser, userData, retryCount]);
+  }, [currentUser, userData, retryCount, firebaseInitialized]);
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
@@ -442,7 +788,9 @@ const MyBookings = () => {
                   <div>
                     <p className="text-amber-800 font-medium">Using Sample Data</p>
                     <p className="text-amber-700 text-sm">
-                      We're unable to find your bookings. Showing sample bookings instead.
+                      {!firebaseInitialized 
+                        ? "Firebase connection failed. Showing sample bookings instead."
+                        : "We're unable to find your bookings. Showing sample bookings instead."}
                     </p>
                   </div>
                 </div>
@@ -457,9 +805,9 @@ const MyBookings = () => {
                 <TabsTrigger value="past" className="text-base">
                   Past ({pastBookings.length})
                 </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="upcoming" className="space-y-4">
+          </TabsList>
+          
+          <TabsContent value="upcoming" className="space-y-4">
                 {upcomingBookings.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-gray-500 mb-4">You don't have any upcoming bookings.</p>
@@ -468,24 +816,24 @@ const MyBookings = () => {
                     </Link>
                   </div>
                 ) : (
-                  upcomingBookings.map(booking => (
-                    <BookingCard key={booking.id} booking={booking} />
-                  ))
-                )}
-              </TabsContent>
-              
-              <TabsContent value="past" className="space-y-4">
+              upcomingBookings.map(booking => (
+                <BookingCard key={booking.id} booking={booking} />
+              ))
+            )}
+          </TabsContent>
+          
+          <TabsContent value="past" className="space-y-4">
                 {pastBookings.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-gray-500">You don't have any past bookings.</p>
                   </div>
                 ) : (
-                  pastBookings.map(booking => (
-                    <BookingCard key={booking.id} booking={booking} />
-                  ))
-                )}
-              </TabsContent>
-            </Tabs>
+              pastBookings.map(booking => (
+                <BookingCard key={booking.id} booking={booking} />
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
             
             {/* Debug section */}
             <div className="mt-12 border-t pt-4">

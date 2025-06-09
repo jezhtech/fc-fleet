@@ -208,10 +208,10 @@ const MapboxMap = ({
   };
 
   return (
-    <Card className={`relative overflow-hidden ${className}`}>
+    <Card className={`relative overflow-hidden ${className}`} style={{ height, width }}>
       <div 
         ref={mapContainer} 
-        style={{ height, width }} 
+        style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0 }} 
         className="mapboxgl-map"
       >
         {!mapLoaded && !mapError && (

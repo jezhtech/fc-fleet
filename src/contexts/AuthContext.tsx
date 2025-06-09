@@ -6,14 +6,24 @@ import FirebaseErrorBanner from '@/components/FirebaseErrorBanner';
 
 // Types
 export type UserData = {
-  firstName: string;
-  lastName: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
-  phoneNumber: string;
+  phone?: string;
+  phoneNumber?: string;
   isVerified: boolean;
   createdAt: string;
   updatedAt: string;
   status: string;
+  role?: 'customer' | 'driver' | 'admin';
+  isDriver?: boolean;
+  isAdmin?: boolean;
+  driverId?: string;
+  vehicleInfo?: {
+    vehicleTypeId: string;
+    vehicleNumber: string;
+  };
 };
 
 type AuthContextType = {
@@ -23,6 +33,9 @@ type AuthContextType = {
   refreshUserData: () => Promise<void>;
   firebaseReady: boolean;
   hasFirebaseError: boolean;
+  userRole: 'customer' | 'driver' | 'admin' | null;
+  isDriver: boolean;
+  isAdmin: boolean;
 };
 
 // Create context
@@ -43,6 +56,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showFirebaseError, setShowFirebaseError] = useState(!!firebaseError);
+  const [userRole, setUserRole] = useState<'customer' | 'driver' | 'admin' | null>(null);
+  const [isDriver, setIsDriver] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Fetch user data from Firestore
   const fetchUserData = async (user: User) => {
@@ -68,17 +84,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         
+        // Determine user role
+        let role = data.role || 'customer';
+        let isDriverUser = !!data.isDriver;
+        let isAdminUser = !!data.isAdmin;
+        
+        // If role is not explicitly set, fall back to isDriver/isAdmin properties
+        if (!data.role) {
+          if (data.isAdmin) {
+            role = 'admin';
+          } else if (data.isDriver) {
+            role = 'driver';
+          } else {
+            role = 'customer';
+          }
+        }
+        
+        console.log(`User role determined: ${role}, isDriver: ${isDriverUser}, isAdmin: ${isAdminUser}`);
+        
         setUserData(data);
+        setUserRole(role as 'customer' | 'driver' | 'admin');
+        setIsDriver(isDriverUser);
+        setIsAdmin(isAdminUser);
       } else {
         console.log('No user document found in Firestore');
         // Sign user out if their data doesn't exist in Firestore
         console.log('Signing out user due to missing database record');
         await signOut(auth);
         setUserData(null);
+        setUserRole(null);
+        setIsDriver(false);
+        setIsAdmin(false);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
       setUserData(null);
+      setUserRole(null);
+      setIsDriver(false);
+      setIsAdmin(false);
     }
   };
 
@@ -109,11 +152,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await fetchUserData(user);
         } else {
           setUserData(null);
+          setUserRole(null);
+          setIsDriver(false);
+          setIsAdmin(false);
         }
       } catch (error) {
         console.error('Error in auth state change handler:', error);
         setCurrentUser(null);
         setUserData(null);
+        setUserRole(null);
+        setIsDriver(false);
+        setIsAdmin(false);
       } finally {
         setLoading(false);
       }
@@ -132,7 +181,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     refreshUserData,
     firebaseReady: firebaseInitialized,
-    hasFirebaseError: !!firebaseError
+    hasFirebaseError: !!firebaseError,
+    userRole,
+    isDriver,
+    isAdmin
   };
 
   console.log('Auth provider state:', { 
@@ -140,7 +192,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hasUserData: !!userData, 
     loading,
     firebaseReady: firebaseInitialized,
-    hasFirebaseError: !!firebaseError
+    hasFirebaseError: !!firebaseError,
+    userRole,
+    isDriver,
+    isAdmin
   });
 
   return (

@@ -8,6 +8,7 @@ const FirebaseTest = () => {
   const [error, setError] = useState<string | null>(null);
   const [collections, setCollections] = useState<string[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [showFullData, setShowFullData] = useState(false);
 
   const testFirestore = async () => {
     setLoading(true);
@@ -28,9 +29,11 @@ const FirebaseTest = () => {
       
       const bookingsList: any[] = [];
       bookingsSnapshot.forEach(doc => {
+        const data = doc.data();
+        console.log(`Booking ${doc.id}:`, data);
         bookingsList.push({
           id: doc.id,
-          ...doc.data()
+          ...data
         });
       });
       
@@ -64,13 +67,21 @@ const FirebaseTest = () => {
     <div className="p-4 border rounded-md">
       <h2 className="text-xl font-bold mb-4">Firebase Test</h2>
       
-      <Button 
-        onClick={testFirestore} 
-        disabled={loading}
-        className="mb-4"
-      >
-        {loading ? 'Testing...' : 'Test Firebase Connection'}
-      </Button>
+      <div className="flex gap-2 mb-4">
+        <Button 
+          onClick={testFirestore} 
+          disabled={loading}
+        >
+          {loading ? 'Testing...' : 'Test Firebase Connection'}
+        </Button>
+
+        <Button
+          variant="outline"
+          onClick={() => setShowFullData(!showFullData)}
+        >
+          {showFullData ? 'Show Less Data' : 'Show Full Data'}
+        </Button>
+      </div>
       
       {error && (
         <div className="bg-red-50 border border-red-200 p-3 rounded mb-4">
@@ -92,13 +103,41 @@ const FirebaseTest = () => {
       {bookings.length > 0 && (
         <div>
           <h3 className="font-medium mb-2">Bookings ({bookings.length}):</h3>
-          <div className="max-h-60 overflow-y-auto border rounded p-2">
+          <div className="max-h-96 overflow-y-auto border rounded p-2">
             {bookings.map(booking => (
-              <div key={booking.id} className="mb-2 pb-2 border-b">
+              <div key={booking.id} className="mb-4 pb-4 border-b">
                 <p><strong>ID:</strong> {booking.id}</p>
                 <p><strong>Type:</strong> {booking.type || booking.bookingType || 'N/A'}</p>
                 <p><strong>Status:</strong> {booking.status || 'N/A'}</p>
-                <p><strong>Email:</strong> {booking.email || booking.customerInfo?.email || 'N/A'}</p>
+                
+                {/* Customer Info */}
+                <div className="mt-2">
+                  <p className="font-medium">Customer Info:</p>
+                  <div className="pl-3 border-l-2 border-gray-200">
+                    {booking.customerInfo ? (
+                      <>
+                        <p><strong>Email:</strong> {booking.customerInfo.email || 'N/A'}</p>
+                        <p><strong>Name:</strong> {booking.customerInfo.name || 'N/A'}</p>
+                        <p><strong>Phone:</strong> {booking.customerInfo.phone || 'N/A'}</p>
+                      </>
+                    ) : (
+                      <p>No customer info</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Direct Email Field */}
+                <p className="mt-2"><strong>Direct Email:</strong> {booking.email || 'N/A'}</p>
+                
+                {/* Show full data if enabled */}
+                {showFullData && (
+                  <div className="mt-2">
+                    <p className="font-medium">Full Data:</p>
+                    <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+                      {JSON.stringify(booking, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             ))}
           </div>

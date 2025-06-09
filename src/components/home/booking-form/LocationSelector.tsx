@@ -464,7 +464,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
 
   return (
     <div className="space-y-1 relative" ref={containerRef}>
-      <label htmlFor={id} className="text-xs font-medium text-gray-700">{label}</label>
+      {label && <label htmlFor={id} className="text-xs font-medium text-gray-700">{label}</label>}
       <div className="relative">
         <MapPin className="absolute left-2 top-2.5 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
         <Input
@@ -487,7 +487,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
             }
           }}
           placeholder={placeholder}
-          className={`pl-7 py-1.5 h-9 text-sm rounded-md w-full ${locationSelected ? 'bg-gray-50' : ''}`}
+          className={`pl-7 py-1.5 h-9 text-sm rounded-md w-full text-gray-800 bg-white border-gray-200 ${locationSelected ? 'bg-gray-50' : ''}`}
           required
           autoComplete="off"
         />
@@ -498,21 +498,21 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
               <div className="max-h-[250px] overflow-y-auto">
                 {isLoading && (
                   <div className="flex items-center justify-center py-2 px-3">
-                    <Loader2 className="h-3 w-3 animate-spin mr-2" />
-                    <span className="text-xs">Loading...</span>
+                    <Loader2 className="h-3 w-3 animate-spin mr-2 text-gray-500" />
+                    <span className="text-xs text-gray-600">Loading...</span>
                   </div>
                 )}
                 
                 {!isLoading && suggestions.length === 0 && (
                   <div className="p-3 text-center">
-                    <div className="text-xs text-gray-500 mb-1">
+                    <div className="text-xs text-gray-600 mb-1">
                       {value.length < 2 ? 
                         "Popular locations shown below" : 
                         "No locations found"
                       }
                     </div>
                     {value.length >= 2 && (
-                      <div className="text-[10px] text-gray-400">
+                      <div className="text-[10px] text-gray-500">
                         Try adding more details like city name or landmark
                       </div>
                     )}
@@ -521,20 +521,20 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
                 
                 {suggestions.length > 0 && (
                   <div>
-                    <div className="px-2 py-1.5 text-xs font-medium text-gray-500 bg-gray-50 border-b border-gray-100">
+                    <div className="px-2 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 border-b border-gray-200">
                       {value.length < 2 ? "Popular Places in UAE" : "Locations in UAE"}
                     </div>
                     <div>
                       {suggestions.map((item) => (
                         <div
                           key={item.place_id}
-                          className="py-1.5 px-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                          className="py-1.5 px-2 cursor-pointer hover:bg-gray-100 transition-colors"
                           onClick={() => handleLocationSelect(item)}
                         >
                           <div className="flex items-start gap-1.5">
-                            <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-600" />
+                            <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-500" />
                             <div className="flex flex-col">
-                              <span className="text-sm font-medium leading-tight">{item.mainName}</span>
+                              <span className="text-sm font-medium leading-tight text-gray-800">{item.mainName}</span>
                               {item.secondaryAddress && (
                                 <span className="text-[10px] text-gray-500 truncate max-w-[220px]">
                                   {item.secondaryAddress}

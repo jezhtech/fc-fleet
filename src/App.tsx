@@ -1,5 +1,4 @@
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -25,6 +24,7 @@ import DriverProfile from "./pages/DriverProfile";
 import DriverRides from "./pages/DriverRides";
 import DriverEarnings from "./pages/DriverEarnings";
 import DriverSettings from "./pages/DriverSettings";
+import DriverWelcome from "./pages/DriverWelcome";
 import MyAccount from "./pages/MyAccount";
 import MyBookings from "./pages/MyBookings";
 import NotFound from "./pages/NotFound";
@@ -135,7 +135,6 @@ const App = () => {
                     <TooltipProvider>
                       <DebugWrapper id="tooltip-provider">
                         <Toaster />
-                        <Sonner />
                         <BrowserRouter>
                           <DebugWrapper id="browser-router">
                             <Routes>
@@ -220,32 +219,37 @@ const App = () => {
                               
                               {/* Protected Driver Routes */}
                               <Route path="/driver" element={
-                                <ProtectedRoute>
+                                <ProtectedRoute requireDriver={true}>
                                   <DriverDashboard />
                                 </ProtectedRoute>
                               } />
+                              <Route path="/driver/welcome" element={
+                                <ProtectedRoute requireDriver={true}>
+                                  <DriverWelcome />
+                                </ProtectedRoute>
+                              } />
                               <Route path="/driver/profile" element={
-                                <ProtectedRoute>
+                                <ProtectedRoute requireDriver={true}>
                                   <DriverProfile />
                                 </ProtectedRoute>
                               } />
                               <Route path="/driver/rides" element={
-                                <ProtectedRoute>
+                                <ProtectedRoute requireDriver={true}>
                                   <DriverRides />
                                 </ProtectedRoute>
                               } />
                               <Route path="/driver/earnings" element={
-                                <ProtectedRoute>
+                                <ProtectedRoute requireDriver={true}>
                                   <DriverEarnings />
                                 </ProtectedRoute>
                               } />
                               <Route path="/driver/bank-details" element={
-                                <ProtectedRoute>
+                                <ProtectedRoute requireDriver={true}>
                                   <DriverBankDetails />
                                 </ProtectedRoute>
                               } />
                               <Route path="/driver/settings" element={
-                                <ProtectedRoute>
+                                <ProtectedRoute requireDriver={true}>
                                   <DriverSettings />
                                 </ProtectedRoute>
                               } />

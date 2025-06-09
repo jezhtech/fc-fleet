@@ -37,3 +37,10 @@ export const parseCurrencyToNumber = (amountString: string): number => {
   return parseFloat(cleanedString);
 }; 
  
+ 
+ 
+ 
+ 
+ 
+ 
+ 

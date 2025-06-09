@@ -6,6 +6,7 @@ import { firestore } from '@/lib/firebase';
 import { useNavigate } from 'react-router-dom';
 import CCavenueCheckout from '@/components/checkout/CCavenueCheckout';
 import PaymentTestControls from '@/components/checkout/PaymentTestControls';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   LocationSelector,
   RouteMap,
@@ -18,9 +19,11 @@ import {
   Vehicle,
   TransportType
 } from '.';
+import { generateBookingId, getNextBookingCount } from '@/utils/booking';
 
 const BookTaxiForm = () => {
   const navigate = useNavigate();
+  const { currentUser, userData } = useAuth();
   
   // Form steps state
   const [step, setStep] = useState(1);
@@ -71,6 +74,7 @@ const BookTaxiForm = () => {
   const [paymentSuccess, setPaymentSuccess] = useState<boolean | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [completedPaymentDetails, setCompletedPaymentDetails] = useState<any>(null);
+  const [formattedBookingId, setFormattedBookingId] = useState<string>('');
 
   // Check if we're in development/test environment
   useEffect(() => {
@@ -407,21 +411,57 @@ const BookTaxiForm = () => {
     try {
       setLoading(prev => ({ ...prev, savingBooking: true }));
       
+      // Get the current date for the booking
+      const bookingDate = new Date();
+      
+      // Get the next booking count for this month
+      const bookingCount = await getNextBookingCount(bookingDate);
+      
+      // Generate a formatted booking ID
+      const formattedId = generateBookingId(bookingDate, bookingCount);
+      
+      // Parse the selected pickup date and time to create a proper Date object
+      let pickupDateTime = new Date();
+      try {
+        // If we have date and time from the form
+        if (bookingData.date && bookingData.time) {
+          // Parse the time string (expected format: "HH:MM")
+          const [hours, minutes] = bookingData.time.split(':').map(Number);
+          
+          // If date is already a Date object, use it, otherwise parse it
+          const pickupDate = bookingData.date instanceof Date 
+            ? bookingData.date 
+            : new Date(bookingData.date);
+            
+          // Create a new date object with the combined date and time
+          pickupDateTime = new Date(pickupDate);
+          pickupDateTime.setHours(hours, minutes, 0, 0);
+        }
+      } catch (error) {
+        console.error('Error parsing pickup date/time:', error);
+        // Fall back to current date/time if parsing fails
+        pickupDateTime = new Date();
+      }
+      
       // Create booking document
       const bookingRef = collection(firestore, 'bookings');
       const newBooking = {
         ...bookingData,
         paymentInfo,
         status,
-        createdAt: serverTimestamp(),
+        formattedId, // Store the formatted ID
+        createdAt: serverTimestamp(), // When the booking was created
+        pickupDateTime: pickupDateTime, // When the service is scheduled
+        date: pickupDateTime, // Keep the original date field for backward compatibility
         updatedAt: serverTimestamp()
       };
       
       // Add document to Firestore
       const docRef = await addDoc(bookingRef, newBooking);
       console.log('Booking saved with ID:', docRef.id);
+      console.log('Formatted booking ID:', formattedId);
       
-      return docRef.id;
+      return { id: docRef.id, formattedId };
     } catch (error) {
       console.error('Error saving booking:', error);
       toast.error('Failed to save booking details');
@@ -450,22 +490,41 @@ const BookTaxiForm = () => {
     setCompletedPaymentDetails(completePaymentDetails);
     setPaymentSuccess(true);
     
+    // Get customer information from auth context
+    const customerName = userData ? 
+      `${userData.firstName} ${userData.lastName}`.trim() : 
+      currentUser?.displayName || "Customer";
+    
+    const customerEmail = userData?.email || 
+      currentUser?.email || 
+      "customer@example.com";
+    
+    const customerPhone = userData?.phoneNumber || 
+      currentUser?.phoneNumber || 
+      "123456789";
+    
     // Save booking to database
     const bookingData = {
       orderId,
       vehicle: paymentDetails.vehicle,
       pickupLocation: paymentDetails.pickupLocation,
       dropoffLocation: paymentDetails.dropoffLocation,
-      date: paymentDetails.date,
+      date: pickupDate,
       time: paymentDetails.time,
       amount: paymentDetails.amount,
-      customerInfo: paymentDetails.customerInfo,
+      customerInfo: {
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone
+      },
+      userId: currentUser?.uid, // Also save the user ID for easier querying
       type: 'Chauffeur'
     };
     
-    const bookingId = await saveBookingToDatabase(bookingData, paymentInfo, 'awaiting');
-    if (bookingId) {
-      setBookingId(bookingId);
+    const result = await saveBookingToDatabase(bookingData, paymentInfo, 'awaiting');
+    if (result) {
+      setBookingId(result.id);
+      setFormattedBookingId(result.formattedId);
       setBookingStatus('awaiting');
       // Move to booking status step
       setStep(5);
@@ -481,6 +540,19 @@ const BookTaxiForm = () => {
     setPaymentSuccess(false);
     setPaymentError(errorMessage);
     
+    // Get customer information from auth context
+    const customerName = userData ? 
+      `${userData.firstName} ${userData.lastName}`.trim() : 
+      currentUser?.displayName || "Customer";
+    
+    const customerEmail = userData?.email || 
+      currentUser?.email || 
+      "customer@example.com";
+    
+    const customerPhone = userData?.phoneNumber || 
+      currentUser?.phoneNumber || 
+      "123456789";
+    
     // Save failed booking to database
     const paymentInfo = {
       paymentMethod: 'CCAvenue',
@@ -495,16 +567,22 @@ const BookTaxiForm = () => {
       vehicle: paymentDetails?.vehicle,
       pickupLocation: paymentDetails?.pickupLocation,
       dropoffLocation: paymentDetails?.dropoffLocation,
-      date: paymentDetails?.date,
+      date: pickupDate,
       time: paymentDetails?.time,
       amount: paymentDetails?.amount || 0,
-      customerInfo: paymentDetails?.customerInfo,
+      customerInfo: {
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone
+      },
+      userId: currentUser?.uid, // Also save the user ID for easier querying
       type: 'Chauffeur'
     };
     
-    const bookingId = await saveBookingToDatabase(bookingData, paymentInfo, 'failed');
-    if (bookingId) {
-      setBookingId(bookingId);
+    const result = await saveBookingToDatabase(bookingData, paymentInfo, 'failed');
+    if (result) {
+      setBookingId(result.id);
+      setFormattedBookingId(result.formattedId);
     }
     
     // Move to booking status step
@@ -564,6 +642,19 @@ const BookTaxiForm = () => {
       // Calculate fare
       const estimatedFare = calculateEstimatedFare();
 
+      // Get customer information from auth context
+      const customerName = userData ? 
+        `${userData.firstName} ${userData.lastName}`.trim() : 
+        currentUser?.displayName || "Customer";
+      
+      const customerEmail = userData?.email || 
+        currentUser?.email || 
+        "customer@example.com";
+      
+      const customerPhone = userData?.phoneNumber || 
+        currentUser?.phoneNumber || 
+        "123456789";
+
       // Create booking details for payment step
       const paymentDetailsObj = {
         vehicle: selectedVehicle,
@@ -573,10 +664,11 @@ const BookTaxiForm = () => {
         time: bookingDetails.time,
         amount: estimatedFare,
         customerInfo: {
-          name: "Customer",  // These would come from user profile in a real app
-          email: "customer@example.com",
-          phone: "123456789"
-        }
+          name: customerName,
+          email: customerEmail,
+          phone: customerPhone
+        },
+        userId: currentUser?.uid
       };
 
       // Generate an order ID using timestamp and random string
@@ -790,7 +882,7 @@ const BookTaxiForm = () => {
                 <h3 className="text-green-800 font-medium">Payment Successful!</h3>
               </div>
               <p className="text-green-700 text-sm mt-2">
-                Your booking has been confirmed. Booking ID: {bookingId || orderId}
+                Your booking has been confirmed. Booking ID: {formattedBookingId || bookingId || orderId}
               </p>
             </div>
           ) : (
