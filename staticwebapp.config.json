@@ -1,0 +1,22 @@
+{
+  "platform": {
+    "apiRuntime": "node:20"
+  },
+  "buildProperties": {
+    "skipBuildDuringDeploy": false,
+    "apiBuildCommand": "",
+    "appBuildCommand": "pnpm run build",
+    "outputLocation": "dist"
+  },
+  "routes": [
+    {
+      "route": "/*",
+      "serve": "/index.html",
+      "statusCode": 200
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*", "/css/*", "/js/*", "/api/*"]
+  }
+} 
