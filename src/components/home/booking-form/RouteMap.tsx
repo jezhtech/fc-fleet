@@ -1,122 +1,113 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, AlertTriangle } from 'lucide-react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { Location } from './types';
-import mapService, { DEFAULT_CENTER } from '../../../services/mapService';
-import useMapboxToken from '@/hooks/useMapboxToken';
+import React, { useState, useEffect, useRef } from "react";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { Location } from "./types";
+import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
+import { googleMapsService } from "@/services/googleMapsService";
 
 interface RouteMapProps {
   pickupLocation?: Location;
   dropoffLocation?: Location;
 }
 
-const RouteMap: React.FC<RouteMapProps> = ({ pickupLocation, dropoffLocation }) => {
+const RouteMap: React.FC<RouteMapProps> = ({
+  pickupLocation,
+  dropoffLocation,
+}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<{ [key: string]: mapboxgl.Marker }>({});
-  const routeLine = useRef<mapboxgl.Layer | null>(null);
+  const map = useRef<google.maps.Map | null>(null);
+  const markers = useRef<{ [key: string]: google.maps.Marker }>({});
+  const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(
+    null
+  );
   const isMapReady = useRef(false);
   const [markersAdded, setMarkersAdded] = useState(false);
-  
+
   // Get token from the hook
-  const { token, isInitialized, error: tokenError } = useMapboxToken();
-  
-  // Set token in mapService when available
-  useEffect(() => {
-    if (token && isInitialized) {
-      mapService.setToken(token);
-    }
-  }, [token, isInitialized]);
-  
+  const { token, isInitialized, error: tokenError } = useGoogleMapsToken();
+
   // Handle token errors
   useEffect(() => {
     if (tokenError) {
-      setError(`Mapbox token error: ${tokenError}`);
+      setError(`Google Maps token error: ${tokenError}`);
     }
   }, [tokenError]);
 
   // Create luxury car icon element for pickup marker
   const createLuxuryCarElement = () => {
-    const el = document.createElement('div');
-    el.className = 'luxury-car-marker';
-    el.style.width = '40px';
-    el.style.height = '40px';
-    el.style.display = 'flex';
-    el.style.justifyContent = 'center';
-    el.style.alignItems = 'center';
-    el.style.borderRadius = '50%';
-    el.style.backgroundColor = 'white';
-    el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-    el.style.fontSize = '22px'; // Make the emoji larger
-    el.style.paddingBottom = '4px'; // Visual adjustment for emoji vertical alignment
-    
+    const el = document.createElement("div");
+    el.className = "luxury-car-marker";
+    el.style.width = "40px";
+    el.style.height = "40px";
+    el.style.display = "flex";
+    el.style.justifyContent = "center";
+    el.style.alignItems = "center";
+    el.style.borderRadius = "50%";
+    el.style.backgroundColor = "white";
+    el.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
+    el.style.fontSize = "22px";
+    el.style.paddingBottom = "4px";
+
     // Use car emoji instead of SVG
-    el.textContent = '🚙';
-    
+    el.textContent = "🚙";
+
     return el;
   };
-  
-  // Get actual driving route using Mapbox Directions API
+
+  // Get actual driving route using Google Directions API
   const getDirectionsRoute = async (pickup: Location, dropoff: Location) => {
     try {
       setRouteLoading(true);
-      
-      // Form the request URL for the Mapbox Directions API
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${pickup.longitude},${pickup.latitude};${dropoff.longitude},${dropoff.latitude}?geometries=geojson&overview=full&access_token=${token}`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch route: ${response.status}`);
+
+      if (!googleMapsService.isReady()) {
+        throw new Error("Google Maps not initialized");
       }
-      
-      const data = await response.json();
-      
-      if (data.routes && data.routes.length > 0) {
-        const route = data.routes[0];
-        
-        // Update the route on the map
-        if (map.current && map.current.getSource('route')) {
-          (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
-            type: 'Feature',
-            properties: {},
-            geometry: route.geometry
-          });
-          
-          // Get route distance and duration
-          const distance = (route.distance / 1000).toFixed(1); // km
-          const duration = Math.round(route.duration / 60); // minutes
-          console.log(`Route: ${distance} km, ${duration} minutes`);
+
+      const directionsResult = await googleMapsService.getDirections(
+        { lat: pickup.latitude, lng: pickup.longitude },
+        { lat: dropoff.latitude, lng: dropoff.longitude }
+      );
+
+      if (directionsResult && directionsRenderer.current) {
+        directionsRenderer.current.setDirections(directionsResult);
+
+        // Get route distance and duration
+        const route = directionsResult.routes[0];
+        if (route && route.legs[0]) {
+          const distance = route.legs[0].distance?.text || "Unknown";
+          const duration = route.legs[0].duration?.text || "Unknown";
         }
       } else {
-        console.warn('No routes found between locations');
+        console.warn("No routes found between locations");
       }
     } catch (error) {
-      console.error('Error fetching directions:', error);
+      console.error("Error fetching directions:", error);
       // Fallback to straight line if directions API fails
       fallbackToStraightLine(pickup, dropoff);
     } finally {
       setRouteLoading(false);
     }
   };
-  
+
   // Fallback to straight line if directions API fails
   const fallbackToStraightLine = (pickup: Location, dropoff: Location) => {
-    if (map.current && map.current.getSource('route')) {
-      (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: [
-            [pickup.longitude, pickup.latitude],
-            [dropoff.longitude, dropoff.latitude]
-          ]
-        }
+    if (map.current && directionsRenderer.current) {
+      // Clear existing directions
+      directionsRenderer.current.setDirections({ routes: [] } as any);
+
+      // Create a simple polyline between the two points
+      const polyline = new google.maps.Polyline({
+        path: [
+          { lat: pickup.latitude, lng: pickup.longitude },
+          { lat: dropoff.latitude, lng: dropoff.longitude },
+        ],
+        geodesic: true,
+        strokeColor: "#FF0000",
+        strokeOpacity: 1.0,
+        strokeWeight: 2,
+        map: map.current,
       });
     }
   };
@@ -125,240 +116,243 @@ const RouteMap: React.FC<RouteMapProps> = ({ pickupLocation, dropoffLocation }) 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
     if (!isInitialized || !token) {
-      console.log('Waiting for Mapbox token to initialize...');
       return;
     }
 
     const initializeMap = async () => {
+      let loadingTimeout: NodeJS.Timeout;
+
       try {
-        // Ensure the token is set before creating the map
-        mapService.setToken(token);
-        
-        // Wait for any preloading to complete
-        await mapService.waitForInitialization();
-        
-        // Create map using the map service
-        const newMap = await mapService.createMap(mapContainer.current);
+        setLoading(true);
+
+        // Set a timeout to prevent infinite loading
+        loadingTimeout = setTimeout(() => {
+          if (loading) {
+            isMapReady.current = true;
+            setLoading(false);
+          }
+        }, 10000); // 10 second timeout
+
+        // Initialize Google Maps service
+
+        await googleMapsService.initialize({ apiKey: token });
+
+        // Create map using the service
+
+        const newMap = await googleMapsService.createMap(
+          mapContainer.current!,
+          {
+            center: { lat: 25.2048, lng: 55.2708 }, // Dubai center
+            zoom: 10,
+          }
+        );
+
         map.current = newMap;
 
-        // Add minimal attribution control
-        map.current.addControl(
-          new mapboxgl.AttributionControl({ compact: true }),
-          'bottom-right'
-        );
-
-        // Add navigation control with minimal options
-        map.current.addControl(
-          new mapboxgl.NavigationControl({ showCompass: false }),
-          'top-right'
-        );
-
-        // Optimize initial load
-        map.current.once('load', () => {
-          setLoading(false);
-          isMapReady.current = true;
-
-          // Add route source and layer with optimized settings
-          map.current?.addSource('route', {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              properties: {},
-              geometry: {
-                type: 'LineString',
-                coordinates: []
-              }
-            },
-            maxzoom: 18,
-            tolerance: 3,
-            buffer: 0,
-            lineMetrics: true,
-          });
-
-          map.current?.addLayer({
-            id: 'route',
-            type: 'line',
-            source: 'route',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round',
-              visibility: 'visible',
-            },
-            paint: {
-              'line-color': '#E53935', // Bright red color for the route
-              'line-width': 6,
-              'line-opacity': 0.9
-            },
-            minzoom: 1,
-            maxzoom: 18,
-          });
-          
-          // Update markers after map is ready
-          updateMapMarkers();
+        // Initialize directions renderer
+        directionsRenderer.current = new google.maps.DirectionsRenderer({
+          map: newMap,
+          suppressMarkers: true, // We'll add our own markers
+          polylineOptions: {
+            strokeColor: "#3B82F6",
+            strokeWeight: 4,
+            strokeOpacity: 0.8,
+          },
         });
 
-        // Add error handler
-        map.current.on('error', (e) => {
-          console.error('Mapbox error:', e.error);
-          setError(`Map error: ${e.error?.message || 'Unknown error'}`);
-        });
-
-        // Optimize performance during map movement
-        map.current.on('movestart', () => {
-          if (map.current) {
-            map.current.getCanvas().style.imageRendering = 'pixelated';
-          }
-        });
-
-        map.current.on('moveend', () => {
-          if (map.current) {
-            map.current.getCanvas().style.imageRendering = 'auto';
-          }
-        });
-
-        // Handle resize efficiently
+        // Add resize listener
         const handleResize = () => {
-          if (map.current && isMapReady.current) {
-            requestAnimationFrame(() => {
-              map.current?.resize();
-            });
+          if (map.current) {
+            google.maps.event.trigger(map.current, "resize");
           }
         };
-        window.addEventListener('resize', handleResize);
 
-        return () => {
-          window.removeEventListener('resize', handleResize);
-          if (map.current && isMapReady.current) {
-            map.current.remove();
-            map.current = null;
-            isMapReady.current = false;
-          }
-        };
-      } catch (err) {
-        console.error('Error initializing Mapbox map:', err);
-        setError(err instanceof Error ? err.message : 'Failed to initialize map');
+        window.addEventListener("resize", handleResize);
+
+        // Wait for map tiles to load before setting ready
+        newMap.addListener("tilesloaded", () => {
+          clearTimeout(loadingTimeout);
+          isMapReady.current = true;
+          setLoading(false);
+        });
+      } catch (error) {
+        clearTimeout(loadingTimeout);
+        console.error("Google Route Map initialization error:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Unknown map initialization error"
+        );
         setLoading(false);
       }
     };
 
     initializeMap();
-  }, [isInitialized, token]);
 
-  // Function to update map markers
+    return () => {
+      if (map.current) {
+        // Clean up map instance
+        google.maps.event.clearInstanceListeners(map.current);
+      }
+    };
+  }, [token, isInitialized]);
+
+  // Update map markers when locations change
   const updateMapMarkers = () => {
     if (!map.current || !isMapReady.current) return;
 
-    try {
-      // Clear existing markers
-      Object.values(markers.current).forEach(marker => marker.remove());
-      markers.current = {};
+    // Clear existing markers
+    Object.values(markers.current).forEach((marker) => marker.setMap(null));
+    markers.current = {};
 
-      // Add new markers
-      if (pickupLocation) {
-        // Create a custom marker with car emoji for pickup
-        const carElement = createLuxuryCarElement();
-        markers.current.pickup = new mapboxgl.Marker({
-          element: carElement,
-          anchor: 'bottom',
-          offset: [0, -10] // Adjusted offset for emoji positioning
-        })
-          .setLngLat([pickupLocation.longitude, pickupLocation.latitude])
-          .addTo(map.current);
-      }
-
-      if (dropoffLocation) {
-        // Red marker for dropoff location
-        markers.current.dropoff = new mapboxgl.Marker({ 
-          color: '#E53935', // Match the route color
-          scale: 0.9 // Slightly smaller than default
-        })
-          .setLngLat([dropoffLocation.longitude, dropoffLocation.latitude])
-          .addTo(map.current);
-      }
-
-      // Fit bounds to show both markers if they exist
-      if (pickupLocation && dropoffLocation) {
-        const bounds = new mapboxgl.LngLatBounds()
-          .extend([pickupLocation.longitude, pickupLocation.latitude])
-          .extend([dropoffLocation.longitude, dropoffLocation.latitude]);
-
-        map.current.fitBounds(bounds, {
-          padding: { top: 70, bottom: 70, left: 70, right: 70 },
-          maxZoom: 15,
-          duration: 1000 // Smooth animation
-        });
-        
-        // Get and display actual driving route
-        getDirectionsRoute(pickupLocation, dropoffLocation);
-      }
-      // Center on single marker if only one exists
-      else if (pickupLocation) {
-        map.current.flyTo({
-          center: [pickupLocation.longitude, pickupLocation.latitude],
-          zoom: 13,
-          duration: 1000 // Smooth animation
-        });
-      }
-      else if (dropoffLocation) {
-        map.current.flyTo({
-          center: [dropoffLocation.longitude, dropoffLocation.latitude],
-          zoom: 13,
-          duration: 1000 // Smooth animation
-        });
-      }
-      
-      setMarkersAdded(true);
-    } catch (error) {
-      console.error('Error updating map markers:', error);
+    // Clear existing directions
+    if (directionsRenderer.current) {
+      directionsRenderer.current.setDirections({ routes: [] } as any);
     }
+
+    const bounds = new google.maps.LatLngBounds();
+
+    // Add pickup marker
+    if (pickupLocation) {
+      const pickupMarker = googleMapsService.createMarker(
+        { lat: pickupLocation.latitude, lng: pickupLocation.longitude },
+        {
+          map: map.current,
+          icon: {
+            url:
+              "data:image/svg+xml;charset=UTF-8," +
+              encodeURIComponent(`
+              <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="18" fill="transparent"/>
+                <text x="20" y="25" text-anchor="middle" fill="white" font-size="20" font-weight="bold">🚙</text>
+              </svg>
+            `),
+            scaledSize: new google.maps.Size(40, 40),
+            anchor: new google.maps.Point(20, 20),
+          },
+          title: `Pickup: ${pickupLocation.name}`,
+        }
+      );
+
+      markers.current["pickup"] = pickupMarker;
+      bounds.extend({
+        lat: pickupLocation.latitude,
+        lng: pickupLocation.longitude,
+      });
+    }
+
+    // Add dropoff marker
+    if (dropoffLocation) {
+      const dropoffMarker = googleMapsService.createMarker(
+        { lat: dropoffLocation.latitude, lng: dropoffLocation.longitude },
+        {
+          map: map.current,
+          icon: {
+            url:
+              "data:image/svg+xml;charset=UTF-8," +
+              encodeURIComponent(`
+              <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="18" fill="transparent"/>
+                <text x="20" y="25" text-anchor="middle" fill="white" font-size="20" font-weight="bold">📍</text>
+              </svg>
+            `),
+            scaledSize: new google.maps.Size(40, 40),
+            anchor: new google.maps.Point(20, 20),
+          },
+          title: `Dropoff: ${dropoffLocation.name}`,
+        }
+      );
+
+      markers.current["dropoff"] = dropoffMarker;
+      bounds.extend({
+        lat: dropoffLocation.latitude,
+        lng: dropoffLocation.longitude,
+      });
+    }
+
+    // Fit map to bounds if we have markers
+    if (!bounds.isEmpty()) {
+      map.current.fitBounds(bounds, 50); // 50px padding
+    }
+
+    // Get route if both locations are available
+    if (pickupLocation && dropoffLocation) {
+      getDirectionsRoute(pickupLocation, dropoffLocation);
+    }
+
+    setMarkersAdded(true);
   };
 
-  // Update markers and route when locations change
+  // Update markers when locations change
   useEffect(() => {
-    updateMapMarkers();
-  }, [pickupLocation, dropoffLocation]);
+    if (isMapReady.current) {
+      updateMapMarkers();
+    }
+  }, [pickupLocation, dropoffLocation, isMapReady.current]);
+
+  // Ensure loading is false when map is ready
+  useEffect(() => {
+    if (isMapReady.current && loading) {
+      setLoading(false);
+    }
+  }, [isMapReady.current, loading]);
 
   const handleReload = () => {
-    window.location.reload();
+    setError(null);
+    setLoading(true);
+    isMapReady.current = false;
+    setMarkersAdded(false);
+
+    // Clear existing map
+    if (map.current) {
+      google.maps.event.clearInstanceListeners(map.current);
+      map.current = null;
+    }
+
+    // Clear markers
+    Object.values(markers.current).forEach((marker) => marker.setMap(null));
+    markers.current = {};
+
+    // Clear directions renderer
+    if (directionsRenderer.current) {
+      directionsRenderer.current.setMap(null);
+      directionsRenderer.current = null;
+    }
   };
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[280px] bg-red-50 text-red-500 rounded-md">
-        <AlertTriangle className="h-6 w-6 mb-1" />
-        <div className="text-center text-xs mb-2">
-          {error}
+      <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <div className="flex items-center justify-center space-x-2 text-red-600 mb-2">
+            <AlertTriangle className="h-4 w-4" />
+            <span className="text-sm">Map Error</span>
+          </div>
+          <p className="text-xs text-gray-600 mb-2">{error}</p>
+          <button
+            onClick={handleReload}
+            className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+          >
+            Retry
+          </button>
         </div>
-        <button 
-          onClick={handleReload}
-          className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
-        >
-          Reload Map
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="relative h-[280px] w-full rounded-lg overflow-hidden border border-gray-100 shadow-md bg-gray-50/50">
-      <div ref={mapContainer} className="absolute inset-0" />
-      {(loading || routeLoading) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 backdrop-blur-sm">
-          <div className="bg-white/90 p-2 rounded-full shadow-md">
-            <Loader2 className="h-6 w-6 text-fleet-red animate-spin" />
+    <div className="w-full h-64 bg-gray-100 rounded-lg overflow-hidden relative">
+      <div ref={mapContainer} className="w-full h-full" />
+      {routeLoading && (
+        <div className="absolute top-2 left-2 bg-white bg-opacity-90 rounded px-2 py-1">
+          <div className="flex items-center space-x-1">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span className="text-xs">Calculating route...</span>
           </div>
-        </div>
-      )}
-      {!loading && !markersAdded && !(pickupLocation || dropoffLocation) && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p className="text-xs text-gray-600 bg-white/90 px-3 py-1.5 rounded-md shadow-sm">
-            Enter locations above to display on map
-          </p>
         </div>
       )}
     </div>
   );
 };
 
-export default RouteMap; 
- 
+export default RouteMap;

@@ -3,6 +3,8 @@ import { Input } from '@/components/ui/input';
 import { MapPin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Location } from './types';
+import { useGoogleMapsToken } from '@/hooks/useGoogleMapsToken';
+import { googleMapsService } from '@/services/googleMapsService';
 
 interface LocationSelectorProps {
   id: string;
@@ -113,8 +115,11 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   const lastSearchRef = useRef<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Initialize Google Maps
+  const { token, isInitialized, error: tokenError } = useGoogleMapsToken();
 
-  // OpenStreetMap Nominatim API for geocoding
+  // Google Places API for geocoding
   const fetchSuggestions = async (query: string) => {
     if (!query || query.length < 2) {
       // Show famous places if query is empty or too short
@@ -132,117 +137,37 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     setIsOpen(true);
     
     try {
-      // First try a general search for all locations in UAE with increased limit
-      const generalUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}+UAE&format=json&countrycodes=ae&limit=10&addressdetails=1&namedetails=1&accept-language=en`;
-      
-      console.log('Fetching general OSM URL:', generalUrl);
-      
-      const generalResponse = await fetch(generalUrl, {
-        headers: {
-          'User-Agent': 'FleetBookingApp/1.0',
-          'Accept-Language': 'en'  // Force English results
-        }
-      });
-      
-      if (!generalResponse.ok) {
-        throw new Error(`Nominatim API error: ${generalResponse.status}`);
+      // Initialize Google Maps if not already done
+      if (!googleMapsService.isReady() && token) {
+        console.log('Initializing Google Maps with token:', token.substring(0, 10) + '...');
+        await googleMapsService.initialize({ apiKey: token });
       }
       
-      const generalData = await generalResponse.json();
-      console.log('General location data:', generalData);
-      
-      // Then try a more specific search for businesses and amenities with increased limit
-      const specificUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=ae&limit=10&addressdetails=1&namedetails=1&accept-language=en&extratags=1`;
-      
-      console.log('Fetching specific OSM URL:', specificUrl);
-      
-      const specificResponse = await fetch(specificUrl, {
-        headers: {
-          'User-Agent': 'FleetBookingApp/1.0',
-          'Accept-Language': 'en'
-        }
-      });
-      
-      if (!specificResponse.ok) {
-        throw new Error(`Nominatim API error: ${specificResponse.status}`);
+      if (!googleMapsService.isReady()) {
+        throw new Error('Google Maps not initialized');
       }
       
-      const specificData = await specificResponse.json();
-      console.log('Specific location data:', specificData);
+      console.log('Google Maps is ready, searching for:', query);
       
-      // Combine results, removing duplicates
-      const combinedResults = [...generalData];
-      specificData.forEach(item => {
-        if (!combinedResults.some(existingItem => existingItem.place_id === item.place_id)) {
-          combinedResults.push(item);
-        }
+      // Search for places using Google Places API
+      const places = await googleMapsService.searchPlaces(query, {
+        limit: 10,
+        types: ['establishment', 'geocode']
       });
       
-      // If we still have no results or fewer than 5, try with broader parameters
-      if (combinedResults.length < 5) {
-        // Try a very broad query with higher limit
-        const broadUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}+UAE&format=json&limit=15&accept-language=en`;
+      console.log('Google Places API results:', places);
+      
+      if (places.length > 0) {
+        // Convert Google Places results to our format
+        const enhancedData = places.map(enrichGooglePlaceData);
         
-        const broadResponse = await fetch(broadUrl, {
-          headers: {
-            'User-Agent': 'FleetBookingApp/1.0',
-            'Accept-Language': 'en'
-          }
-        });
-        
-        if (broadResponse.ok) {
-          const broadData = await broadResponse.json();
-          // Filter to only include UAE results
-          const uaeResults = broadData.filter(item => 
-            item.display_name.toLowerCase().includes('united arab emirates') ||
-            item.display_name.toLowerCase().includes('uae') ||
-            item.display_name.toLowerCase().includes('dubai') ||
-            item.display_name.toLowerCase().includes('abu dhabi') ||
-            item.display_name.toLowerCase().includes('sharjah') ||
-            item.display_name.toLowerCase().includes('ajman') ||
-            item.display_name.toLowerCase().includes('fujairah') ||
-            item.display_name.toLowerCase().includes('ras al khaimah') ||
-            item.display_name.toLowerCase().includes('umm al quwain')
-          );
-          
-          combinedResults.push(...uaeResults);
-        }
-      }
-      
-      if (combinedResults.length > 0) {
-        // Process and enhance the data
-        const enhancedData = combinedResults.map(enrichLocationData);
-        // Remove duplicates based on name and coordinates
+        // Remove duplicates based on place_id
         const uniqueData = enhancedData.filter((item, index, self) => 
-          index === self.findIndex(t => (
-            t.mainName === item.mainName && 
-            t.lat === item.lat && 
-            t.lon === item.lon
-          ))
+          index === self.findIndex(t => t.place_id === item.place_id)
         );
         
-        // Sort results to prioritize UAE places
-        uniqueData.sort((a, b) => {
-          // Prioritize items with UAE in the address
-          const aHasUAE = a.display_name.toLowerCase().includes('united arab emirates');
-          const bHasUAE = b.display_name.toLowerCase().includes('united arab emirates');
-          
-          if (aHasUAE && !bHasUAE) return -1;
-          if (!aHasUAE && bHasUAE) return 1;
-          
-          // Then sort by how closely the main name matches the query
-          const queryLower = query.toLowerCase();
-          const aMainNameMatch = a.mainName.toLowerCase().includes(queryLower);
-          const bMainNameMatch = b.mainName.toLowerCase().includes(queryLower);
-          
-          if (aMainNameMatch && !bMainNameMatch) return -1;
-          if (!aMainNameMatch && bMainNameMatch) return 1;
-          
-          return 0;
-        });
-        
         setSuggestions(uniqueData);
-        console.log('Enhanced combined location data:', uniqueData);
+        console.log('Enhanced Google Places data:', uniqueData);
       } else {
         console.log('No suggestions found for query:', query);
         setSuggestions([]);
@@ -320,6 +245,45 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     };
   };
 
+  // Convert Google Places API results to our format
+  const enrichGooglePlaceData = (place: google.maps.places.PlaceResult) => {
+    const mainName = place.name || 'Unknown Location';
+    const displayName = place.formatted_address || place.name || 'Unknown Address';
+    
+    // Extract secondary address (everything after the main name)
+    const addressParts = displayName.split(', ');
+    const secondaryAddress = addressParts.slice(1, Math.min(addressParts.length, 3)).join(', ');
+    
+    // Get coordinates
+    const lat = place.geometry?.location?.lat() || 0;
+    const lng = place.geometry?.location?.lng() || 0;
+    
+    // Determine location type
+    let locationType = '';
+    if (place.types && place.types.length > 0) {
+      const type = place.types[0];
+      if (type.includes('restaurant')) locationType = 'restaurant';
+      else if (type.includes('hotel')) locationType = 'hotel';
+      else if (type.includes('shopping')) locationType = 'shopping center';
+      else if (type.includes('airport')) locationType = 'airport';
+      else if (type.includes('hospital')) locationType = 'hospital';
+      else if (type.includes('school')) locationType = 'school';
+      else if (type.includes('establishment')) locationType = 'business';
+      else locationType = type;
+    }
+    
+    return {
+      place_id: place.place_id || `google-${Date.now()}-${Math.random()}`,
+      mainName,
+      secondaryAddress,
+      display_name: displayName,
+      lat: lat.toString(),
+      lon: lng.toString(),
+      type: locationType,
+      geometry: place.geometry
+    };
+  };
+
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -335,45 +299,9 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
       searchTimeoutRef.current = setTimeout(() => {
         console.log(`Searching for ${id}: "${value}"`);
         
-        // Determine if query needs location context
-        const lowerValue = value.trim().toLowerCase();
-        const hasLocationContext = 
-          lowerValue.includes('dubai') || 
-          lowerValue.includes('abu dhabi') ||
-          lowerValue.includes('sharjah') ||
-          lowerValue.includes('ajman') ||
-          lowerValue.includes('fujairah') ||
-          lowerValue.includes('ras al') ||
-          lowerValue.includes('umm al') ||
-          lowerValue.includes('uae') ||
-          lowerValue.includes('emirates');
-          
-        // Business keywords
-        const businessKeywords = ['restaurant', 'cafe', 'hotel', 'mall', 'shop', 'store', 'office', 'building', 'plaza', 'center', 'centre'];
-        const isBusiness = businessKeywords.some(keyword => lowerValue.includes(keyword));
-        
-        // Location keywords that indicate it's a general place
-        const locationKeywords = ['village', 'town', 'city', 'district', 'area', 'neighborhood', 'community', 'street', 'road', 'avenue', 'boulevard'];
-        const isGeneralLocation = locationKeywords.some(keyword => lowerValue.includes(keyword));
-        
-        // Use the query as-is if it already has location context
-        let searchQuery = value;
-        
-        // If no location context provided, add UAE context based on query type
-        if (!hasLocationContext) {
-          if (isBusiness) {
-            // For businesses, append Dubai as it's the most likely location
-            searchQuery = `${value}, Dubai`;
-          } else if (isGeneralLocation) {
-            // For general locations, just append UAE
-            searchQuery = `${value}, UAE`;
-          } else {
-            // For generic queries, search as is (fetchSuggestions will append UAE)
-            searchQuery = value;
-          }
-        }
-        
-        fetchSuggestions(searchQuery);
+        // Use the query as-is for Google Places API
+        // Google Places API will automatically handle UAE context and provide better results
+        fetchSuggestions(value);
       }, 300); // Reduced debounce delay for better responsiveness
     } else {
       // Show famous places when input is empty or has fewer than 2 characters
@@ -396,13 +324,9 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         return;
       }
       
-      // Always use the English name from mainName, which is already prioritized from namedetails
-      // Fall back to the first part of the English display name if mainName is somehow Arabic
-      const displayName = item.display_name.split(',')[0];
-      const hasArabicCharacters = /[\u0600-\u06FF]/.test(item.mainName);
-      
+      // Use the mainName from Google Places data
       const location: Location = {
-        name: hasArabicCharacters ? displayName : item.mainName,
+        name: item.mainName,
         longitude: parseFloat(item.lon),
         latitude: parseFloat(item.lat),
         address: item.display_name,
