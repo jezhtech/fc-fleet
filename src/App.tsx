@@ -38,22 +38,15 @@ import EmergencyFallback from "./pages/EmergencyFallback";
 import { AuthProvider } from "./contexts/AuthContext";
 import TranslationProvider from "./contexts/TranslationContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import React, { Component, ErrorInfo, useState, useEffect } from 'react';
+import React, { Component, ErrorInfo } from "react";
 
 const queryClient = new QueryClient();
 
-// Debug component to track rendering
-const DebugWrapper = ({ id, children }: { id: string, children: React.ReactNode }) => {
-  useEffect(() => {
-    console.log(`DebugWrapper ${id} mounted`);
-    return () => console.log(`DebugWrapper ${id} unmounted`);
-  }, [id]);
-  
-  return <>{children}</>;
-};
-
 // Error boundary component to handle application errors gracefully
-class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -74,9 +67,12 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-md">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h1>
+            <h1 className="text-2xl font-bold text-red-600 mb-4">
+              Something went wrong
+            </h1>
             <p className="text-gray-700 mb-4">
-              The application encountered an error. This could be due to a configuration issue or a temporary problem.
+              The application encountered an error. This could be due to a
+              configuration issue or a temporary problem.
             </p>
             <pre className="bg-gray-100 p-3 rounded text-xs mb-4 overflow-auto max-h-32">
               {this.state.error?.toString() || "Unknown error"}
@@ -97,178 +93,202 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
 }
 
 const App = () => {
-  // Display a simple loading message first to check if basic rendering works
-  const [showApp, setShowApp] = useState(false);
-  
-  useEffect(() => {
-    console.log("App component mounted");
-    
-    // Delay showing the real app to check if this part renders
-    setTimeout(() => {
-      console.log("Showing full app now");
-      setShowApp(true);
-    }, 1000);
-    
-    return () => console.log("App component unmounted");
-  }, []);
-  
-  if (!showApp) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-fleet-red mb-4">First Class Fleet</h1>
-          <p className="text-gray-600">Loading application...</p>
-        </div>
-      </div>
-    );
-  }
+  console.log("App component rendering");
 
   return (
     <ErrorBoundary>
-      <DebugWrapper id="app-root">
-        <QueryClientProvider client={queryClient}>
-          <DebugWrapper id="query-provider">
-            <AuthProvider>
-              <DebugWrapper id="auth-provider">
-                <TranslationProvider>
-                  <DebugWrapper id="translation-provider">
-                    <TooltipProvider>
-                      <DebugWrapper id="tooltip-provider">
-                        <Toaster />
-                        <BrowserRouter>
-                          <DebugWrapper id="browser-router">
-                            <Routes>
-                              {/* Fallback Route (will be shown if other components fail) */}
-                              <Route path="/fallback" element={<EmergencyFallback />} />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TranslationProvider>
+            <TooltipProvider>
+              <Toaster />
+              <BrowserRouter>
+                <Routes>
+                  {/* Fallback Route (will be shown if other components fail) */}
+                  <Route path="/fallback" element={<EmergencyFallback />} />
 
-                              {/* Public Routes */}
-                              <Route path="/" element={<Index />} />
-                              <Route path="/login" element={<Login />} />
-                              <Route path="/register" element={<Register />} />
-                              <Route path="/about" element={<About />} />
-                              <Route path="/contact" element={<Contact />} />
-                              <Route path="/faq" element={<FAQ />} />
-                              <Route path="/terms" element={<TermsAndConditions />} />
-                              <Route path="/privacy" element={<PrivacyPolicy />} />
-                              <Route path="/book-chauffeur" element={<BookChauffeur />} />
-                              <Route path="/booking-status" element={<BookingStatus />} />
-                              
-                              {/* Protected User Routes */}
-                              <Route path="/my-account" element={
-                                <ProtectedRoute>
-                                  <MyAccount />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/my-bookings" element={
-                                <ProtectedRoute>
-                                  <MyBookings />
-                                </ProtectedRoute>
-                              } />
-                              
-                              {/* Protected Admin Routes */}
-                              <Route path="/admin" element={
-                                <ProtectedRoute requireAdmin={true}>
-                                  <AdminDashboard />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/admin/users" element={
-                                <ProtectedRoute requireAdmin={true}>
-                                  <AdminUsers />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/admin/drivers" element={
-                                <ProtectedRoute requireAdmin={true}>
-                                  <AdminDrivers />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/admin/taxi-types" element={
-                                <ProtectedRoute requireAdmin={true}>
-                                  <AdminTaxiTypes />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/admin/vehicle-types" element={
-                                <ProtectedRoute requireAdmin={true}>
-                                  <AdminVehicleTypes />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/admin/fare-settings" element={
-                                <ProtectedRoute requireAdmin={true}>
-                                  <AdminFareSettings />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/admin/geofencing" element={
-                                <ProtectedRoute requireAdmin={true}>
-                                  <AdminGeofencing />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/admin/bookings" element={
-                                <ProtectedRoute requireAdmin={true}>
-                                  <AdminBookings />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/admin/payment-settings" element={
-                                <ProtectedRoute requireAdmin={true}>
-                                  <AdminPaymentSettings />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/admin/settings" element={
-                                <ProtectedRoute requireAdmin={true}>
-                                  <AdminSettings />
-                                </ProtectedRoute>
-                              } />
-                              
-                              {/* Protected Driver Routes */}
-                              <Route path="/driver" element={
-                                <ProtectedRoute requireDriver={true}>
-                                  <DriverDashboard />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/driver/welcome" element={
-                                <ProtectedRoute requireDriver={true}>
-                                  <DriverWelcome />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/driver/profile" element={
-                                <ProtectedRoute requireDriver={true}>
-                                  <DriverProfile />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/driver/rides" element={
-                                <ProtectedRoute requireDriver={true}>
-                                  <DriverRides />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/driver/earnings" element={
-                                <ProtectedRoute requireDriver={true}>
-                                  <DriverEarnings />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/driver/bank-details" element={
-                                <ProtectedRoute requireDriver={true}>
-                                  <DriverBankDetails />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/driver/settings" element={
-                                <ProtectedRoute requireDriver={true}>
-                                  <DriverSettings />
-                                </ProtectedRoute>
-                              } />
-                              
-                              {/* Example and Wildcard Routes */}
-                              <Route path="/firebase-example" element={<FirebaseExample />} />
-                              <Route path="*" element={<NotFound />} />
-                            </Routes>
-                          </DebugWrapper>
-                        </BrowserRouter>
-                      </DebugWrapper>
-                    </TooltipProvider>
-                  </DebugWrapper>
-                </TranslationProvider>
-              </DebugWrapper>
-            </AuthProvider>
-          </DebugWrapper>
-        </QueryClientProvider>
-      </DebugWrapper>
+                  {/* Public Routes */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/faq" element={<FAQ />} />
+                  <Route path="/terms" element={<TermsAndConditions />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/book-chauffeur" element={<BookChauffeur />} />
+                  <Route path="/booking-status" element={<BookingStatus />} />
+
+                  {/* Protected User Routes */}
+                  <Route
+                    path="/my-account"
+                    element={
+                      <ProtectedRoute>
+                        <MyAccount />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/my-bookings"
+                    element={
+                      <ProtectedRoute>
+                        <MyBookings />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Protected Admin Routes */}
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/users"
+                    element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminUsers />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/drivers"
+                    element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminDrivers />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/taxi-types"
+                    element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminTaxiTypes />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/vehicle-types"
+                    element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminVehicleTypes />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/fare-settings"
+                    element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminFareSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/geofencing"
+                    element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminGeofencing />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/bookings"
+                    element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminBookings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/payment-settings"
+                    element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminPaymentSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/settings"
+                    element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Protected Driver Routes */}
+                  <Route
+                    path="/driver"
+                    element={
+                      <ProtectedRoute requireDriver={true}>
+                        <DriverDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/driver/welcome"
+                    element={
+                      <ProtectedRoute requireDriver={true}>
+                        <DriverWelcome />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/driver/profile"
+                    element={
+                      <ProtectedRoute requireDriver={true}>
+                        <DriverProfile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/driver/rides"
+                    element={
+                      <ProtectedRoute requireDriver={true}>
+                        <DriverRides />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/driver/earnings"
+                    element={
+                      <ProtectedRoute requireDriver={true}>
+                        <DriverEarnings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/driver/bank-details"
+                    element={
+                      <ProtectedRoute requireDriver={true}>
+                        <DriverBankDetails />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/driver/settings"
+                    element={
+                      <ProtectedRoute requireDriver={true}>
+                        <DriverSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Example and Wildcard Routes */}
+                  <Route
+                    path="/firebase-example"
+                    element={<FirebaseExample />}
+                  />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </TranslationProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 };
