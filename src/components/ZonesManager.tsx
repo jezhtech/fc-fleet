@@ -40,7 +40,7 @@ import {
   setDoc
 } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
-import GeofencingDraw from './GeofencingDraw';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import * as turf from '@turf/turf';
 import { validateAndFixPolygon, createTestZone, logZoneInfo } from '@/lib/mapUtils';
@@ -1027,82 +1027,18 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
                 </div>
               ) : (
                 <div className="relative">
-                  {!mapError ? (
-                    <GeofencingDraw
-                      existingZones={zonesAsGeoJSON()}
-                      onZoneCreate={handlePolygonComplete}
-                      onZoneSelect={handleGeoJSONFeatureToZoneId}
-                      readOnly={!drawingMode}
-                      userHasPermissions={true}
-                      initialCenter={[55.2708, 25.2048]} // Dubai coordinates
-                      initialZoom={10}
-                      mapContainerRef={dialogMapContainerRef}
-                      drawStyles={[]}
-                      fetchZones={() => Promise.resolve(zonesAsGeoJSON())}
-                    />
-                  ) : (
-                    <SimpleZoneRenderer
-                      zones={zones}
-                      onSelectZone={handleZoneIdSelect}
-                      onEditZone={(zoneId) => handleAddEdit(zones.find(z => z.id === zoneId) || null)}
-                      onDeleteZone={(zoneId) => confirmDelete(zones.find(z => z.id === zoneId)!)}
-                      onCreateZone={() => handleAddEdit(null)}
-                      selectedZoneId={selectedZoneId}
-                    />
-                  )}
+                  <SimpleZoneRenderer
+                    zones={zones}
+                    onSelectZone={handleZoneIdSelect}
+                    onEditZone={(zoneId) => handleAddEdit(zones.find(z => z.id === zoneId) || null)}
+                    onDeleteZone={(zoneId) => confirmDelete(zones.find(z => z.id === zoneId)!)}
+                    onCreateZone={() => handleAddEdit(null)}
+                    selectedZoneId={selectedZoneId}
+                  />
                   
-                  {/* Add automatic fallback detection that's not hidden */}
-                  <div className="mt-4" id="map-fallback" style={{display: 'none'}}>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-6 flex items-start space-x-4">
-                      <AlertTriangle className="h-6 w-6 text-yellow-500 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h3 className="font-medium text-yellow-800">Map loading issues detected</h3>
-                        <p className="text-yellow-700 mt-1 mb-4">
-                          We'll use a simplified version instead.
-                        </p>
-                        <SimpleZoneRenderer 
-                          zones={zones}
-                          selectedZoneId={selectedZoneId}
-                          onSelectZone={handleZoneIdSelect}
-                          onCreateZone={() => handleAddEdit(null)}
-                          onEditZone={(id) => {
-                            const zone = zones.find(z => z.id === id);
-                            if (zone) handleAddEdit(zone);
-                          }}
-                          onDeleteZone={(id) => {
-                            const zone = zones.find(z => z.id === id);
-                            if (zone) confirmDelete(zone);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+
                   
-                  {/* Improve fallback detection script */}
-                  <script dangerouslySetInnerHTML={{
-                    __html: `
-                      // Show fallback after a short delay to allow map time to load
-                      setTimeout(function() {
-                        try {
-                          const mapContainer = document.querySelector('.mapboxgl-map');
-                          const mapCanvas = document.querySelector('.mapboxgl-canvas');
-                          
-                          // Check for various failure indicators
-                          if (!mapContainer || 
-                              !mapCanvas || 
-                              document.querySelector('.mapboxgl-map .text-red-600') ||
-                              document.querySelector('.mapboxgl-missing-css') ||
-                              document.querySelector('.mapboxgl-map .bg-red-50')) {
-                            console.log('Map loading issues detected, showing fallback');
-                            document.getElementById('map-fallback').style.display = 'block';
-                          }
-                        } catch(e) {
-                          console.error('Error checking map status:', e);
-                          document.getElementById('map-fallback').style.display = 'block';
-                        }
-                      }, 2500);
-                    `
-                  }} />
+
                 </div>
               )}
             </CardContent>
@@ -1350,19 +1286,17 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
               {drawingMode && (
                 <div className="h-[400px]">
                   <Label className="mb-2 block">Draw Zone on Map</Label>
-                  <div className="relative h-full">
-                    <GeofencingDraw
-                      existingZones={zonesAsGeoJSON()}
-                      isDialog={true}
-                      userHasPermissions={true}
-                      initialCenter={[55.2708, 25.2048]} // Dubai coordinates
-                      initialZoom={10}
-                      mapContainerRef={dialogMapContainerRef!}
-                      drawStyles={[]}
-                      fetchZones={() => Promise.resolve(zonesAsGeoJSON())}
-                      onZoneCreate={handlePolygonComplete}
-                      onZoneSelect={handleGeoJSONFeatureToZoneId}
-                    />
+                  <div className="relative h-full flex items-center justify-center bg-gray-50 rounded-md">
+                    <div className="text-center p-6">
+                      <Map className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Drawing Mode</h3>
+                      <p className="text-gray-600 mb-4">
+                        Zone drawing functionality is being updated to use Google Maps.
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        For now, please use the "Create Default Square Zone" option or manually enter coordinates.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
