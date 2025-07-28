@@ -28,60 +28,19 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Vendor chunks
           if (id.includes("node_modules")) {
+            // Keep React and React-DOM together
             if (id.includes("react") || id.includes("react-dom")) {
               return "vendor-react";
             }
-            if (id.includes("react-router")) {
-              return "vendor-router";
+            // Group other major libraries
+            if (id.includes("firebase")) {
+              return "vendor-firebase";
             }
             if (id.includes("@radix-ui")) {
               return "vendor-ui";
             }
-            if (id.includes("@googlemaps")) {
-              return "vendor-maps";
-            }
-            if (id.includes("firebase")) {
-              return "vendor-firebase";
-            }
-            if (
-              id.includes("framer-motion") ||
-              id.includes("sonner") ||
-              id.includes("lucide-react")
-            ) {
-              return "vendor-utils";
-            }
-            if (id.includes("recharts")) {
-              return "vendor-charts";
-            }
-            if (
-              id.includes("react-hook-form") ||
-              id.includes("@hookform") ||
-              id.includes("zod")
-            ) {
-              return "vendor-forms";
-            }
-            if (id.includes("@turf") || id.includes("turf")) {
-              return "vendor-geo";
-            }
-            if (
-              id.includes("html2canvas") ||
-              id.includes("jspdf") ||
-              id.includes("xlsx")
-            ) {
-              return "vendor-export";
-            }
-            if (id.includes("crypto-js")) {
-              return "vendor-crypto";
-            }
-            if (id.includes("date-fns")) {
-              return "vendor-dates";
-            }
-            if (id.includes("axios")) {
-              return "vendor-http";
-            }
-            // Default vendor chunk for other node_modules
+            // Default vendor chunk
             return "vendor";
           }
         },
