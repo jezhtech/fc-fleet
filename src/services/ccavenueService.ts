@@ -4,7 +4,7 @@ import { logDebug, logError } from "@/utils/logger";
 const DEBUG_MODE = process.env.NODE_ENV === "development";
 
 // Backend API configuration
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
 
 /**
  * Fetches CCAvenue payment settings from backend
