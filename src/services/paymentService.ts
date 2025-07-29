@@ -1,369 +1,479 @@
-import axios from 'axios';
-import { encryptPaymentSettings, decryptPaymentSettings } from '@/utils/encryption';
-import { logDebug, logError } from '@/utils/logger';
+import { toast } from "sonner";
+import { initiateCCavenuePayment, processCCavenueResponse } from './ccavenueService';
 
-// Configuration for debug mode
-const DEBUG_MODE = true;
-
-// Mock database for demo purposes
-// In a real application, this would be stored in a database
-let ccavenueSettings: Record<string, string> = {
-  merchantId: '',
-  accessCode: '',
-  workingKey: '',
-  mode: 'test'
-};
-
-/**
- * Fetches CCAvenue payment settings
- * @returns Promise with CCAvenue settings
- */
-export const getCCavenueSettings = async (): Promise<{
-  success: boolean;
-  merchantId?: string;
-  accessCode?: string;
-  workingKey?: string;
-  mode?: string;
-  error?: string;
-}> => {
-  try {
-    // In a real application, this would fetch from a database
-    // For this demo, we're using a mock in-memory store
-    
-    // Return decrypted values (except mode which isn't encrypted)
-    const settings = ccavenueSettings;
-    
-    if (!settings.merchantId && !settings.accessCode && !settings.workingKey) {
-      logDebug('No CCAvenue settings found');
-      return { success: true };
-    }
-    
-    const decryptedSettings = decryptPaymentSettings(settings);
-    logDebug('Retrieved CCAvenue settings', { mode: decryptedSettings.mode });
-    
-    return {
-      success: true,
-      merchantId: decryptedSettings.merchantId,
-      accessCode: decryptedSettings.accessCode,
-      workingKey: decryptedSettings.workingKey,
-      mode: decryptedSettings.mode
-    };
-  } catch (error) {
-    console.error('Error fetching CCAvenue settings:', error);
-    return { 
-      success: false, 
-      error: 'Failed to fetch CCAvenue settings' 
-    };
-  }
-};
-
-/**
- * Saves CCAvenue payment settings with encryption
- * @param settings CCAvenue settings to save
- * @returns Promise with success status
- */
-export const saveCCavenueSettings = async (settings: {
-  merchantId: string;
-  accessCode: string;
-  workingKey: string;
-  mode: string;
-}): Promise<{ success: boolean; error?: string }> => {
-  try {
-    // Encrypt sensitive fields before saving
-    const encryptedSettings = encryptPaymentSettings(settings);
-    
-    // In a real application, save to database
-    // For this demo, we're using a mock in-memory store
-    ccavenueSettings = encryptedSettings;
-    
-    logDebug('Saved CCAvenue settings', { mode: settings.mode });
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error saving CCAvenue settings:', error);
-    return { 
-      success: false, 
-      error: 'Failed to save CCAvenue settings' 
-    };
-  }
-};
-
-/**
- * Tests CCAvenue connection with provided credentials
- * @param settings CCAvenue settings to test
- * @returns Promise with test results
- */
-export const testCCavenueConnection = async (settings: {
-  merchantId: string;
-  accessCode: string;
-  workingKey: string;
-  mode: string;
-}): Promise<{ success: boolean; error?: string }> => {
-  try {
-    logDebug('Testing CCAvenue connection', { 
-      merchantId: settings.merchantId.substring(0, 4) + '***', 
-      mode: settings.mode 
-    });
-    
-    // In a real implementation, this would call CCAvenue's API to validate credentials
-    // For this demo, we'll just check if all required fields are provided
-    
-    if (!settings.merchantId || !settings.accessCode || !settings.workingKey) {
-      return { 
-        success: false, 
-        error: 'All CCAvenue credentials are required' 
-      };
-    }
-    
-    // For test mode, we can perform an actual API call to CCAvenue's test endpoint
-    if (settings.mode === 'test') {
-      try {
-        // In a real implementation, you would use CCAvenue's test API
-        // This is a placeholder for demonstration purposes
-        logDebug('Performing test call to CCAvenue test server');
-        // await axios.post('https://test.ccavenue.com/apis/servlet/DoTestConnection', {
-        //   merchant_id: settings.merchantId,
-        //   access_code: settings.accessCode
-        // }, {
-        //   headers: {
-        //     'Content-Type': 'application/json'
-        //   }
-        // });
-      } catch (testError) {
-        logDebug('Test connection API call failed', testError);
-        // Proceed anyway since we're just demonstrating
-      }
-    }
-    
-    // Simulate a successful API call to CCAvenue
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    logDebug('CCAvenue test connection successful');
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error testing CCAvenue connection:', error);
-    return { 
-      success: false, 
-      error: 'Failed to test CCAvenue connection' 
-    };
-  }
-};
-
-/**
- * Initiates a CCAvenue payment
- * @param paymentData Payment data including amount, order info, etc.
- * @returns URL to redirect user for payment completion
- */
-export const initiateCCavenuePayment = async (paymentData: {
+// Types for payment integration
+export interface PaymentRequest {
   orderId: string;
   amount: number;
-  currency: string;
-  customerData: {
-    name: string;
-    email: string;
-    phone: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  billingAddress?: string;
+  billingCity?: string;
+  billingState?: string;
+  billingZip?: string;
+  billingCountry?: string;
+  billingTel?: string;
+  deliveryName?: string;
+  deliveryAddress?: string;
+  deliveryCity?: string;
+  deliveryState?: string;
+  deliveryZip?: string;
+  deliveryCountry?: string;
+  deliveryTel?: string;
+  merchantParam1?: string;
+  merchantParam2?: string;
+  merchantParam3?: string;
+  merchantParam4?: string;
+  merchantParam5?: string;
+  promoCode?: string;
+  customerIdentifier?: string;
+  rsaKey?: string;
+}
+
+export interface PaymentResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    encRequest: string;
+    access_code: string;
+    paymentUrl: string;
   };
-  redirectUrl: string;
-  cancelUrl: string;
-}): Promise<{ success: boolean; redirectUrl?: string; error?: string }> => {
-  try {
-    logDebug('Initiating CCAvenue payment', { 
-      orderId: paymentData.orderId,
-      amount: paymentData.amount,
-      currency: paymentData.currency
-    });
-    
-    // Get CCAvenue settings
-    const settings = await getCCavenueSettings();
-    
-    if (!settings.success || !settings.merchantId || !settings.accessCode) {
-      throw new Error('CCAvenue settings not available');
+  error?: string;
+}
+
+export interface PaymentStatusResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    orderId: string;
+    trackingId: string;
+    orderStatus: string;
+    statusMessage: string;
+    bankRefNo: string;
+    transactionDate: string;
+    isSuccessful: boolean;
+  };
+  error?: string;
+}
+
+export interface PaymentHistoryResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    payments: any[];
+  };
+  error?: string;
+}
+
+class PaymentService {
+  private baseUrl: string;
+
+  constructor() {
+    // Use environment variable or default to localhost for development
+    this.baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+  }
+
+  /**
+   * Initialize payment with CCAvenue
+   */
+  async initializePayment(
+    paymentData: PaymentRequest
+  ): Promise<PaymentResponse> {
+    try {
+      const idToken = await this.getFirebaseIdToken();
+
+      if (!idToken) {
+        throw new Error("Authentication token not available");
+      }
+      console.log("Initializing payment with data:", this.baseUrl);
+      const response = await fetch(`http://localhost:3000/api/payment/initialize`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(paymentData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to initialize payment");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Payment initialization error:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Payment initialization failed"
+      );
     }
-    
-    // In development mode, create a mock payment URL
-    const isDev = process.env.NODE_ENV === 'development' || 
-                 window.location.hostname === 'localhost' ||
-                 window.location.hostname === '127.0.0.1';
-    
-    // In a real implementation, this would make an API call to your backend
-    // which would then create a CCAvenue request with encryption
-    
-    if (isDev) {
-      // For development, return a mock URL
-      const mockPaymentUrl = `${window.location.origin}/mock-payment?` +
-        `orderId=${paymentData.orderId}` +
-        `&amount=${paymentData.amount}` +
-        `&currency=${paymentData.currency}` +
-        `&redirectUrl=${encodeURIComponent(paymentData.redirectUrl)}` +
-        `&cancelUrl=${encodeURIComponent(paymentData.cancelUrl)}`;
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      return {
-        success: true,
-        redirectUrl: mockPaymentUrl
-      };
+  }
+
+  /**
+   * Handle payment response from CCAvenue
+   */
+  async handlePaymentResponse(
+    encResp: string,
+    orderId: string
+  ): Promise<PaymentStatusResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/payment/response`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ encResp, orderId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to process payment response");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Payment response handling error:", error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Payment response processing failed"
+      );
     }
-    
-    // In production, this would make a real API call to your backend
-    // which would handle the CCAvenue integration
-    
-    // Mock API call for now
-    const apiResponse = await fetch('/api/payments/ccavenue/initiate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+  }
+
+  /**
+   * Handle payment success redirect
+   */
+  async handlePaymentSuccess(
+    encResp: string,
+    orderId: string
+  ): Promise<PaymentStatusResponse> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/payment/success?encResp=${encodeURIComponent(
+          encResp
+        )}&orderId=${encodeURIComponent(orderId)}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to process payment success");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Payment success handling error:", error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Payment success processing failed"
+      );
+    }
+  }
+
+  /**
+   * Handle payment cancel redirect
+   */
+  async handlePaymentCancel(
+    encResp: string,
+    orderId: string
+  ): Promise<PaymentStatusResponse> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/payment/cancel?encResp=${encodeURIComponent(
+          encResp
+        )}&orderId=${encodeURIComponent(orderId)}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Failed to process payment cancellation"
+        );
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Payment cancel handling error:", error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Payment cancellation processing failed"
+      );
+    }
+  }
+
+
+
+  /**
+   * Get payment history for authenticated user
+   */
+  async getPaymentHistory(): Promise<PaymentHistoryResponse> {
+    try {
+      const idToken = await this.getFirebaseIdToken();
+
+      if (!idToken) {
+        throw new Error("Authentication token not available");
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/payment/history`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to retrieve payment history");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Payment history error:", error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Failed to retrieve payment history"
+      );
+    }
+  }
+
+  /**
+   * Process CCAvenue payment form submission
+   */
+  async processCCAvenuePayment(
+    paymentData: PaymentRequest
+  ): Promise<{ success: boolean; paymentUrl?: string; error?: string }> {
+    try {
+      // Use the new CCAvenue service instead of backend calls
+      const redirectUrl = `${window.location.origin}/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=success`;
+      const cancelUrl = `${window.location.origin}/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=cancel`;
+      
+      // Get authentication token
+      const token = await this.getFirebaseIdToken();
+      
+      const response = await initiateCCavenuePayment({
         orderId: paymentData.orderId,
         amount: paymentData.amount,
-        currency: paymentData.currency,
-        customerName: paymentData.customerData.name,
-        customerEmail: paymentData.customerData.email,
-        customerPhone: paymentData.customerData.phone,
-        redirectUrl: paymentData.redirectUrl,
-        cancelUrl: paymentData.cancelUrl
-      })
-    });
-    
-    if (!apiResponse.ok) {
-      throw new Error(`API error: ${apiResponse.status}`);
-    }
-    
-    const responseData = await apiResponse.json();
-    
-    if (!responseData.success) {
-      throw new Error(responseData.error || 'Failed to initiate payment');
-    }
-    
-    return {
-      success: true,
-      redirectUrl: responseData.paymentUrl
-    };
-    
-  } catch (error) {
-    logError('Error initiating CCAvenue payment', error);
-    
-    // For development, return a mock URL even on error
-    if (process.env.NODE_ENV === 'development' || 
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1') {
-      
+        currency: 'AED', // Default to AED for UAE
+        customerData: {
+          name: paymentData.customerName,
+          email: paymentData.customerEmail,
+          phone: paymentData.customerPhone
+        },
+        redirectUrl,
+        cancelUrl,
+        token
+      });
+
+      if (!response.success) {
+        throw new Error(response.error || "Payment initialization failed");
+      }
+
+      // Return the payment URL for redirection
       return {
         success: true,
-        redirectUrl: `${window.location.origin}/mock-payment?orderId=${paymentData.orderId}&amount=${paymentData.amount}&error=true`
+        paymentUrl: response.paymentUrl,
       };
-    }
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-};
-
-// Helper function to get test result override
-// This allows us to force success or failure in test mode
-const getForceTestResult = (): 'success' | 'fail' | null => {
-  // Check for a localStorage setting that could be set in the UI for testing
-  if (typeof window !== 'undefined') {
-    const testMode = localStorage.getItem('ccavenue_test_mode');
-    if (testMode === 'success' || testMode === 'fail') {
-      return testMode;
-    }
-  }
-  return null;
-};
-
-/**
- * Process CCAvenue payment response
- * @param encryptedResponse Encrypted response from CCAvenue
- * @returns Processed payment result
- */
-export const processCCavenueResponse = async (encryptedResponse: string): Promise<{
-  success: boolean;
-  status?: 'success' | 'failure' | 'pending';
-  orderId?: string;
-  transactionId?: string;
-  amount?: string;
-  error?: string;
-}> => {
-  try {
-    logDebug('Processing CCAvenue payment response');
-    
-    // Get CCAvenue settings to get the working key for decryption
-    const settings = await getCCavenueSettings();
-    
-    if (!settings.success || !settings.workingKey) {
-      logDebug('CCAvenue settings not properly configured for response processing');
-      return { 
-        success: false, 
-        error: 'CCAvenue settings are not properly configured' 
-      };
-    }
-    
-    // In a real implementation, this would:
-    // 1. Decrypt the response using CCAvenue's method and the working key
-    // 2. Parse the decrypted response
-    // 3. Update the order status based on payment result
-    // 4. Return the appropriate response
-    
-    // For testing purposes, we can decode the test response
-    let decodedResponse;
-    try {
-      // In test mode, we'll pretend to decrypt the response
-      if (settings.mode === 'test') {
-        // This is just for demonstration purposes - in real implementation 
-        // you would use CCAvenue's decryption method
-        logDebug('Decrypting test response');
-        
-        // For test purposes, let's check if this is our test forcing mechanism
-        if (encryptedResponse === 'TEST_FORCE_SUCCESS') {
-          return {
-            success: true,
-            status: 'success',
-            orderId: 'TEST_ORDER',
-            transactionId: 'TEST_TXN_' + Date.now(),
-            amount: '100.00'
-          };
-        } else if (encryptedResponse === 'TEST_FORCE_FAILURE') {
-          return {
-            success: false,
-            status: 'failure',
-            error: 'Payment was declined (test mode)'
-          };
-        }
-      }
-    } catch (decryptError) {
-      logDebug('Failed to decrypt response', decryptError);
-    }
-    
-    // For this demo, we'll simulate a successful payment
-    const testResult = getForceTestResult();
-    if (settings.mode === 'test' && testResult === 'fail') {
-      logDebug('Simulating payment failure (test mode)');
+    } catch (error) {
+      console.error("CCAvenue payment processing error:", error);
       return {
         success: false,
-        status: 'failure',
-        error: 'Payment failed in test mode'
+        error:
+          error instanceof Error ? error.message : "Payment processing failed",
       };
     }
-    
-    logDebug('Payment processed successfully');
+  }
+
+  /**
+   * Handle CCAvenue payment response (for webhook or redirect)
+   */
+  async processCCAvenueResponse(
+    encResp: string,
+    orderId: string,
+    isSuccess: boolean = true
+  ): Promise<PaymentStatusResponse> {
+    try {
+      // Use the new CCAvenue service instead of backend calls
+      const response = await processCCavenueResponse(encResp, orderId, isSuccess);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Payment response processing failed');
+      }
+      
+      // Convert the response to match the expected PaymentStatusResponse format
+      const paymentStatusResponse: PaymentStatusResponse = {
+        success: true,
+        message: response.data?.statusMessage || 'Payment processed successfully',
+        data: {
+          orderId: response.data?.orderId || orderId,
+          trackingId: response.data?.trackingId || '',
+          orderStatus: response.data?.orderStatus || 'Success',
+          statusMessage: response.data?.statusMessage || 'Payment successful',
+          bankRefNo: response.data?.bankRefNo || '',
+          transactionDate: response.data?.transactionDate || new Date().toISOString(),
+          isSuccessful: response.data?.isSuccessful || true
+        }
+      };
+      
+      return paymentStatusResponse;
+    } catch (error) {
+      console.error("CCAvenue response processing error:", error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Payment response processing failed"
+      );
+    }
+  }
+
+  /**
+   * Get authentication token from localStorage or context
+   */
+  private getAuthToken(): string {
+    try {
+      // Try to get Firebase auth token from localStorage
+      const firebaseKeys = Object.keys(localStorage).filter(
+        (key) => key.includes("firebase:authUser:") && key.includes("[DEFAULT]")
+      );
+
+      if (firebaseKeys.length > 0) {
+        const firebaseKey = firebaseKeys[0];
+        const firebaseUser = localStorage.getItem(firebaseKey);
+
+        if (firebaseUser) {
+          try {
+            const parsed = JSON.parse(firebaseUser);
+            // Return the access token from Firebase auth
+            const accessToken = parsed.stsTokenManager?.accessToken;
+            console.log("Found Firebase access token:", !!accessToken);
+            return accessToken || "";
+          } catch (error) {
+            console.error("Error parsing Firebase user data:", error);
+          }
+        }
+      }
+
+      // Fallback to other token sources
+      const token =
+        localStorage.getItem("authToken") ||
+        sessionStorage.getItem("authToken") ||
+        localStorage.getItem("firebase_token");
+
+      if (token) {
+        try {
+          const parsed = JSON.parse(token);
+          return (
+            parsed.stsTokenManager?.accessToken || parsed.accessToken || token
+          );
+        } catch {
+          return token;
+        }
+      }
+
+      // Return empty string if no token found
+      console.log("No auth token found in localStorage");
+      return "";
+    } catch (error) {
+      console.error("Error getting auth token:", error);
+      return "";
+    }
+  }
+
+  /**
+   * Get Firebase ID token for backend authentication
+   */
+  async getFirebaseIdToken(): Promise<string> {
+    try {
+      // Import Firebase auth dynamically to avoid circular dependencies
+      const { getAuth } = await import("firebase/auth");
+      const auth = getAuth();
+
+      if (auth.currentUser) {
+        const idToken = await auth.currentUser.getIdToken();
+        console.log("Got Firebase ID token:", !!idToken);
+        return idToken;
+      }
+
+      console.log("No current user in Firebase auth");
+      return "";
+    } catch (error) {
+      console.error("Error getting Firebase ID token:", error);
+      return "";
+    }
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  async isAuthenticated(): Promise<boolean> {
+    try {
+      const idToken = await this.getFirebaseIdToken();
+      console.log("Payment service auth check - ID Token found:", !!idToken);
+      return !!idToken;
+    } catch (error) {
+      console.error("Error checking authentication:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Validate payment data before submission
+   */
+  validatePaymentData(data: PaymentRequest): {
+    isValid: boolean;
+    errors: string[];
+  } {
+    const errors: string[] = [];
+
+    if (!data.orderId) errors.push("Order ID is required");
+    if (!data.amount || data.amount <= 0)
+      errors.push("Valid amount is required");
+    if (!data.customerName) errors.push("Customer name is required");
+    if (!data.customerEmail) errors.push("Customer email is required");
+    if (!data.customerPhone) errors.push("Customer phone is required");
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (data.customerEmail && !emailRegex.test(data.customerEmail)) {
+      errors.push("Invalid email format");
+    }
+
+    // Validate phone format (basic validation)
+    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    if (
+      data.customerPhone &&
+      !phoneRegex.test(data.customerPhone.replace(/\s/g, ""))
+    ) {
+      errors.push("Invalid phone number format");
+    }
+
     return {
-      success: true,
-      status: 'success',
-      orderId: 'ORDER' + Date.now(),
-      transactionId: 'TXN' + Date.now(),
-      amount: '100.00'
-    };
-  } catch (error) {
-    console.error('Error processing CCAvenue response:', error);
-    return {
-      success: false,
-      error: 'Failed to process CCAvenue payment response'
+      isValid: errors.length === 0,
+      errors,
     };
   }
-}; 
+}
+
+// Create and export singleton instance
+export const paymentService = new PaymentService();

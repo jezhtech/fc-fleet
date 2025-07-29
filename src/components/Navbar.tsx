@@ -30,10 +30,6 @@ const Navbar = ({ position = "sticky" }: NavbarProps) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    console.log("Navbar auth state:", { currentUser, userData });
-  }, [currentUser, userData]);
-
   const toggleLanguage = () => {
     setLanguage(language === "en" ? "ar" : "en");
   };

@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Loader2, CreditCard, RefreshCw, ExternalLink } from 'lucide-react';
-import { initiateCCavenuePayment } from '@/services/paymentService';
-import { CURRENCY } from '@/utils/currency';
-import { toast } from 'sonner';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { paymentService, PaymentRequest } from "@/services/paymentService";
+import { initiateCCavenuePayment } from "@/services/ccavenueService";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CCavenueCheckoutProps {
   orderId: string;
@@ -11,8 +20,8 @@ interface CCavenueCheckoutProps {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  onPaymentSuccess: (transactionId: string) => void;
-  onPaymentFailure: (error: string) => void;
+  onPaymentSuccess: (transactionId: string, orderId?: string) => void;
+  onPaymentFailure: (errorMessage: string, orderId?: string) => void;
 }
 
 const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
@@ -22,249 +31,428 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
   customerEmail,
   customerPhone,
   onPaymentSuccess,
-  onPaymentFailure
+  onPaymentFailure,
 }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
-  const [isTestMode, setIsTestMode] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const { currentUser } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [paymentData, setPaymentData] = useState<PaymentRequest>({
+    orderId,
+    amount,
+    customerName,
+    customerEmail,
+    customerPhone,
+    billingAddress: "",
+    billingCity: "",
+    billingState: "",
+    billingZip: "",
+    billingCountry: "AE", // UAE
+    billingTel: customerPhone,
+    deliveryName: customerName,
+    deliveryAddress: "",
+    deliveryCity: "",
+    deliveryState: "",
+    deliveryZip: "",
+    deliveryCountry: "AE", // UAE
+    deliveryTel: customerPhone,
+  });
 
-  // Check if we're in development mode
+  // Check if user is authenticated
   useEffect(() => {
-    setIsTestMode(
-      window.location.hostname === 'localhost' || 
-      window.location.hostname === '127.0.0.1' || 
-      window.location.hostname.includes('192.168.') ||
-      process.env.NODE_ENV === 'development'
-    );
-  }, []);
+    const checkAuth = async () => {
+      console.log("CCavenueCheckout - Checking authentication...");
+      console.log("Current user:", currentUser);
 
-  // Handle payment initialization
-  const handlePaymentClick = async () => {
-    try {
-      setIsProcessing(true);
-      setError(null);
-      setDebugInfo(null);
-      
-      // Current URL for response and cancel URLs
-      const baseUrl = window.location.origin;
-      
-      // Add some debug info in test mode
-      if (isTestMode) {
-        setDebugInfo(`Initiating payment for order ${orderId} with amount ${amount}`);
+      if (!currentUser) {
+        toast.error("Please log in to proceed with payment");
+        onPaymentFailure("Authentication required", paymentData.orderId);
+        return;
       }
-      
-      // Check if we're in test mode with a forced result
-      const testMode = localStorage.getItem('ccavenue_test_mode');
-      if (isTestMode && testMode) {
-        setDebugInfo(prevInfo => `${prevInfo}\nTest mode detected: ${testMode}`);
-        
-        if (testMode === 'fail') {
-          // Simulate a payment failure
-          setTimeout(() => {
-            setError('Payment failed (test mode)');
-            onPaymentFailure('Payment failed (test mode)');
-            setIsProcessing(false);
-          }, 1000);
-          return;
-        } else if (testMode === 'success') {
-          // Simulate a payment success
-          setTimeout(() => {
-            // For test success, simulate a successful payment
-            const transactionId = `TEST-TXN-${Date.now()}`;
-            setIsProcessing(false);
-            setDebugInfo(prevInfo => `${prevInfo}\nTest payment successful with transaction ID: ${transactionId}`);
-            
-            // Call success callback
-            onPaymentSuccess(transactionId);
-          }, 1000);
-          return;
-        }
-      }
-      
-      // Normal payment flow - get payment URL
+
       try {
-        const paymentResult = await initiateCCavenuePayment({
-          orderId,
-          amount,
-          currency: CURRENCY.code,
-          customerData: {
-            name: customerName,
-            email: customerEmail,
-            phone: customerPhone
-          },
-          redirectUrl: `${baseUrl}/payment/success`,
-          cancelUrl: `${baseUrl}/payment/cancel`
+        const isAuth = await paymentService.isAuthenticated();
+        if (!isAuth) {
+          console.log(
+            "Payment service reports not authenticated, but user is logged in"
+          );
+          // Don't fail immediately, let the user try to proceed
+          // The backend will handle authentication validation
+        }
+      } catch (error) {
+        console.error("Error checking authentication:", error);
+      }
+    };
+
+    checkAuth();
+  }, [currentUser, onPaymentFailure]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPaymentData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!currentUser) {
+      toast.error("Please log in to proceed with payment");
+      onPaymentFailure("Authentication required", paymentData.orderId);
+      return;
+    }
+
+    // Validate payment data
+    const validation = paymentService.validatePaymentData(paymentData);
+    if (!validation.isValid) {
+      toast.error(
+        `Please fix the following errors: ${validation.errors.join(", ")}`
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      console.log("Submitting payment with data:", {
+        orderId: paymentData.orderId,
+        amount: paymentData.amount,
+        customerName: paymentData.customerName,
+        customerEmail: paymentData.customerEmail,
+      });
+
+      // Process payment through CCAvenue using the new service
+      // Redirect back to the booking form page with payment response
+      const redirectUrl = `${window.location.origin}/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=success`;
+      const cancelUrl = `${window.location.origin}/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=cancel`;
+
+      const token = await currentUser.getIdToken();
+
+      const result = await initiateCCavenuePayment({
+        orderId: paymentData.orderId,
+        amount: paymentData.amount,
+        currency: "AED", // Default to AED for UAE
+        customerData: {
+          name: paymentData.customerName,
+          email: paymentData.customerEmail,
+          phone: paymentData.customerPhone,
+        },
+        redirectUrl,
+        cancelUrl,
+        token,
+      });
+      console.log("Payment result:", result);
+      if (result.success && result.encRequest && result.access_code) {
+        console.log("Payment data received:", {
+          encRequest: result.encRequest.substring(0, 50) + "...",
+          access_code: result.access_code,
+          paymentUrl: result.paymentUrl,
         });
 
-        if (paymentResult.success && paymentResult.redirectUrl) {
-          // Store the payment URL
-          setPaymentUrl(paymentResult.redirectUrl);
-          
-          // Add debug info in test mode
-          if (isTestMode) {
-            setDebugInfo(prevInfo => 
-              `${prevInfo}\nPayment URL generated: ${paymentResult.redirectUrl}`
-            );
-          }
-        } else {
-          const errorMessage = paymentResult.error || 'Failed to initiate payment. Please try again.';
-          setError(errorMessage);
-          onPaymentFailure(errorMessage);
-        }
-      } catch (apiError) {
-        console.error('API error when initiating payment:', apiError);
-        
-        // In test mode, provide a mock payment URL
-        if (isTestMode) {
-          setDebugInfo(prevInfo => 
-            `${prevInfo}\nAPI call failed. Using mock payment URL in test mode.`
-          );
-          setPaymentUrl(`${baseUrl}/mock-payment?orderId=${orderId}&amount=${amount}`);
-        } else {
-          throw apiError; // Re-throw for non-test mode to be caught by outer catch
-        }
+        // Create and submit form to CCAvenue (like the JSP example)
+        submitToCCavenue(
+          result.encRequest,
+          result.access_code,
+          result.paymentUrl
+        );
+      } else {
+        throw new Error(result.error || "Payment initialization failed");
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      console.error('Error initiating CCAvenue payment:', error);
-      setError(errorMessage);
-      onPaymentFailure('An error occurred while processing your payment.');
+      console.error("Payment error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Payment failed";
+      toast.error(errorMessage);
+      onPaymentFailure(errorMessage, paymentData.orderId);
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
   };
 
-  // Handle simulated payment completion (for test mode)
-  const handleTestPaymentSuccess = () => {
-    const transactionId = `TEST-TXN-${Date.now()}`;
-    onPaymentSuccess(transactionId);
+  // Function to submit form to CCAvenue (like the JSP example)
+  const submitToCCavenue = (
+    encRequest: string,
+    access_code: string,
+    paymentUrl: string
+  ) => {
+    // Create a form element
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = paymentUrl;
+    form.style.display = "none";
+
+    // Add encRequest field
+    const encRequestInput = document.createElement("input");
+    encRequestInput.type = "hidden";
+    encRequestInput.name = "encRequest";
+    encRequestInput.value = encRequest;
+    form.appendChild(encRequestInput);
+
+    // Add access_code field
+    const accessCodeInput = document.createElement("input");
+    accessCodeInput.type = "hidden";
+    accessCodeInput.name = "access_code";
+    accessCodeInput.value = access_code;
+    form.appendChild(accessCodeInput);
+
+    // Add form to document and submit
+    document.body.appendChild(form);
+    form.submit();
   };
 
-  const handleTestPaymentFailure = () => {
-    onPaymentFailure('Payment was cancelled or failed');
-  };
+  const handleTestPayment = async (success: boolean = true) => {
+    setLoading(true);
 
-  const handleRetry = () => {
-    setError(null);
-    setDebugInfo(null);
-    setPaymentUrl(null);
-    // Small delay before retrying
-    setTimeout(handlePaymentClick, 500);
-  };
+    try {
+      // Simulate payment processing
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-  // Handle opening payment URL in new window
-  const handleOpenPaymentUrl = () => {
-    if (paymentUrl) {
-      // In a real environment, this would open the payment gateway
-      window.open(paymentUrl, '_blank');
-      
-      // In test mode, simulate payment completion after delay
-      if (isTestMode) {
-        const testMode = localStorage.getItem('ccavenue_test_mode');
-        
-        setTimeout(() => {
-          if (testMode === 'fail') {
-            handleTestPaymentFailure();
-          } else {
-            handleTestPaymentSuccess();
-          }
-        }, 3000);
+      if (success) {
+        const transactionId = `TEST_TXN_${Date.now()}`;
+        toast.success("Test payment successful!");
+        onPaymentSuccess(transactionId, paymentData.orderId);
+      } else {
+        toast.error("Test payment failed!");
+        onPaymentFailure("Test payment was declined", paymentData.orderId);
       }
+    } catch (error) {
+      console.error("Test payment error:", error);
+      onPaymentFailure("Test payment failed", paymentData.orderId);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="w-full p-4 border rounded-lg bg-white">
-      <div className="flex items-center space-x-4 mb-4">
-        <div className="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded-full">
-          <CreditCard className="h-6 w-6 text-white" />
-        </div>
-        <div>
-          <h3 className="font-medium">CCAvenue Secure Payment</h3>
-          <p className="text-sm text-gray-500">Pay securely with CCAvenue payment gateway</p>
-        </div>
-      </div>
-      
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
-          <p className="mb-2 font-medium">Payment Error</p>
-          <p className="text-sm mb-3">{error}</p>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="text-xs flex items-center border-red-300 hover:bg-red-100"
-            onClick={handleRetry}
-          >
-            <RefreshCw className="h-3 w-3 mr-1" /> Retry Payment
-          </Button>
-        </div>
-      )}
-      
-      {isTestMode && debugInfo && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-          <p className="text-xs font-medium text-blue-700 mb-1">Debug Info (Test Mode)</p>
-          <pre className="text-xs text-blue-600 whitespace-pre-wrap">
-            {debugInfo}
-          </pre>
-        </div>
-      )}
-      
-      {paymentUrl ? (
-        <div className="border rounded-lg p-4 mb-4">
-          <div className="text-center space-y-4">
-            <h3 className="text-lg font-medium">Payment URL Generated</h3>
-            <p className="text-sm text-gray-600">
-              Click the button below to open the payment gateway in a new window.
-            </p>
-            <Button
-              onClick={handleOpenPaymentUrl}
-              className="bg-fleet-red hover:bg-fleet-red/90 text-white flex items-center gap-2"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open Payment Gateway
-            </Button>
-            {isTestMode && (
-              <div className="mt-4 text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                <p>Test Mode: This will simulate a payment {localStorage.getItem('ccavenue_test_mode') === 'fail' ? 'failure' : 'success'}</p>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
+            </svg>
+            Secure Payment via CCAvenue
+          </CardTitle>
+          <CardDescription>
+            Complete your booking with secure payment processing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePaymentSubmit} className="space-y-4">
+            {/* Order Summary */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-medium mb-2">Order Summary</h3>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span>Order ID:</span>
+                  <span className="font-mono">{orderId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Amount:</span>
+                  <span className="font-bold text-green-600">
+                    AED {amount.toFixed(2)}
+                  </span>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Customer Information */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Customer Information</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="customerName">Full Name</Label>
+                  <Input
+                    id="customerName"
+                    name="customerName"
+                    value={paymentData.customerName}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="customerEmail">Email</Label>
+                  <Input
+                    id="customerEmail"
+                    name="customerEmail"
+                    type="email"
+                    value={paymentData.customerEmail}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="customerPhone">Phone</Label>
+                  <Input
+                    id="customerPhone"
+                    name="customerPhone"
+                    value={paymentData.customerPhone}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Billing Address */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Billing Address</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label htmlFor="billingAddress">Address</Label>
+                  <Input
+                    id="billingAddress"
+                    name="billingAddress"
+                    value={paymentData.billingAddress}
+                    onChange={handleInputChange}
+                    placeholder="Enter your billing address"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="billingCity">City</Label>
+                  <Input
+                    id="billingCity"
+                    name="billingCity"
+                    value={paymentData.billingCity}
+                    onChange={handleInputChange}
+                    placeholder="Dubai"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="billingState">State/Emirate</Label>
+                  <Input
+                    id="billingState"
+                    name="billingState"
+                    value={paymentData.billingState}
+                    onChange={handleInputChange}
+                    placeholder="Dubai"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="billingZip">ZIP Code</Label>
+                  <Input
+                    id="billingZip"
+                    name="billingZip"
+                    value={paymentData.billingZip}
+                    onChange={handleInputChange}
+                    placeholder="00000"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="billingTel">Phone</Label>
+                  <Input
+                    id="billingTel"
+                    name="billingTel"
+                    value={paymentData.billingTel}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Security Notice */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-start gap-3">
+                <svg
+                  className="w-5 h-5 text-blue-600 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div>
+                  <h4 className="font-medium text-blue-900">Secure Payment</h4>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Your payment information is encrypted and secure. We use
+                    industry-standard SSL encryption to protect your data.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Buttons */}
+            <div className="space-y-3">
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                disabled={loading || !currentUser}
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
+                    </svg>
+                    Pay AED {amount.toFixed(2)} via CCAvenue
+                  </div>
+                )}
+              </Button>
+
+              {/* Test Mode Buttons - Only show in development */}
+              {(process.env.NODE_ENV === "development" ||
+                window.location.hostname === "localhost") && (
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleTestPayment(true)}
+                    disabled={loading}
+                  >
+                    Test Success Payment
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleTestPayment(false)}
+                    disabled={loading}
+                  >
+                    Test Failed Payment
+                  </Button>
+                </div>
+              )}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Payment Methods Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Accepted Payment Methods</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <span>Credit Cards</span>
+            <span>Debit Cards</span>
+            <span>Net Banking</span>
+            <span>UPI</span>
           </div>
-        </div>
-      ) : (
-        <div className="flex justify-between items-center border-t border-gray-200 pt-4 mt-4">
-          <div>
-            <p className="text-sm text-gray-500">Amount to pay</p>
-            <p className="text-xl font-semibold">{CURRENCY.symbol} {amount.toFixed(2)}</p>
-          </div>
-          
-          <Button
-            onClick={handlePaymentClick}
-            disabled={isProcessing}
-            className="bg-fleet-red hover:bg-fleet-red/90 text-white"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              'Pay Now'
-            )}
-          </Button>
-        </div>
-      )}
-      
-      {isTestMode && (
-        <div className="mt-4 pt-3 border-t border-gray-100">
-          <p className="text-xs text-amber-600">
-            ⚠️ Test Mode Active - No actual payment will be processed
-          </p>
-        </div>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-export default CCavenueCheckout; 
+export default CCavenueCheckout;

@@ -42,7 +42,7 @@ const BookingPayment = () => {
     customerInfo
   } = bookingDetails;
   
-  const handlePaymentSuccess = (transactionId: string) => {
+  const handlePaymentSuccess = (transactionId: string, orderId?: string) => {
     // Navigate to success page with booking and payment details
     navigate("/booking-status", {
       state: {
@@ -58,7 +58,7 @@ const BookingPayment = () => {
     });
   };
   
-  const handlePaymentFailure = (errorMessage: string) => {
+  const handlePaymentFailure = (errorMessage: string, orderId?: string) => {
     // Navigate to failure page with booking details and error
     navigate("/booking-status", {
       state: {

@@ -51,7 +51,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
     el.style.paddingBottom = "4px";
 
     // Use car emoji instead of SVG
-    el.textContent = "🚙";
+    el.textContent = "🚗";
 
     return el;
   };
@@ -154,7 +154,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
           map: newMap,
           suppressMarkers: true, // We'll add our own markers
           polylineOptions: {
-            strokeColor: "#3B82F6",
+            strokeColor: "#DC2626", // Red color to match fleet theme
             strokeWeight: 4,
             strokeOpacity: 0.8,
           },
@@ -224,7 +224,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
               encodeURIComponent(`
               <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="20" cy="20" r="18" fill="transparent"/>
-                <text x="20" y="25" text-anchor="middle" fill="white" font-size="20" font-weight="bold">🚙</text>
+                <text x="20" y="25" text-anchor="middle" fill="white" font-size="20" font-weight="bold">🚗</text>
               </svg>
             `),
             scaledSize: new google.maps.Size(40, 40),

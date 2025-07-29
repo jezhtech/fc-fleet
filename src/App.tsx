@@ -33,6 +33,7 @@ import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import BookChauffeur from "./pages/BookChauffeur";
 import BookingStatus from "./pages/BookingStatus";
+
 import FirebaseExample from "./components/FirebaseExample";
 import EmergencyFallback from "./pages/EmergencyFallback";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -93,8 +94,6 @@ class ErrorBoundary extends Component<
 }
 
 const App = () => {
-  console.log("App component rendering");
-
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

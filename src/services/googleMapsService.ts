@@ -1,4 +1,4 @@
-import { Loader } from '@googlemaps/js-api-loader';
+import { Loader } from "@googlemaps/js-api-loader";
 
 // UAE bounds for initial view
 const UAE_BOUNDS = {
@@ -12,12 +12,74 @@ const UAE_BOUNDS = {
 const DEFAULT_CENTER = {
   longitude: 55.2708,
   latitude: 25.2048,
-  zoom: 10
+  zoom: 10,
 };
 
 interface GoogleMapsServiceOptions {
   apiKey: string;
   libraries?: string[];
+}
+
+// New Places API (New) interfaces
+interface PlaceSearchRequest {
+  textQuery?: string;
+  locationBias?: {
+    circle?: {
+      center: { latitude: number; longitude: number };
+      radius: number;
+    };
+    rectangle?: {
+      low: { latitude: number; longitude: number };
+      high: { latitude: number; longitude: number };
+    };
+  };
+  locationRestriction?: {
+    circle: {
+      center: { latitude: number; longitude: number };
+      radius: number;
+    };
+  };
+  maxResultCount?: number;
+  languageCode?: string;
+  regionCode?: string;
+}
+
+interface PlaceDetailsRequest {
+  placeId: string;
+  fields?: string[];
+  languageCode?: string;
+  regionCode?: string;
+}
+
+interface PlaceResult {
+  id: string;
+  displayName: {
+    text: string;
+    languageCode: string;
+  };
+  formattedAddress: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  types: string[];
+  businessStatus?: string;
+  photos?: Array<{
+    name: string;
+    widthPx: number;
+    heightPx: number;
+  }>;
+  rating?: number;
+  userRatingCount?: number;
+  priceLevel?: string;
+  openingHours?: {
+    openNow: boolean;
+    periods?: Array<{
+      open: { day: number; time: string };
+      close: { day: number; time: string };
+    }>;
+    weekdayDescriptions?: string[];
+  };
 }
 
 class GoogleMapsService {
@@ -26,9 +88,8 @@ class GoogleMapsService {
   private google: typeof google | null = null;
   private isInitialized: boolean = false;
   private initializationPromise: Promise<void> | null = null;
-  private placesService: google.maps.places.PlacesService | null = null;
-  private autocompleteService: google.maps.places.AutocompleteService | null = null;
-  private apiKey: string = '';
+  private apiKey: string = "";
+  private baseUrl = "https://places.googleapis.com/v1";
 
   private constructor() {}
 
@@ -53,38 +114,33 @@ class GoogleMapsService {
     return this.initializationPromise;
   }
 
-  private async performInitialization(options: GoogleMapsServiceOptions): Promise<void> {
+  private async performInitialization(
+    options: GoogleMapsServiceOptions
+  ): Promise<void> {
     try {
       this.loader = new Loader({
         apiKey: options.apiKey,
-        version: 'weekly',
-        libraries: options.libraries || ['places', 'geometry'] as any,
-        language: 'en',
-        region: 'AE' // UAE region
+        version: "weekly",
+        libraries: options.libraries || (["geometry"] as any), // Remove 'places' as we're using the new API
+        language: "en",
+        region: "AE", // UAE region
       });
 
       this.google = await this.loader.load();
-      
-      // Initialize services
-      this.autocompleteService = new this.google.maps.places.AutocompleteService();
-      this.placesService = new this.google.maps.places.PlacesService(
-        document.createElement('div')
-      );
-      
-      console.log('✓ Google Maps initialized successfully');
+
       this.isInitialized = true;
     } catch (error) {
-      console.error('Google Maps initialization error:', error);
+      console.error("Google Maps initialization error:", error);
       throw error;
     }
   }
 
   public async createMap(
-    container: HTMLElement, 
+    container: HTMLElement,
     options: Partial<google.maps.MapOptions> = {}
   ): Promise<google.maps.Map> {
     if (!this.google) {
-      throw new Error('Google Maps not initialized');
+      throw new Error("Google Maps not initialized");
     }
 
     const defaultOptions: google.maps.MapOptions = {
@@ -95,7 +151,7 @@ class GoogleMapsService {
       streetViewControl: false,
       fullscreenControl: false,
       zoomControl: true,
-      gestureHandling: 'cooperative',
+      gestureHandling: "cooperative",
       styles: this.getMapStyles(),
       restriction: {
         latLngBounds: {
@@ -104,8 +160,8 @@ class GoogleMapsService {
           west: UAE_BOUNDS.west,
           east: UAE_BOUNDS.east,
         },
-        strictBounds: false
-      }
+        strictBounds: false,
+      },
     };
 
     return new this.google.maps.Map(container, {
@@ -122,91 +178,203 @@ class GoogleMapsService {
       types?: string[];
       limit?: number;
     } = {}
-  ): Promise<google.maps.places.PlaceResult[]> {
-    if (!this.google) {
-      throw new Error('Google Maps not initialized');
+  ): Promise<PlaceResult[]> {
+    if (!this.isInitialized) {
+      throw new Error("Google Maps not initialized");
     }
 
-    // For now, use the legacy API which is more reliable and well-documented
-    // The new Places API (New) has different authentication and format requirements
-    return this.fallbackSearchPlaces(query, options);
+    try {
+      const searchRequest: PlaceSearchRequest = {
+        textQuery: query,
+        maxResultCount: options.limit || 10,
+        languageCode: "en",
+        regionCode: "AE",
+      };
+
+      // Add location bias if provided
+      if (options.location) {
+        searchRequest.locationBias = {
+          circle: {
+            center: {
+              latitude: options.location.lat(),
+              longitude: options.location.lng(),
+            },
+            radius: options.radius || 50000,
+          },
+        };
+      }
+
+      // Note: Type filtering is not supported in the new Places API
+      // The API will return all types of places based on the text query
+
+      const response = await this.makePlacesApiRequest(
+        "/places:searchText",
+        searchRequest
+      );
+
+      if (response.places) {
+        return response.places.map((place) => this.transformPlaceResult(place));
+      }
+
+      return [];
+    } catch (error) {
+      console.error("Error searching places:", error);
+      return [];
+    }
   }
 
-  private async fallbackSearchPlaces(
-    query: string,
+  public async getPlaceDetails(placeId: string): Promise<PlaceResult | null> {
+    if (!this.isInitialized) {
+      throw new Error("Google Maps not initialized");
+    }
+
+    try {
+      const fields = [
+        "id",
+        "displayName",
+        "formattedAddress",
+        "location",
+        "types",
+        "businessStatus",
+        "photos",
+        "rating",
+        "userRatingCount",
+        "priceLevel",
+        "openingHours",
+      ];
+
+      const response = await this.makePlacesApiRequest(`/places/${placeId}`, {
+        fields: fields.join(","),
+        languageCode: "en",
+        regionCode: "AE",
+      });
+
+      if (response) {
+        return this.transformPlaceResult(response);
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error getting place details:", error);
+      return null;
+    }
+  }
+
+  public async searchNearbyPlaces(
+    location: google.maps.LatLng,
     options: {
-      location?: google.maps.LatLng;
       radius?: number;
       types?: string[];
       limit?: number;
     } = {}
-  ): Promise<google.maps.places.PlaceResult[]> {
-    if (!this.google || !this.autocompleteService) {
-      return [];
+  ): Promise<PlaceResult[]> {
+    if (!this.isInitialized) {
+      throw new Error("Google Maps not initialized");
     }
 
-    return new Promise((resolve) => {
-      const request: google.maps.places.AutocompletionRequest = {
-        input: query,
-        componentRestrictions: { country: 'ae' },
-        types: options.types || ['establishment', 'geocode'],
-        language: 'en'
+    try {
+      const searchRequest: PlaceSearchRequest = {
+        locationRestriction: {
+          circle: {
+            center: {
+              latitude: location.lat(),
+              longitude: location.lng(),
+            },
+            radius: options.radius || 5000,
+          },
+        },
+        maxResultCount: options.limit || 10,
+        languageCode: "en",
+        regionCode: "AE",
       };
 
-      if (options.location) {
-        request.location = options.location;
-        request.radius = options.radius || 50000;
+      // Note: Type filtering is not supported in the new Places API
+      // The API will return all types of places based on the location
+
+      const response = await this.makePlacesApiRequest(
+        "/places:searchNearby",
+        searchRequest
+      );
+
+      if (response.places) {
+        return response.places.map((place) => this.transformPlaceResult(place));
       }
 
-      console.log('Searching with request:', request);
-      this.autocompleteService!.getPlacePredictions(request, (predictions, status) => {
-        console.log('Autocomplete response:', { predictions: predictions?.length, status });
-        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-          this.getPlaceDetails(predictions.slice(0, options.limit || 10))
-            .then(resolve)
-            .catch((error) => {
-              console.error('Error getting place details:', error);
-              resolve([]);
-            });
-        } else {
-          console.log('No predictions found for query:', query, 'Status:', status);
-          resolve([]);
-        }
-      });
-    });
+      return [];
+    } catch (error) {
+      console.error("Error searching nearby places:", error);
+      return [];
+    }
   }
 
-  private async getPlaceDetails(
-    predictions: google.maps.places.AutocompletePrediction[]
-  ): Promise<google.maps.places.PlaceResult[]> {
-    if (!this.google || !this.placesService) {
-      throw new Error('Google Maps not initialized');
+  private async makePlacesApiRequest(
+    endpoint: string,
+    data?: any
+  ): Promise<any> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": this.apiKey,
+    };
+
+    // Add field mask - required for all requests
+    if (endpoint.includes("/places/")) {
+      // For place details (GET request)
+      headers["X-Goog-FieldMask"] = data?.fields || "*";
+    } else {
+      // For search requests (POST request) - specify which fields we want from the response
+      // Using only the basic fields that are definitely available
+      headers["X-Goog-FieldMask"] =
+        "places.id,places.displayName,places.formattedAddress,places.location,places.types";
     }
 
-    const promises = predictions.map(prediction => {
-      return new Promise<google.maps.places.PlaceResult>((resolve) => {
-        const request: google.maps.places.PlaceDetailsRequest = {
-          placeId: prediction.place_id,
-          fields: ['name', 'formatted_address', 'geometry', 'place_id', 'types', 'business_status']
-        };
+    const requestOptions: RequestInit = {
+      method: endpoint.includes("/places/") ? "GET" : "POST",
+      headers,
+    };
 
-        this.placesService!.getDetails(request, (place, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-            resolve(place);
-          } else {
-            // Fallback to prediction data if details fail
-            resolve({
-              place_id: prediction.place_id,
-              name: prediction.description,
-              formatted_address: prediction.description,
-              geometry: undefined
-            } as google.maps.places.PlaceResult);
+    // Add body for POST requests (search)
+    if (requestOptions.method === "POST" && data) {
+      requestOptions.body = JSON.stringify(data);
+    }
+
+    const response = await fetch(url, requestOptions);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Places API error response:", errorText);
+      throw new Error(
+        `Places API error: ${response.status} ${response.statusText} - ${errorText}`
+      );
+    }
+
+    return response.json();
+  }
+
+  private transformPlaceResult(place: any): PlaceResult {
+    return {
+      id: place.id || place.place_id,
+      displayName: {
+        text: place.displayName?.text || place.name || "",
+        languageCode: place.displayName?.languageCode || "en",
+      },
+      formattedAddress: place.formattedAddress || place.formatted_address || "",
+      location: place.location
+        ? {
+            latitude:
+              place.location.latitude || place.geometry?.location?.lat(),
+            longitude:
+              place.location.longitude || place.geometry?.location?.lng(),
           }
-        });
-      });
-    });
-
-    return Promise.all(promises);
+        : undefined,
+      types: place.types || [],
+      businessStatus: place.businessStatus || place.business_status,
+      photos: place.photos,
+      rating: place.rating,
+      userRatingCount: place.userRatingCount,
+      priceLevel: place.priceLevel,
+      openingHours: place.openingHours,
+    };
   }
 
   public createMarker(
@@ -214,13 +382,13 @@ class GoogleMapsService {
     options: Partial<google.maps.MarkerOptions> = {}
   ): google.maps.Marker {
     if (!this.google) {
-      throw new Error('Google Maps not initialized');
+      throw new Error("Google Maps not initialized");
     }
 
     const defaultOptions: google.maps.MarkerOptions = {
       position,
       animation: google.maps.Animation.DROP,
-      optimized: true
+      optimized: true,
     };
 
     return new this.google.maps.Marker({
@@ -238,7 +406,7 @@ class GoogleMapsService {
     } = {}
   ): Promise<google.maps.DirectionsResult | null> {
     if (!this.google) {
-      throw new Error('Google Maps not initialized');
+      throw new Error("Google Maps not initialized");
     }
 
     const directionsService = new this.google.maps.DirectionsService();
@@ -249,12 +417,16 @@ class GoogleMapsService {
         destination,
         travelMode: options.mode || google.maps.TravelMode.DRIVING,
         unitSystem: google.maps.UnitSystem.METRIC,
-        region: 'ae'
+        region: "ae",
       };
 
       if (options.avoid) {
-        request.avoidHighways = options.avoid.includes(google.maps.TravelMode.DRIVING);
-        request.avoidTolls = options.avoid.includes(google.maps.TravelMode.DRIVING);
+        request.avoidHighways = options.avoid.includes(
+          google.maps.TravelMode.DRIVING
+        );
+        request.avoidTolls = options.avoid.includes(
+          google.maps.TravelMode.DRIVING
+        );
       }
 
       directionsService.route(request, (result, status) => {
@@ -270,15 +442,15 @@ class GoogleMapsService {
   private getMapStyles(): google.maps.MapTypeStyle[] {
     return [
       {
-        featureType: 'poi',
-        elementType: 'labels',
-        stylers: [{ visibility: 'off' }]
+        featureType: "poi",
+        elementType: "labels",
+        stylers: [{ visibility: "off" }],
       },
       {
-        featureType: 'transit',
-        elementType: 'labels',
-        stylers: [{ visibility: 'off' }]
-      }
+        featureType: "transit",
+        elementType: "labels",
+        stylers: [{ visibility: "off" }],
+      },
     ];
   }
 
@@ -291,4 +463,7 @@ class GoogleMapsService {
   }
 }
 
-export const googleMapsService = GoogleMapsService.getInstance(); 
+export const googleMapsService = GoogleMapsService.getInstance();
+
+// Export interfaces for use in other components
+export type { PlaceResult, PlaceSearchRequest, PlaceDetailsRequest };
