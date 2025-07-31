@@ -30,6 +30,7 @@ import {
   TransportType,
 } from ".";
 import { generateBookingId, getNextBookingCount } from "@/utils/booking";
+import { Clock } from "lucide-react";
 
 const BookTaxiForm = () => {
   const navigate = useNavigate();
@@ -874,6 +875,22 @@ const BookTaxiForm = () => {
         return;
       }
 
+      // Check if booking is at least 4 hours in advance
+      if (pickupDate) {
+        const now = new Date();
+        const selectedDateTime = new Date(pickupDate);
+        const [hours, minutes] = bookingDetails.time.split(":").map(Number);
+        selectedDateTime.setHours(hours, minutes, 0, 0);
+        
+        const timeDifference = selectedDateTime.getTime() - now.getTime();
+        const hoursDifference = timeDifference / (1000 * 60 * 60);
+        
+        if (hoursDifference < 4) {
+          toast.error("Bookings must be made at least 4 hours in advance");
+          return;
+        }
+      }
+
       // Only fetch transport types if we don't already have them
       if (transportTypes.length === 0) {
         await fetchTransportTypes();
@@ -1034,6 +1051,19 @@ const BookTaxiForm = () => {
               setBookingDetails((prev) => ({ ...prev, time }))
             }
           />
+
+          {/* 4-hour advance booking notice */}
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <div className="flex items-start gap-2">
+              <Clock className="h-4 w-4 text-blue-600 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-blue-800">Advance Booking Required</p>
+                <p className="text-blue-700 mt-1">
+                  Bookings must be made at least 4 hours in advance. This ensures we can provide the best service for your journey.
+                </p>
+              </div>
+            </div>
+          </div>
 
           <Button
             type="button"

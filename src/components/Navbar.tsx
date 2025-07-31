@@ -406,14 +406,7 @@ const AuthButtons = ({
   return (
     <>
       <Link to="/login">
-        <Button
-          variant="outline"
-          className={`border-2 ${
-            scrolled
-              ? "bg-white/30 text-white border-white hover:bg-white/40"
-              : "bg-white/30 text-white border-white hover:bg-white/40"
-          } font-medium`}
-        >
+        <Button variant="outline" className={`border font-medium`}>
           {translate("nav.login")}
         </Button>
       </Link>

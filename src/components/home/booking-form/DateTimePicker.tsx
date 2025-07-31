@@ -75,27 +75,32 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
     const currentHours = now.getHours();
     const currentMinutes = now.getMinutes();
     
-    // If selected date is today, check if time is in the past
+    // If selected date is today, check if time is at least 4 hours in the future
     if (isSameDay(date, now)) {
       // Convert selected time to 24-hour format for comparison
       const [timeHours, timeMinutes] = time.split(':').map(Number);
       
-      // Compare with current time
-      if (timeHours < currentHours || (timeHours === currentHours && timeMinutes <= currentMinutes)) {
-        setTimeError(`Please select a time after ${format(now, 'h:mm a')}`);
+      // Calculate minimum booking time (4 hours from now)
+      const minBookingTime = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+      const minHours = minBookingTime.getHours();
+      const minMinutes = minBookingTime.getMinutes();
+      
+      // Compare with minimum booking time
+      if (timeHours < minHours || (timeHours === minHours && timeMinutes < minMinutes)) {
+        setTimeError(`Bookings must be at least 4 hours in advance. Earliest time: ${format(minBookingTime, 'h:mm a')}`);
         
-        // Auto-adjust to the next valid time (current time + 1 minute)
-        const nextValidTime = addMinutes(now, 1);
-        const nextHours = nextValidTime.getHours();
-        const nextMinutes = nextValidTime.getMinutes();
+        // Auto-adjust to the minimum booking time
+        const adjustedTime = new Date(minBookingTime);
+        const adjustedHours = adjustedTime.getHours();
+        const adjustedMinutes = adjustedTime.getMinutes();
         
         // Format in 24-hour format for the hidden input
-        const formattedHours = nextHours.toString().padStart(2, '0');
-        const formattedMinutes = nextMinutes.toString().padStart(2, '0');
+        const formattedHours = adjustedHours.toString().padStart(2, '0');
+        const formattedMinutes = adjustedMinutes.toString().padStart(2, '0');
         onTimeChange(`${formattedHours}:${formattedMinutes}`);
         
         // Update display values
-        let display12Hour = nextHours;
+        let display12Hour = adjustedHours;
         if (display12Hour > 12) {
           display12Hour -= 12;
         } else if (display12Hour === 0) {
@@ -103,10 +108,10 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
         }
         
         setHours(display12Hour);
-        setMinutes(nextMinutes);
-        setPeriod(nextHours >= 12 ? 'PM' : 'AM');
+        setMinutes(adjustedMinutes);
+        setPeriod(adjustedHours >= 12 ? 'PM' : 'AM');
         
-        toast.warning(`Booking time adjusted to ${format(nextValidTime, 'h:mm a')} (next available time)`);
+        toast.warning(`Booking time adjusted to ${format(adjustedTime, 'h:mm a')} (4 hours in advance)`);
       }
     }
   };
@@ -443,7 +448,11 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
               selected={date}
               onSelect={onDateChange}
               initialFocus
-              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+              disabled={(date) => {
+                const now = new Date();
+                const minBookingDate = new Date(now.getTime() + 4 * 60 * 60 * 1000); // 4 hours from now
+                return date < minBookingDate;
+              }}
               className="rounded-md border-0"
             />
           </PopoverContent>
