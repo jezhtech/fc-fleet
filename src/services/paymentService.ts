@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { initiateCCavenuePayment, processCCavenueResponse } from './ccavenueService';
+import { config } from "@/constants/config";
 
 // Types for payment integration
 export interface PaymentRequest {
@@ -71,7 +72,7 @@ class PaymentService {
 
   constructor() {
     // Use environment variable or default to localhost for development
-    this.baseUrl = import.meta.env.VITE_BACKEND_URL || "";
+    this.baseUrl = config.apiUrl;
   }
 
   /**
@@ -87,7 +88,7 @@ class PaymentService {
         throw new Error("Authentication token not available");
       }
       console.log("Initializing payment with data:", this.baseUrl);
-      const response = await fetch(`http://localhost:3000/api/payment/initialize`, {
+      const response = await fetch(`${this.baseUrl}/payment/initialize`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -119,7 +120,7 @@ class PaymentService {
     orderId: string
   ): Promise<PaymentStatusResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/payment/response`, {
+      const response = await fetch(`${this.baseUrl}/payment/response`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

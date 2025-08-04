@@ -5,7 +5,7 @@ import { config } from '@/constants/config';
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const token = await getAuthToken();
   
-  const response = await fetch(`${config.backendUrl}/api/booking${endpoint}`, {
+  const response = await fetch(`${config.apiUrl}/booking${endpoint}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

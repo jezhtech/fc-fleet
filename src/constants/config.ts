@@ -1,5 +1,5 @@
 export const config = {
-  backendUrl: import.meta.env.VITE_BACKEND_URL || "",
+  apiUrl: import.meta.env.VITE_API_URL || "/api",
   firebaseConfig: {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",

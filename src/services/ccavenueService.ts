@@ -1,11 +1,5 @@
+import { config } from "@/constants/config";
 import { logDebug, logError } from "@/utils/logger";
-
-// Configuration for debug mode
-const DEBUG_MODE = process.env.NODE_ENV === "development";
-
-// Backend API configuration
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
-
 /**
  * Fetches CCAvenue payment settings from backend
  * @returns Promise with CCAvenue settings
@@ -20,7 +14,7 @@ export const getCCavenueSettings = async (): Promise<{
 }> => {
   try {
     const response = await fetch(
-      `${BACKEND_URL}/api/payment/ccavenue/settings`,
+      `${config.apiUrl}/payment/ccavenue/settings`,
       {
         method: "GET",
         headers: {
@@ -71,7 +65,7 @@ export const saveCCavenueSettings = async (settings: {
 }): Promise<{ success: boolean; error?: string }> => {
   try {
     const response = await fetch(
-      `${BACKEND_URL}/api/payment/ccavenue/settings`,
+      `${config.apiUrl}/payment/ccavenue/settings`,
       {
         method: "POST",
         headers: {
@@ -119,7 +113,7 @@ export const testCCavenueConnection = async (settings: {
       mode: settings.mode,
     });
 
-    const response = await fetch(`${BACKEND_URL}/api/payment/ccavenue/test`, {
+    const response = await fetch(`${config.apiUrl}/payment/ccavenue/test`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -179,7 +173,7 @@ export const initiateCCavenuePayment = async (paymentData: {
       currency: paymentData.currency,
     });
 
-    const response = await fetch(`${BACKEND_URL}/api/payment/initialize`, {
+    const response = await fetch(`${config.apiUrl}/payment/initialize`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -280,7 +274,7 @@ export const processCCavenueResponse = async (
     }
 
     // Use backend API to process the response
-    const response = await fetch(`${BACKEND_URL}/api/payment/response`, {
+    const response = await fetch(`${config.apiUrl}/payment/response`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

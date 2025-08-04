@@ -1,8 +1,5 @@
 import { auth } from "@/lib/firebase";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
-console.log("API_BASE_URL:", API_BASE_URL);
-
+import { config } from "@/constants/config";
 interface Driver {
   id: string;
   uid: string;
@@ -75,7 +72,7 @@ export const getAuthToken = async (): Promise<string> => {
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const token = await getAuthToken();
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${config.apiUrl}${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
