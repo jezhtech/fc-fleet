@@ -25,7 +25,7 @@ import {
   TransportType,
 } from ".";
 import { generateBookingId, getNextBookingCount } from "@/utils/booking";
-import { Clock } from "lucide-react";
+import { Clock, AlertTriangle } from "lucide-react";
 import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
 
 const BookTaxiForm = () => {
@@ -757,6 +757,20 @@ const BookTaxiForm = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    // Check if user is authenticated
+    if (!currentUser) {
+      toast.error("Please login to book a chauffeur");
+      navigate("/login", { 
+        state: { 
+          from: { 
+            pathname: window.location.pathname,
+            search: window.location.search 
+          } 
+        } 
+      });
+      return;
+    }
+
     if (step === 1) {
       if (!bookingDetails.pickup || !bookingDetails.dropoff) {
         toast.error("Please enter both pickup and drop-off locations");
@@ -864,6 +878,23 @@ const BookTaxiForm = () => {
 
   return (
     <div className="space-y-3">
+      {/* Login notice for unauthenticated users */}
+      {!currentUser && step === 1 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-amber-800">
+                Login Required
+              </p>
+              <p className="text-amber-700 mt-1">
+                Please login to book a chauffeur. You'll be redirected to the login page when you click "Book Chauffeur".
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {step === 1 && (
         <>
           <div className="space-y-3">
@@ -929,7 +960,9 @@ const BookTaxiForm = () => {
           >
             {loading.transportTypes || loading.checkingAvailability
               ? "Loading..."
-              : "Book Chauffeur"}
+              : !currentUser 
+                ? "Login to Book Chauffeur"
+                : "Book Chauffeur"}
           </Button>
         </>
       )}

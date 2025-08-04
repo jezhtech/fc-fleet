@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,8 +36,12 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser, refreshUserData, hasFirebaseError, needsRegistration } =
     useAuth();
+
+  // Get the intended destination from location state
+  const from = (location.state as any)?.from?.pathname || "/";
 
   // State for phone number and OTP
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -55,11 +59,11 @@ const Login = () => {
   useEffect(() => {
     if (currentUser && !needsRegistration) {
       console.log(
-        "User already logged in with complete data, redirecting to home"
+        "User already logged in with complete data, redirecting to", from
       );
-      navigate("/");
+      navigate(from, { replace: true });
     }
-  }, [currentUser, needsRegistration, navigate]);
+  }, [currentUser, needsRegistration, navigate, from]);
 
   useEffect(() => {
     window.recaptchaVerifier = null;
