@@ -64,6 +64,29 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
   useEffect(() => {
     validateSelectedDateTime();
   }, [date, time]);
+
+  // Auto-adjust time when date changes to ensure it's at least 4 hours in the future
+  useEffect(() => {
+    if (date) {
+      const now = new Date();
+      
+      // If selected date is today, ensure time is at least 4 hours in the future
+      if (isSameDay(date, now)) {
+        const minBookingTime = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+        const [currentTimeHours, currentTimeMinutes] = time.split(':').map(Number);
+        const minHours = minBookingTime.getHours();
+        const minMinutes = minBookingTime.getMinutes();
+        
+        // Check if current time is less than minimum booking time
+        if (currentTimeHours < minHours || (currentTimeHours === minHours && currentTimeMinutes < minMinutes)) {
+          // Auto-adjust to minimum booking time
+          const adjustedHours = minHours.toString().padStart(2, '0');
+          const adjustedMinutes = minMinutes.toString().padStart(2, '0');
+          onTimeChange(`${adjustedHours}:${adjustedMinutes}`);
+        }
+      }
+    }
+  }, [date]);
   
   // Validate that the selected date and time are in the future
   const validateSelectedDateTime = () => {
@@ -72,8 +95,6 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
     if (!date) return;
     
     const now = new Date();
-    const currentHours = now.getHours();
-    const currentMinutes = now.getMinutes();
     
     // If selected date is today, check if time is at least 4 hours in the future
     if (isSameDay(date, now)) {
@@ -113,6 +134,9 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
         
         toast.warning(`Booking time adjusted to ${format(adjustedTime, 'h:mm a')} (4 hours in advance)`);
       }
+    } else if (date < now) {
+      // If selected date is in the past, show error
+      setTimeError("Cannot select a date in the past");
     }
   };
   
@@ -450,8 +474,8 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
               initialFocus
               disabled={(date) => {
                 const now = new Date();
-                const minBookingDate = new Date(now.getTime() + 4 * 60 * 60 * 1000); // 4 hours from now
-                return date < minBookingDate;
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                return date < today;
               }}
               className="rounded-md border-0"
             />

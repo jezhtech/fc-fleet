@@ -26,6 +26,7 @@ import { firestore } from '@/lib/firebase';
 import { formatExistingBookingId, updateAllBookingIds } from '@/utils/booking';
 import InvoiceGenerator from '@/components/invoice/InvoiceGenerator';
 import * as XLSX from 'xlsx';
+import { confirmBooking, assignDriver, cancelBooking, getAvailableDrivers } from '@/services/bookingService';
 
 // Booking interface
 interface Booking {
@@ -327,33 +328,26 @@ const AdminBookings = () => {
   const fetchDriversForAssignment = async () => {
     try {
       setIsLoadingDrivers(true);
-      const driversRef = collection(firestore, 'drivers');
-      const q = query(driversRef, where('status', '==', 'active'));
-      const snapshot = await getDocs(q);
+      const response = await getAvailableDrivers();
       
-      if (snapshot.empty) {
+      if (response.success && response.data.length > 0) {
+        const driversData: Driver[] = response.data.map(driver => ({
+          id: driver.id,
+          name: driver.name,
+          email: driver.email,
+          phone: driver.phone,
+          status: driver.status,
+          vehicle: driver.vehicleNumber || 'Unknown Vehicle',
+          rating: driver.rating || 4.5
+        }));
+        
+        console.log('Loaded drivers for assignment:', driversData);
+        setDrivers(driversData);
+      } else {
         console.log('No active drivers found');
         toast.error('No active drivers available for assignment');
         setDrivers([]);
-        return;
       }
-      
-      const driversData: Driver[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        driversData.push({
-          id: doc.id,
-          name: data.name || `${data.firstName || ''} ${data.lastName || ''}`,
-          email: data.email || '',
-          phone: data.phone || data.phoneNumber || '',
-          status: data.status || 'active',
-          vehicle: data.vehicleNumber || 'Unknown Vehicle',
-          rating: data.rating || 4.5
-        });
-      });
-      
-      console.log('Loaded drivers for assignment:', driversData);
-      setDrivers(driversData);
     } catch (error) {
       console.error('Error fetching drivers for assignment:', error);
       toast.error('Failed to load available drivers');
@@ -363,46 +357,47 @@ const AdminBookings = () => {
     }
   };
   
-  // Update booking status in Firestore
+  // Update booking status using API
   const updateBookingStatus = async () => {
     if (!selectedBooking) return;
     
     try {
-      const bookingRef = doc(firestore, 'bookings', selectedBooking.id);
-      
       if (dialogType === 'confirm') {
-        await updateDoc(bookingRef, {
-          status: 'confirmed',
-          updatedAt: new Date()
-        });
-        toast.success('Booking confirmed successfully');
+        const response = await confirmBooking(selectedBooking.id);
+        if (response.success) {
+          toast.success(`Booking confirmed successfully${response.emailSent ? ' and email sent to customer' : ''}`);
+        } else {
+          toast.error('Failed to confirm booking');
+          return;
+        }
       } 
       else if (dialogType === 'assign' && selectedDriver) {
-        // Get driver details
-        const driverRef = doc(firestore, 'drivers', selectedDriver);
-        const driverSnap = await getDoc(driverRef);
-        const driverData = driverSnap.data();
-        
-        await updateDoc(bookingRef, {
-          status: 'driver_assigned',
-          driverId: selectedDriver,
-          driverInfo: {
-            name: driverData?.name || `${driverData?.firstName || ''} ${driverData?.lastName || ''}`,
-            phone: driverData?.phone || driverData?.phoneNumber || '',
-            vehicleNumber: driverData?.vehicleNumber || driverData?.vehicleId || ''
-          },
-          updatedAt: new Date()
-        });
-        toast.success('Driver assigned successfully');
+        const response = await assignDriver(selectedBooking.id, selectedDriver);
+        if (response.success) {
+          const emailStatus = response.emailsSent;
+          let message = 'Driver assigned successfully';
+          if (emailStatus.customer && emailStatus.driver) {
+            message += ' and emails sent to both customer and driver';
+          } else if (emailStatus.customer) {
+            message += ' and email sent to customer';
+          } else if (emailStatus.driver) {
+            message += ' and email sent to driver';
+          }
+          toast.success(message);
+        } else {
+          toast.error('Failed to assign driver');
+          return;
+        }
       } 
       else if (dialogType === 'cancel') {
-        await updateDoc(bookingRef, {
-          status: 'cancelled',
-          cancellationReason: cancellationReason.trim(),
-          updatedAt: new Date()
-        });
-        toast.success('Booking cancelled successfully');
-        setCancellationReason(''); // Reset the cancellation reason
+        const response = await cancelBooking(selectedBooking.id, cancellationReason.trim());
+        if (response.success) {
+          toast.success(`Booking cancelled successfully${response.emailSent ? ' and email sent to customer' : ''}`);
+          setCancellationReason(''); // Reset the cancellation reason
+        } else {
+          toast.error('Failed to cancel booking');
+          return;
+        }
       }
       
       // Refresh bookings

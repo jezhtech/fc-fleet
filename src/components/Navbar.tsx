@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import BookTaxiForm from "./home/BookTaxiForm";
 import RentCarForm from "./home/RentCarForm";
 import { useAuth } from "@/contexts/AuthContext";
-import { logout } from "@/lib/authUtils";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { cn } from "@/lib/utils";
+import { NavProfile } from "./NavProfile";
 
 interface NavbarProps {
   position?: "fixed" | "sticky";
@@ -63,7 +63,7 @@ const Navbar = ({ position = "sticky" }: NavbarProps) => {
             >
               {language === "en" ? "EN" : "AR"}
             </Button>
-            <AuthButtons
+            <NavProfile
               position={position}
               currentUser={currentUser}
               userData={userData}
@@ -106,7 +106,7 @@ const Navbar = ({ position = "sticky" }: NavbarProps) => {
             <div className="flex flex-col space-y-4">
               <NavLinks mobile />
               <div className="flex flex-col space-y-2 pt-2 border-t">
-                <AuthButtons
+                <NavProfile
                   mobile
                   currentUser={currentUser}
                   userData={userData}
@@ -229,194 +229,6 @@ const NavLinks = ({
   );
 };
 
-const AuthButtons = ({
-  mobile = false,
-  currentUser,
-  userData,
-  scrolled = false,
-  position = "sticky",
-}: {
-  mobile?: boolean;
-  currentUser: any;
-  userData: any;
-  scrolled?: boolean;
-  position?: "fixed" | "sticky";
-}) => {
-  const navigate = useNavigate();
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
-  const { translate } = useTranslation();
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setProfileMenuOpen(false);
-      navigate("/");
-    } catch (error) {
-      console.error("Error logging out:", error);
-    }
-  };
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(event.target as Node)
-      ) {
-        setProfileMenuOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Get user initials for avatar
-  const getUserInitials = () => {
-    if (!userData) return "U";
-
-    const firstInitial = userData.firstName ? userData.firstName.charAt(0) : "";
-    const lastInitial = userData.lastName ? userData.lastName.charAt(0) : "";
-
-    return (firstInitial + lastInitial).toUpperCase();
-  };
-
-  if (currentUser) {
-    if (mobile) {
-      return (
-        <>
-          <div className="flex items-center gap-2 p-2">
-            <div className="w-8 h-8 rounded-full bg-red-100 text-red-800 flex items-center justify-center font-medium">
-              {getUserInitials()}
-            </div>
-            <div>
-              <p
-                className={cn(
-                  "font-medium",
-                  position === "sticky" && "text-fleet-dark"
-                )}
-              >
-                {userData?.firstName || "User"}
-              </p>
-              <p
-                className={cn(
-                  "text-xs text-gray-500",
-                  position === "sticky" && "text-fleet-dark"
-                )}
-              >
-                {userData?.email}
-              </p>
-            </div>
-          </div>
-          <Link to="/my-account" className="w-full">
-            <Button variant="outline" className="w-full justify-start">
-              {translate("nav.my_account")}
-            </Button>
-          </Link>
-          <Link to="/my-bookings" className="w-full">
-            <Button variant="outline" className="w-full justify-start">
-              {translate("nav.my_bookings")}
-            </Button>
-          </Link>
-          <Button
-            variant="outline"
-            className="w-full justify-start text-red-600"
-            onClick={handleLogout}
-          >
-            {translate("nav.logout")}
-          </Button>
-        </>
-      );
-    }
-
-    return (
-      <div className="relative" ref={profileMenuRef}>
-        <button
-          onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-          className={`flex items-center gap-2 ${
-            scrolled ? "text-white" : "text-white"
-          }`}
-          aria-label="User menu"
-        >
-          <div className="w-10 h-10 rounded-full bg-red-100 text-red-800 flex items-center justify-center font-medium">
-            {getUserInitials()}
-          </div>
-          <span
-            className={cn(
-              "hidden sm:inline",
-              position === "sticky" && "text-fleet-dark"
-            )}
-          >
-            {userData?.firstName || "User"}
-          </span>
-        </button>
-
-        {profileMenuOpen && (
-          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
-            <div className="px-4 py-2 border-b">
-              <p className="font-medium">
-                {userData?.firstName} {userData?.lastName}
-              </p>
-              <p className="text-sm text-gray-500">{userData?.email}</p>
-            </div>
-            <Link
-              to="/my-account"
-              className="block px-4 py-2 text-gray-700 hover:bg-red-500 hover:text-white"
-            >
-              {translate("nav.my_account")}
-            </Link>
-            <Link
-              to="/my-bookings"
-              className="block px-4 py-2 text-gray-700 hover:bg-red-500 hover:text-white"
-            >
-              {translate("nav.my_bookings")}
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-500 hover:text-white"
-            >
-              {translate("nav.logout")}
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (mobile) {
-    return (
-      <>
-        <Link to="/login" className="w-full">
-          <Button variant="outline" className="w-full">
-            {translate("nav.login")}
-          </Button>
-        </Link>
-        <Link to="/register" className="w-full">
-          <Button className="w-full bg-fleet-red text-white hover:bg-fleet-red/90">
-            {translate("nav.register")}
-          </Button>
-        </Link>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Link to="/login">
-        <Button variant="outline" className={`border font-medium`}>
-          {translate("nav.login")}
-        </Button>
-      </Link>
-      <Link to="/register">
-        <Button className="bg-fleet-red text-white hover:bg-fleet-red/90 font-medium">
-          {translate("nav.register")}
-        </Button>
-      </Link>
-    </>
-  );
-};
 
 export default Navbar;

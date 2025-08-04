@@ -1,20 +1,27 @@
-import React, { useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { isAdmin } from '@/lib/authUtils';
+import React, { useEffect, useState } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
   requireAdmin?: boolean;
   requireDriver?: boolean;
+  requireCustomer?: boolean; // Add customer requirement
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAdmin = false,
-  requireDriver = false
+  requireDriver = false,
+  requireCustomer = false,
 }) => {
-  const { currentUser, loading, isDriver, isAdmin: isAdminUser, userData } = useAuth();
+  const {
+    currentUser,
+    loading,
+    isDriver,
+    isAdmin: isAdminUser,
+    userData,
+    needsRegistration,
+    userRole,
+  } = useAuth();
   const location = useLocation();
   const [roleCheckComplete, setRoleCheckComplete] = useState(false);
 
@@ -24,18 +31,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       setRoleCheckComplete(true);
       return;
     }
-    
-    if (!requireAdmin && !requireDriver) {
+
+    // If user needs registration, don't check roles yet
+    if (needsRegistration) {
+      setRoleCheckComplete(true);
+      return;
+    }
+
+    if (!requireAdmin && !requireDriver && !requireCustomer) {
       // No special role required
       setRoleCheckComplete(true);
       return;
     }
-    
+
     // Set role check as complete once userData is loaded
     if (userData) {
       setRoleCheckComplete(true);
     }
-  }, [currentUser, requireAdmin, requireDriver, userData]);
+  }, [currentUser, requireAdmin, requireDriver, requireCustomer, userData, needsRegistration]);
 
   // Show loading state while checking authentication
   if (loading || !roleCheckComplete) {
@@ -54,20 +67,32 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // If user needs registration, redirect to registration
+  if (needsRegistration) {
+    console.log("User needs to complete registration");
+    return <Navigate to="/register" state={{ from: location }} replace />;
+  }
+
   // If admin access required but user is not admin, redirect to home
   if (requireAdmin && !isAdminUser) {
-    console.log('Non-admin user attempting to access admin route');
+    console.log("Non-admin user attempting to access admin route");
     return <Navigate to="/" replace />;
   }
-  
+
   // If driver access required but user is not a driver, redirect to home
   if (requireDriver && !isDriver) {
-    console.log('Non-driver user attempting to access driver route');
+    console.log("Non-driver user attempting to access driver route");
+    return <Navigate to="/" replace />;
+  }
+
+  // If customer access required but user is not a customer, redirect to home
+  if (requireCustomer && (isDriver || isAdminUser)) {
+    console.log("Non-customer user attempting to access customer route");
     return <Navigate to="/" replace />;
   }
 
   // If authenticated and passes role checks, render children
-  return <>{children}</>;
+  return <Outlet />;
 };
 
-export default ProtectedRoute; 
+export default ProtectedRoute;

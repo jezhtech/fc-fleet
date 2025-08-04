@@ -114,17 +114,10 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
     setLoading(true);
 
     try {
-      console.log("Submitting payment with data:", {
-        orderId: paymentData.orderId,
-        amount: paymentData.amount,
-        customerName: paymentData.customerName,
-        customerEmail: paymentData.customerEmail,
-      });
-
       // Process payment through CCAvenue using the new service
       // Redirect back to the booking form page with payment response
-      const redirectUrl = `${window.location.origin}/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=success`;
-      const cancelUrl = `${window.location.origin}/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=cancel`;
+      const redirectUrl = `${window.location.origin}/user/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=success`;
+      const cancelUrl = `${window.location.origin}/user/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=cancel`;
 
       const token = await currentUser.getIdToken();
 
@@ -141,7 +134,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
         cancelUrl,
         token,
       });
-      console.log("Payment result:", result);
+
       if (result.success && result.encRequest && result.access_code) {
         console.log("Payment data received:", {
           encRequest: result.encRequest.substring(0, 50) + "...",
@@ -149,7 +142,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
           paymentUrl: result.paymentUrl,
         });
 
-        // Create and submit form to CCAvenue (like the JSP example)
+        // Create and submit form to CCAvenue
         submitToCCavenue(
           result.encRequest,
           result.access_code,
@@ -198,29 +191,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
     // Add form to document and submit
     document.body.appendChild(form);
     form.submit();
-  };
-
-  const handleTestPayment = async (success: boolean = true) => {
-    setLoading(true);
-
-    try {
-      // Simulate payment processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      if (success) {
-        const transactionId = `TEST_TXN_${Date.now()}`;
-        toast.success("Test payment successful!");
-        onPaymentSuccess(transactionId, paymentData.orderId);
-      } else {
-        toast.error("Test payment failed!");
-        onPaymentFailure("Test payment was declined", paymentData.orderId);
-      }
-    } catch (error) {
-      console.error("Test payment error:", error);
-      onPaymentFailure("Test payment failed", paymentData.orderId);
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -407,31 +377,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
                   </div>
                 )}
               </Button>
-
-              {/* Test Mode Buttons - Only show in development */}
-              {(process.env.NODE_ENV === "development" ||
-                window.location.hostname === "localhost") && (
-                <div className="space-y-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleTestPayment(true)}
-                    disabled={loading}
-                  >
-                    Test Success Payment
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleTestPayment(false)}
-                    disabled={loading}
-                  >
-                    Test Failed Payment
-                  </Button>
-                </div>
-              )}
             </div>
           </form>
         </CardContent>

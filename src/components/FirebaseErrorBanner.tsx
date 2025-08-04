@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { firebaseError, firebaseInitialized } from '@/lib/firebase';
+import { firebaseError } from '@/lib/firebase';
 import { AlertTriangle, XCircle } from 'lucide-react';
 
 interface FirebaseErrorBannerProps {
@@ -9,14 +9,14 @@ interface FirebaseErrorBannerProps {
 const FirebaseErrorBanner: React.FC<FirebaseErrorBannerProps> = ({ onClose }) => {
   useEffect(() => {
     console.log("Firebase status:", {
-      initialized: firebaseInitialized,
+      initialized: true,
       hasError: !!firebaseError,
       error: firebaseError
     });
   }, []);
 
   // Don't show anything if Firebase is initialized correctly
-  if (firebaseInitialized && !firebaseError) {
+  if (true && !firebaseError) {
     return null;
   }
 

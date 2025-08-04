@@ -1,5 +1,4 @@
 
-import React, { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Calendar, Clock, User, MapPin, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase';
+import { useState, useEffect } from 'react';
 
 // Sample ride data
 const rides = [
@@ -65,13 +68,42 @@ const rides = [
 ];
 
 const DriverRides = () => {
+  const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [rides, setRides] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRides = async () => {
+      if (!currentUser?.uid) return;
+      
+      try {
+        setLoading(true);
+        const bookingsRef = collection(firestore, 'bookings');
+        const q = query(bookingsRef, where('driverId', '==', currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        
+        const fetchedRides = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setRides(fetchedRides);
+      } catch (error) {
+        console.error('Error fetching rides:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRides();
+  }, [currentUser?.uid]);
   
   const filteredRides = rides.filter(ride =>
     ride.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ride.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ride.pickup.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ride.dropoff.toLowerCase().includes(searchTerm.toLowerCase())
+    (ride.customerInfo?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (ride.pickupLocation?.name || ride.pickup || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (ride.dropoffLocation?.name || ride.dropoff || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   const getStatusBadgeColor = (status: string) => {
@@ -90,6 +122,16 @@ const DriverRides = () => {
     ).join(' ');
   };
   
+  if (loading) {
+    return (
+      <DashboardLayout userType="driver">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fleet-red"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout userType="driver">
       <div className="flex justify-between items-center mb-6">
@@ -178,22 +220,26 @@ const DriverRides = () => {
                             <td className="p-4">
                               <div className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-gray-500" />
-                                <span>{ride.user}</span>
+                                <span>{ride.customerInfo?.name || 'Customer'}</span>
                               </div>
                             </td>
                             <td className="p-4">
                               <div className="flex flex-col">
                                 <div className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3 text-gray-500" />
-                                  <span className="text-sm">{format(ride.date, 'MMM d, yyyy')}</span>
+                                  <span className="text-sm">
+                                    {ride.pickupDateTime ? format(ride.pickupDateTime.toDate(), 'MMM d, yyyy') : 'N/A'}
+                                  </span>
                                 </div>
                                 <div className="flex items-center gap-1 mt-1">
                                   <Clock className="h-3 w-3 text-gray-500" />
-                                  <span className="text-sm">{format(ride.date, 'h:mm a')}</span>
+                                  <span className="text-sm">
+                                    {ride.pickupDateTime ? format(ride.pickupDateTime.toDate(), 'h:mm a') : 'N/A'}
+                                  </span>
                                 </div>
                               </div>
                             </td>
-                            <td className="p-4 font-medium">{ride.amount}</td>
+                            <td className="p-4 font-medium">AED {ride.amount || '0.00'}</td>
                             <td className="p-4">
                               <Badge className={getStatusBadgeColor(ride.status)}>
                                 {formatStatus(ride.status)}
@@ -228,14 +274,17 @@ const DriverRides = () => {
                                       <p className="text-sm text-gray-500">User</p>
                                       <div className="flex items-center gap-2">
                                         <User className="h-4 w-4 text-gray-500" />
-                                        <p className="font-medium">{ride.user}</p>
+                                        <p className="font-medium">{ride.customerInfo?.name || 'Customer'}</p>
                                       </div>
                                     </div>
                                     
                                     <div>
                                       <p className="text-sm text-gray-500">Date & Time</p>
                                       <p className="font-medium">
-                                        {format(ride.date, 'MMMM d, yyyy')} at {format(ride.date, 'h:mm a')}
+                                        {ride.pickupDateTime ? 
+                                          `${format(ride.pickupDateTime.toDate(), 'MMMM d, yyyy')} at ${format(ride.pickupDateTime.toDate(), 'h:mm a')}` : 
+                                          'N/A'
+                                        }
                                       </p>
                                     </div>
                                     
@@ -243,7 +292,7 @@ const DriverRides = () => {
                                       <p className="text-sm text-gray-500">Pickup Location</p>
                                       <div className="flex items-start gap-2">
                                         <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                                        <p className="font-medium">{ride.pickup}</p>
+                                        <p className="font-medium">{ride.pickupLocation?.name || ride.pickup || 'N/A'}</p>
                                       </div>
                                     </div>
                                     
@@ -251,13 +300,13 @@ const DriverRides = () => {
                                       <p className="text-sm text-gray-500">Dropoff Location</p>
                                       <div className="flex items-start gap-2">
                                         <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                                        <p className="font-medium">{ride.dropoff}</p>
+                                        <p className="font-medium">{ride.dropoffLocation?.name || ride.dropoff || 'N/A'}</p>
                                       </div>
                                     </div>
                                     
                                     <div>
                                       <p className="text-sm text-gray-500">Amount</p>
-                                      <p className="text-xl font-bold">{ride.amount}</p>
+                                      <p className="text-xl font-bold">AED {ride.amount || '0.00'}</p>
                                     </div>
                                     
                                     {ride.status === 'scheduled' && (

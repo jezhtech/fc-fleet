@@ -179,7 +179,6 @@ export const initiateCCavenuePayment = async (paymentData: {
       currency: paymentData.currency,
     });
 
-    // In production, use the backend API
     const response = await fetch(`${BACKEND_URL}/api/payment/initialize`, {
       method: "POST",
       headers: {
@@ -216,20 +215,6 @@ export const initiateCCavenuePayment = async (paymentData: {
     };
   } catch (error) {
     logError("Error initiating CCAvenue payment", error);
-
-    // For development, return a mock URL even on error
-    if (
-      process.env.NODE_ENV === "development" ||
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1"
-    ) {
-      return {
-        success: true,
-        encRequest: "TEST_MOCK_ENCRYPTED_REQUEST",
-        access_code: "TEST_ACCESS_CODE",
-        paymentUrl: `${window.location.origin}/mock-payment?orderId=${paymentData.orderId}&amount=${paymentData.amount}&error=true`,
-      };
-    }
 
     return {
       success: false,

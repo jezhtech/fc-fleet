@@ -7,31 +7,31 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminTaxiTypes from "./pages/AdminTaxiTypes";
-import AdminFareSettings from "./pages/AdminFareSettings";
-import AdminGeofencing from "./pages/AdminGeofencing";
-import AdminVehicleTypes from "./pages/AdminVehicleTypes";
-import AdminRentalVehicles from "./pages/AdminRentalVehicles";
-import AdminPaymentSettings from "./pages/AdminPaymentSettings";
-import AdminUsers from "./pages/AdminUsers";
-import AdminDrivers from "./pages/AdminDrivers";
-import AdminBookings from "./pages/AdminBookings";
-import AdminSettings from "./pages/AdminSettings";
-import DriverDashboard from "./pages/DriverDashboard";
-import DriverBankDetails from "./pages/DriverBankDetails";
-import DriverProfile from "./pages/DriverProfile";
-import DriverRides from "./pages/DriverRides";
-import DriverEarnings from "./pages/DriverEarnings";
-import DriverSettings from "./pages/DriverSettings";
-import DriverWelcome from "./pages/DriverWelcome";
-import MyAccount from "./pages/MyAccount";
-import MyBookings from "./pages/MyBookings";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminTaxiTypes from "./pages/admin/AdminTaxiTypes";
+import AdminFareSettings from "./pages/admin/AdminFareSettings";
+import AdminGeofencing from "./pages/admin/AdminGeofencing";
+import AdminVehicleTypes from "./pages/admin/AdminVehicleTypes";
+import AdminRentalVehicles from "./pages/admin/AdminRentalVehicles";
+import AdminPaymentSettings from "./pages/admin/AdminPaymentSettings";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminDrivers from "./pages/admin/AdminDrivers";
+import AdminBookings from "./pages/admin/AdminBookings";
+import AdminSettings from "./pages/admin/AdminSettings";
+import DriverDashboard from "./pages/driver/DriverDashboard";
+import DriverBankDetails from "./pages/driver/DriverBankDetails";
+import DriverProfile from "./pages/driver/DriverProfile";
+import DriverRides from "./pages/driver/DriverRides";
+import DriverEarnings from "./pages/driver/DriverEarnings";
+import DriverSettings from "./pages/driver/DriverSettings";
+import DriverWelcome from "./pages/driver/DriverWelcome";
+import MyAccount from "./pages/user/MyAccount";
+import MyBookings from "./pages/user/MyBookings";
 import NotFound from "./pages/NotFound";
 import FAQ from "./pages/FAQ";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-import BookChauffeur from "./pages/BookChauffeur";
+import BookChauffeur from "./pages/user/BookChauffeur";
 import BookingStatus from "./pages/BookingStatus";
 
 import FirebaseExample from "./components/FirebaseExample";
@@ -118,163 +118,56 @@ const App = () => {
                   <Route path="/book-chauffeur" element={<BookChauffeur />} />
                   <Route path="/booking-status" element={<BookingStatus />} />
 
-                  {/* Protected User Routes */}
-                  <Route
-                    path="/my-account"
-                    element={
-                      <ProtectedRoute>
-                        <MyAccount />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/my-bookings"
-                    element={
-                      <ProtectedRoute>
-                        <MyBookings />
-                      </ProtectedRoute>
-                    }
-                  />
+                  {/* User Routes */}
+                  <Route path="/user" element={<ProtectedRoute />}>
+                    <Route path="my-account" element={<MyAccount />} />
+                    <Route path="my-bookings" element={<MyBookings />} />
+                    <Route path="book-chauffeur" element={<BookChauffeur />} />
+                  </Route>
 
-                  {/* Protected Admin Routes */}
+                  {/* Admin Routes */}
                   <Route
                     path="/admin"
-                    element={
-                      <ProtectedRoute requireAdmin={true}>
-                        <AdminDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/users"
-                    element={
-                      <ProtectedRoute requireAdmin={true}>
-                        <AdminUsers />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/drivers"
-                    element={
-                      <ProtectedRoute requireAdmin={true}>
-                        <AdminDrivers />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/taxi-types"
-                    element={
-                      <ProtectedRoute requireAdmin={true}>
-                        <AdminTaxiTypes />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/vehicle-types"
-                    element={
-                      <ProtectedRoute requireAdmin={true}>
-                        <AdminVehicleTypes />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/fare-settings"
-                    element={
-                      <ProtectedRoute requireAdmin={true}>
-                        <AdminFareSettings />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/geofencing"
-                    element={
-                      <ProtectedRoute requireAdmin={true}>
-                        <AdminGeofencing />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/bookings"
-                    element={
-                      <ProtectedRoute requireAdmin={true}>
-                        <AdminBookings />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/payment-settings"
-                    element={
-                      <ProtectedRoute requireAdmin={true}>
-                        <AdminPaymentSettings />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/settings"
-                    element={
-                      <ProtectedRoute requireAdmin={true}>
-                        <AdminSettings />
-                      </ProtectedRoute>
-                    }
-                  />
+                    element={<ProtectedRoute requireAdmin={true} />}
+                  >
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="users" element={<AdminUsers />} />
+                    <Route path="drivers" element={<AdminDrivers />} />
+                    <Route path="taxi-types" element={<AdminTaxiTypes />} />
+                    <Route
+                      path="vehicle-types"
+                      element={<AdminVehicleTypes />}
+                    />
+                    <Route
+                      path="fare-settings"
+                      element={<AdminFareSettings />}
+                    />
+                    <Route path="geofencing" element={<AdminGeofencing />} />
+                    <Route path="bookings" element={<AdminBookings />} />
+                    <Route
+                      path="payment-settings"
+                      element={<AdminPaymentSettings />}
+                    />
+                    <Route path="settings" element={<AdminSettings />} />
+                  </Route>
 
-                  {/* Protected Driver Routes */}
+                  {/* Driver Routes */}
                   <Route
                     path="/driver"
-                    element={
-                      <ProtectedRoute requireDriver={true}>
-                        <DriverDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/driver/welcome"
-                    element={
-                      <ProtectedRoute requireDriver={true}>
-                        <DriverWelcome />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/driver/profile"
-                    element={
-                      <ProtectedRoute requireDriver={true}>
-                        <DriverProfile />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/driver/rides"
-                    element={
-                      <ProtectedRoute requireDriver={true}>
-                        <DriverRides />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/driver/earnings"
-                    element={
-                      <ProtectedRoute requireDriver={true}>
-                        <DriverEarnings />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/driver/bank-details"
-                    element={
-                      <ProtectedRoute requireDriver={true}>
-                        <DriverBankDetails />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/driver/settings"
-                    element={
-                      <ProtectedRoute requireDriver={true}>
-                        <DriverSettings />
-                      </ProtectedRoute>
-                    }
-                  />
+                    element={<ProtectedRoute requireDriver={true} />}
+                  >
+                    {/* Protected Driver Routes */}
+                    <Route index element={<DriverDashboard />} />
+                    <Route path="welcome" element={<DriverWelcome />} />
+                    <Route path="profile" element={<DriverProfile />} />
+                    <Route path="rides" element={<DriverRides />} />
+                    <Route path="earnings" element={<DriverEarnings />} />
+                    <Route
+                      path="bank-details"
+                      element={<DriverBankDetails />}
+                    />
+                    <Route path="settings" element={<DriverSettings />} />
+                  </Route>
 
                   {/* Example and Wildcard Routes */}
                   <Route

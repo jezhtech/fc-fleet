@@ -8,17 +8,137 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Car, Star, Phone, Mail, MapPin, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { getDriver, updateDriver } from '@/services/userService';
+import { useState, useEffect } from 'react';
 
 const DriverProfile = () => {
-  const handleSave = () => {
-    toast.success('Profile updated successfully');
+  const { currentUser, userData } = useAuth();
+  const [driverData, setDriverData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    emergencyContact: '',
+    emergencyPhone: '',
+    vehicleMake: '',
+    vehicleModel: '',
+    year: '',
+    color: '',
+    licensePlate: '',
+    registrationNumber: '',
+    insurance: '',
+    policyNumber: '',
+    expiryDate: ''
+  });
+
+  useEffect(() => {
+    const fetchDriverData = async () => {
+      if (!currentUser?.uid) return;
+      
+      try {
+        setLoading(true);
+        const response = await getDriver(currentUser.uid);
+        if (response.success && response.data) {
+          const driver = response.data;
+          setDriverData(driver);
+          setFormData({
+            firstName: driver.name?.split(' ')[0] || '',
+            lastName: driver.name?.split(' ').slice(1).join(' ') || '',
+            email: driver.email || '',
+            phone: driver.phone || '',
+            address: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            emergencyContact: '',
+            emergencyPhone: '',
+            vehicleMake: '',
+            vehicleModel: '',
+            year: '',
+            color: '',
+            licensePlate: driver.vehicleNumber || '',
+            registrationNumber: '',
+            insurance: '',
+            policyNumber: '',
+            expiryDate: ''
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching driver data:', error);
+        toast.error('Failed to load profile data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDriverData();
+  }, [currentUser?.uid]);
+
+  const handleSave = async () => {
+    try {
+      if (!currentUser?.uid) return;
+      
+      const updateData = {
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: formData.email,
+        phone: formData.phone,
+        vehicleNumber: formData.licensePlate
+      };
+
+      const response = await updateDriver(currentUser.uid, updateData);
+      if (response.success) {
+        toast.success('Profile updated successfully');
+        setEditing(false);
+        // Refresh driver data
+        const refreshResponse = await getDriver(currentUser.uid);
+        if (refreshResponse.success && refreshResponse.data) {
+          setDriverData(refreshResponse.data);
+        }
+      } else {
+        toast.error('Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    }
   };
   
+  if (loading) {
+    return (
+      <DashboardLayout userType="driver">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fleet-red"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout userType="driver">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-2xl font-bold">My Profile</h1>
-        <Badge className="bg-green-100 text-green-800 mt-2 md:mt-0">Active</Badge>
+        <div className="flex items-center gap-2 mt-2 md:mt-0">
+          <Badge className="bg-green-100 text-green-800">
+            {driverData?.status === 'active' ? 'Active' : 'Inactive'}
+          </Badge>
+          {!editing && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setEditing(true)}
+            >
+              Edit Profile
+            </Button>
+          )}
+        </div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -29,13 +149,13 @@ const DriverProfile = () => {
                 <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                   <User className="h-16 w-16 text-gray-600" />
                 </div>
-                <h2 className="text-xl font-bold">Michael Chen</h2>
-                <p className="text-gray-500">Driver ID: DRV-5678</p>
+                <h2 className="text-xl font-bold">{driverData?.name || 'Loading...'}</h2>
+                <p className="text-gray-500">Driver ID: {currentUser?.uid?.substring(0, 8) || 'N/A'}</p>
                 
                 <div className="flex items-center mt-2">
                   <Star className="h-5 w-5 text-yellow-400" />
-                  <span className="ml-1 font-medium">4.8</span>
-                  <span className="text-gray-500 ml-1">(145 rides)</span>
+                  <span className="ml-1 font-medium">{driverData?.rating?.toFixed(1) || '0.0'}</span>
+                  <span className="text-gray-500 ml-1">({driverData?.rides || 0} rides)</span>
                 </div>
                 
                 <div className="mt-6 w-full">
@@ -53,7 +173,7 @@ const DriverProfile = () => {
                   <Car className="h-5 w-5 text-gray-500" />
                   <div>
                     <p className="text-sm text-gray-500">Vehicle</p>
-                    <p className="font-medium">Toyota Camry</p>
+                    <p className="font-medium">{driverData?.vehicleNumber || 'N/A'}</p>
                   </div>
                 </div>
                 
@@ -61,7 +181,7 @@ const DriverProfile = () => {
                   <Calendar className="h-5 w-5 text-gray-500" />
                   <div>
                     <p className="text-sm text-gray-500">Member Since</p>
-                    <p className="font-medium">June 15, 2023</p>
+                    <p className="font-medium">{driverData?.joined ? new Date(driverData.joined).toLocaleDateString() : 'N/A'}</p>
                   </div>
                 </div>
                 
@@ -69,7 +189,7 @@ const DriverProfile = () => {
                   <Phone className="h-5 w-5 text-gray-500" />
                   <div>
                     <p className="text-sm text-gray-500">Phone</p>
-                    <p className="font-medium">+1 (555) 123-4567</p>
+                    <p className="font-medium">{driverData?.phone || 'N/A'}</p>
                   </div>
                 </div>
                 
@@ -77,7 +197,7 @@ const DriverProfile = () => {
                   <Mail className="h-5 w-5 text-gray-500" />
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">michael@example.com</p>
+                    <p className="font-medium">{driverData?.email || 'N/A'}</p>
                   </div>
                 </div>
                 
@@ -109,25 +229,42 @@ const DriverProfile = () => {
                 <CardContent>
                   <form className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label htmlFor="firstName" className="text-sm font-medium">First Name</label>
-                        <Input id="firstName" defaultValue="Michael" />
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="lastName" className="text-sm font-medium">Last Name</label>
-                        <Input id="lastName" defaultValue="Chen" />
-                      </div>
+                                          <div className="space-y-2">
+                      <label htmlFor="firstName" className="text-sm font-medium">First Name</label>
+                      <Input 
+                        id="firstName" 
+                        value={formData.firstName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                      />
                     </div>
-                    
                     <div className="space-y-2">
-                      <label htmlFor="email" className="text-sm font-medium">Email Address</label>
-                      <Input id="email" type="email" defaultValue="michael@example.com" />
+                      <label htmlFor="lastName" className="text-sm font-medium">Last Name</label>
+                      <Input 
+                        id="lastName" 
+                        value={formData.lastName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                      />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <label htmlFor="phone" className="text-sm font-medium">Phone Number</label>
-                      <Input id="phone" defaultValue="+1 (555) 123-4567" />
-                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium">Email Address</label>
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="phone" className="text-sm font-medium">Phone Number</label>
+                    <Input 
+                      id="phone" 
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    />
+                  </div>
                     
                     <div className="space-y-2">
                       <label htmlFor="address" className="text-sm font-medium">Address</label>
@@ -159,13 +296,22 @@ const DriverProfile = () => {
                       <Input id="emergencyPhone" defaultValue="+1 (555) 987-6543" />
                     </div>
                     
-                    <Button 
-                      type="button" 
-                      className="bg-fleet-red hover:bg-fleet-red/90"
-                      onClick={handleSave}
-                    >
-                      Save Changes
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => setEditing(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="button" 
+                        className="bg-fleet-red hover:bg-fleet-red/90"
+                        onClick={handleSave}
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
                   </form>
                 </CardContent>
               </Card>
@@ -202,7 +348,11 @@ const DriverProfile = () => {
                     
                     <div className="space-y-2">
                       <label htmlFor="licensePlate" className="text-sm font-medium">License Plate Number</label>
-                      <Input id="licensePlate" defaultValue="ABC-1234" />
+                      <Input 
+                        id="licensePlate" 
+                        value={formData.licensePlate}
+                        onChange={(e) => setFormData(prev => ({ ...prev, licensePlate: e.target.value }))}
+                      />
                     </div>
                     
                     <div className="space-y-2">

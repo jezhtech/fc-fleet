@@ -9,6 +9,7 @@ import { Star, Users, Clock, Calendar, ChartBar, Car, CheckCircle, MapPin, Alert
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { getDriver } from '@/services/userService';
 
 // Define interfaces for driver and booking data
 interface DriverData {
@@ -70,7 +71,7 @@ const performanceData = [
 ];
 
 const DriverDashboard = () => {
-  const { userData, isDriver, loading } = useAuth();
+  const { userData, currentUser, isDriver, loading } = useAuth();
   const [driverData, setDriverData] = useState<DriverData | null>(null);
   const [assignedRides, setAssignedRides] = useState<BookingData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,54 +83,107 @@ const DriverDashboard = () => {
     rating: 0
   });
 
-  // Fetch driver data from Firestore
+  // Fetch driver data from API
   useEffect(() => {
     const fetchDriverData = async () => {
-      if (!userData || !isDriver || !userData.driverId) return;
+      if (!userData || !isDriver || !currentUser?.uid) return;
       
       try {
         setIsLoading(true);
-        // Fetch driver data
-        const driverRef = doc(firestore, 'drivers', userData.driverId);
-        const driverSnap = await getDoc(driverRef);
         
-        if (driverSnap.exists()) {
-          const driver = { id: driverSnap.id, ...driverSnap.data() } as DriverData;
-          setDriverData(driver);
-          
-          // Update stats
-          setStats(prev => ({
-            ...prev,
-            totalRides: driver.rides || 0,
-            rating: driver.rating || 0,
-            earnings: driver.earnings || 0
-          }));
-          
-          // Fetch vehicle type information
-          if (driver.vehicleTypeId) {
-            const vehicleTypeRef = doc(firestore, 'vehicleTypes', driver.vehicleTypeId);
-            const vehicleTypeSnap = await getDoc(vehicleTypeRef);
-            if (vehicleTypeSnap.exists()) {
-              const vehicleTypeData = vehicleTypeSnap.data();
-              setDriverData(prev => {
-                if (!prev) return null;
-                return {
-                  ...prev,
-                  vehicleTypeName: vehicleTypeData.name || 'Unknown Vehicle'
-                };
-              });
+        // Try to fetch driver data from API first
+        try {
+          const driverResponse = await getDriver(currentUser.uid);
+          if (driverResponse.success && driverResponse.data) {
+            const apiDriver = driverResponse.data;
+            const driver: DriverData = {
+              id: apiDriver.id,
+              name: apiDriver.name,
+              email: apiDriver.email,
+              phone: apiDriver.phone,
+              status: apiDriver.status,
+              taxiTypeId: apiDriver.taxiTypeId,
+              vehicleTypeId: apiDriver.vehicleTypeId,
+              vehicleNumber: apiDriver.vehicleNumber,
+              rating: apiDriver.rating,
+              rides: apiDriver.rides,
+              earnings: apiDriver.earnings,
+              joined: apiDriver.joined,
+            };
+            
+            setDriverData(driver);
+            
+            // Update stats
+            setStats(prev => ({
+              ...prev,
+              totalRides: driver.rides || 0,
+              rating: driver.rating || 0,
+              earnings: driver.earnings || 0
+            }));
+            
+            // Fetch vehicle type information
+            if (driver.vehicleTypeId) {
+              const vehicleTypeRef = doc(firestore, 'vehicleTypes', driver.vehicleTypeId);
+              const vehicleTypeSnap = await getDoc(vehicleTypeRef);
+              if (vehicleTypeSnap.exists()) {
+                const vehicleTypeData = vehicleTypeSnap.data();
+                setDriverData(prev => {
+                  if (!prev) return null;
+                  return {
+                    ...prev,
+                    vehicleTypeName: vehicleTypeData.name || 'Unknown Vehicle'
+                  };
+                });
+              }
             }
+          } else {
+            console.log('No driver data found in API');
           }
-        } else {
-          console.log('No driver data found');
+        } catch (apiError) {
+          console.error('Error fetching from API, falling back to Firestore:', apiError);
+          
+          // Fallback to direct Firestore calls
+          const driverRef = doc(firestore, 'drivers', currentUser.uid);
+          const driverSnap = await getDoc(driverRef);
+          
+          if (driverSnap.exists()) {
+            const driver = { id: driverSnap.id, ...driverSnap.data() } as DriverData;
+            setDriverData(driver);
+            
+            // Update stats
+            setStats(prev => ({
+              ...prev,
+              totalRides: driver.rides || 0,
+              rating: driver.rating || 0,
+              earnings: driver.earnings || 0
+            }));
+            
+            // Fetch vehicle type information
+            if (driver.vehicleTypeId) {
+              const vehicleTypeRef = doc(firestore, 'vehicleTypes', driver.vehicleTypeId);
+              const vehicleTypeSnap = await getDoc(vehicleTypeRef);
+              if (vehicleTypeSnap.exists()) {
+                const vehicleTypeData = vehicleTypeSnap.data();
+                setDriverData(prev => {
+                  if (!prev) return null;
+                  return {
+                    ...prev,
+                    vehicleTypeName: vehicleTypeData.name || 'Unknown Vehicle'
+                  };
+                });
+              }
+            }
+          } else {
+            console.log('No driver data found');
+          }
         }
         
         // Fetch assigned rides (bookings where this driver is assigned)
-        if (userData.driverId) {
+        if (currentUser.uid) {
           const bookingsRef = collection(firestore, 'bookings');
           const q = query(
             bookingsRef, 
-            where('driverId', '==', userData.driverId),
+            where('driverId', '==', currentUser.uid),
             where('status', 'in', ['driver_assigned', 'in_progress'])
           );
           
@@ -146,13 +200,13 @@ const DriverDashboard = () => {
           // Update stats with completed and cancelled rides
           const completedQuery = query(
             bookingsRef,
-            where('driverId', '==', userData.driverId),
+            where('driverId', '==', currentUser.uid),
             where('status', '==', 'completed')
           );
           
           const cancelledQuery = query(
             bookingsRef,
-            where('driverId', '==', userData.driverId),
+            where('driverId', '==', currentUser.uid),
             where('status', '==', 'cancelled')
           );
           

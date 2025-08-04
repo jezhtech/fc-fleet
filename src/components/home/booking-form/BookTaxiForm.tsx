@@ -7,16 +7,11 @@ import {
   query,
   where,
   addDoc,
-  updateDoc,
-  doc,
   serverTimestamp,
 } from "firebase/firestore";
 import { firestore } from "@/lib/firebase";
 import { useNavigate } from "react-router-dom";
-import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
-import PaymentTestControls from "@/components/checkout/PaymentTestControls";
 import { useAuth } from "@/contexts/AuthContext";
-import { paymentService } from "@/services/paymentService";
 import {
   LocationSelector,
   RouteMap,
@@ -31,6 +26,7 @@ import {
 } from ".";
 import { generateBookingId, getNextBookingCount } from "@/utils/booking";
 import { Clock } from "lucide-react";
+import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
 
 const BookTaxiForm = () => {
   const navigate = useNavigate();
@@ -40,11 +36,38 @@ const BookTaxiForm = () => {
   const [step, setStep] = useState(1);
 
   // Form data states
-  const [pickupDate, setPickupDate] = useState<Date | undefined>(new Date());
+  const [pickupDate, setPickupDate] = useState<Date | undefined>(() => {
+    const now = new Date();
+    const fourHoursFromNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+    // Use the date of 4 hours from now, not just today
+    const initialDate = new Date(
+      fourHoursFromNow.getFullYear(),
+      fourHoursFromNow.getMonth(),
+      fourHoursFromNow.getDate()
+    );
+    console.log("Initial pickup date:", initialDate.toISOString());
+    return initialDate;
+  });
+
+  // Calculate initial time (4 hours from now)
+  const getInitialTime = () => {
+    const now = new Date();
+    const fourHoursFromNow = new Date(now.getTime() + 4 * 70 * 60 * 1000);
+    const hours = fourHoursFromNow.getHours().toString().padStart(2, "0");
+    const minutes = fourHoursFromNow.getMinutes().toString().padStart(2, "0");
+    const timeString = `${hours}:${minutes}`;
+    console.log("Initial time calculation:", {
+      now: now.toISOString(),
+      fourHoursFromNow: fourHoursFromNow.toISOString(),
+      timeString,
+    });
+    return timeString;
+  };
+
   const [bookingDetails, setBookingDetails] = useState<BookingDetails>({
     pickup: "",
     dropoff: "",
-    time: "12:00",
+    time: getInitialTime(),
     cardNumber: "",
     cardName: "",
     cardExpiry: "",
@@ -80,92 +103,37 @@ const BookTaxiForm = () => {
     savingBooking: false,
   });
 
-  // Payment related states
-  const [isTestMode, setIsTestMode] = useState(false);
-  const [paymentDetails, setPaymentDetails] = useState<any>(null);
-  const [orderId, setOrderId] = useState("");
-  const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS' | 'FAILED'>('PENDING');
-
   // Booking status states
   const [bookingId, setBookingId] = useState<string>("");
-  const [bookingStatus, setBookingStatus] = useState<
-    "initiated" | "awaiting" | "assigned" | "pickup" | "dropped" | "failed"
-  >("initiated");
-  const [paymentSuccess, setPaymentSuccess] = useState<boolean | null>(null);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [completedPaymentDetails, setCompletedPaymentDetails] =
-    useState<any>(null);
   const [formattedBookingId, setFormattedBookingId] = useState<string>("");
+  const [orderId, setOrderId] = useState<string>("");
 
-  // Check if we're in development/test environment
+  // Payment states
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  // Debug logging for date and time changes
   useEffect(() => {
-    const inDevMode =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1" ||
-      window.location.hostname.includes("192.168.") ||
-      process.env.NODE_ENV === "development";
-    setIsTestMode(inDevMode);
-  }, []);
+    console.log("Date/Time changed:", {
+      pickupDate: pickupDate?.toISOString(),
+      time: bookingDetails.time,
+    });
+  }, [pickupDate, bookingDetails.time]);
 
-  // Handle payment response from CCAvenue (URL parameters)
+  // Debug function - can be called from console
+  const debugValidation = () => {
+    console.log("=== DEBUG VALIDATION ===");
+    console.log("pickupDate:", pickupDate);
+    console.log("bookingDetails.time:", bookingDetails.time);
+    console.log("Validation result:", validateBookingTime());
+  };
+
+  // Expose debug function to window for console access
   useEffect(() => {
-    const handlePaymentResponse = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const encResp = urlParams.get("encResp");
-      const orderId = urlParams.get("orderId");
-      const paymentStatus = urlParams.get("paymentStatus");
-      
-      // Check if we're on the booking form page and have payment response parameters
-      const isOnBookingForm = window.location.pathname.includes("/book-chauffeur");
-      const hasPaymentResponse = orderId && paymentStatus;
+    (window as any).debugBookingValidation = debugValidation;
+  }, [pickupDate, bookingDetails.time]);
 
-      if (isOnBookingForm && hasPaymentResponse) {
-        try {
-          // If we have encResp, process it through the backend
-          if (encResp) {
-            const response = await paymentService.processCCAvenueResponse(
-              encResp,
-              orderId,
-              paymentStatus === "success"
-            );
 
-            if (response.success && response.data?.isSuccessful) {
-              // Payment was successful
-              const transactionId =
-                response.data.trackingId || `TXN_${Date.now()}`;
-              await handlePaymentSuccess(transactionId, orderId);
-            } else {
-              // Payment failed or was cancelled
-              const errorMessage =
-                response.data?.statusMessage || "Payment was not successful";
-              await handlePaymentFailure(errorMessage, orderId);
-            }
-          } else {
-            // No encResp (might be a direct redirect), handle based on paymentStatus
-            if (paymentStatus === "success") {
-              const transactionId = `TXN_${Date.now()}`;
-              await handlePaymentSuccess(transactionId, orderId);
-            } else if (paymentStatus === "cancel") {
-              await handlePaymentFailure("Payment was cancelled by user", orderId);
-            }
-          }
-          
-          // Clear URL parameters after processing
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, document.title, newUrl);
-        } catch (error) {
-          console.error("Error processing payment response:", error);
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : "Error processing payment response";
-          await handlePaymentFailure(errorMessage, orderId);
-        }
-      }
-    };
-
-    handlePaymentResponse();
-  }, []);
 
   // Fetch transport types when component mounts
   useEffect(() => {
@@ -480,13 +448,56 @@ const BookTaxiForm = () => {
     }
   };
 
+  // Payment handlers
+  const handlePaymentSuccess = (transactionId: string, orderId?: string) => {
+    console.log("Payment successful:", { transactionId, orderId });
+    setPaymentSuccess(true);
+    setPaymentError(null);
+    
+    // Redirect to booking confirmation page
+    if (orderId) {
+      const bookingParams = new URLSearchParams({
+        orderId: orderId,
+        paymentStatus: 'success'
+      });
+      navigate(`/user/book-chauffeur?${bookingParams.toString()}`);
+    }
+  };
+
+  const handlePaymentFailure = (errorMessage: string, orderId?: string) => {
+    console.error("Payment failed:", { errorMessage, orderId });
+    setPaymentError(errorMessage);
+    setPaymentSuccess(false);
+    
+    // Redirect to booking confirmation page with error
+    if (orderId) {
+      const bookingParams = new URLSearchParams({
+        orderId: orderId,
+        paymentStatus: 'failed'
+      });
+      navigate(`/user/book-chauffeur?${bookingParams.toString()}`);
+    }
+  };
+
   // Reset form to initial state
   const resetForm = () => {
     setStep(1);
+
+    // Calculate the correct initial date and time
+    const now = new Date();
+    const fourHoursFromNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+    const initialDate = new Date(
+      fourHoursFromNow.getFullYear(),
+      fourHoursFromNow.getMonth(),
+      fourHoursFromNow.getDate()
+    );
+    const initialTime = getInitialTime();
+
+    setPickupDate(initialDate);
     setBookingDetails({
       pickup: "",
       dropoff: "",
-      time: "12:00",
+      time: initialTime,
       cardNumber: "",
       cardName: "",
       cardExpiry: "",
@@ -496,12 +507,11 @@ const BookTaxiForm = () => {
     setSelectedCarModel("");
     setSelectedPickupLocation(undefined);
     setSelectedDropoffLocation(undefined);
-    setPaymentDetails(null);
     setBookingId("");
-    setBookingStatus("initiated");
-    setPaymentSuccess(null);
+    setFormattedBookingId("");
+    setOrderId("");
+    setPaymentSuccess(false);
     setPaymentError(null);
-    setCompletedPaymentDetails(null);
   };
 
   // Calculate estimated fare based on vehicle and distance
@@ -680,184 +690,67 @@ const BookTaxiForm = () => {
     }
   };
 
-  // Update booking payment status in Firestore
-  const updateBookingPaymentStatus = async (
-    orderId: string,
-    paymentStatus: "PENDING" | "SUCCESS" | "FAILED",
-    paymentInfo: any
-  ) => {
-    try {
-      // Find the booking by orderId
-      const bookingsRef = collection(firestore, "bookings");
-      const q = query(bookingsRef, where("orderId", "==", orderId));
-      const snapshot = await getDocs(q);
 
-      if (snapshot.empty) {
-        console.error("No booking found with orderId:", orderId);
-        return false;
-      }
 
-      // Update the first matching booking
-      const bookingDoc = snapshot.docs[0];
-      const bookingRef = doc(firestore, "bookings", bookingDoc.id);
-
-      await updateDoc(bookingRef, {
-        paymentStatus,
-        paymentInfo,
-        updatedAt: serverTimestamp(),
-      });
-
-      console.log("Booking payment status updated:", { orderId, paymentStatus });
-      return true;
-    } catch (error) {
-      console.error("Error updating booking payment status:", error);
+  // Validate booking time is at least 4 hours in advance
+  const validateBookingTime = () => {
+    if (!pickupDate) {
+      console.log("No pickup date selected");
       return false;
     }
-  };
 
-  // Handle payment success
-  const handlePaymentSuccess = async (transactionId: string, orderId?: string) => {
-    try {
-      // Create a complete payment details object
-      const paymentInfo = {
-        transactionId,
-        paymentMethod: "CCAvenue",
-        amount: paymentDetails.amount,
-        timestamp: new Date().toISOString(),
-        status: "success",
-      };
-
-      const completePaymentDetails = {
-        ...paymentDetails,
-        paymentInfo,
-      };
-
-      setCompletedPaymentDetails(completePaymentDetails);
-      setPaymentSuccess(true);
-      setPaymentStatus('SUCCESS');
-
-      // If we have an orderId from the payment response, update the existing booking
-      if (orderId) {
-        const updateSuccess = await updateBookingPaymentStatus(orderId, 'SUCCESS', paymentInfo);
-        if (updateSuccess) {
-          console.log("Payment status updated to SUCCESS for orderId:", orderId);
-        } else {
-          console.warn("Failed to update payment status for orderId:", orderId);
-        }
-        // Move to booking status step
-        setStep(5);
-        return;
-      }
-
-      // If no orderId (new booking), save to database
-      const { customerName, customerEmail, customerPhone } = getCustomerInfo();
-
-      const bookingData = {
-        orderId: orderId || `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-        vehicle: paymentDetails.vehicle,
-        pickupLocation: paymentDetails.pickupLocation,
-        dropoffLocation: paymentDetails.dropoffLocation,
-        date: pickupDate,
-        time: paymentDetails.time,
-        amount: paymentDetails.amount,
-        customerInfo: {
-          name: customerName,
-          email: customerEmail,
-          phone: customerPhone,
-        },
-        userId: currentUser?.uid,
-        type: "Chauffeur",
-      };
-
-      const result = await saveBookingToDatabase(
-        bookingData,
-        paymentInfo,
-        "awaiting",
-        "SUCCESS"
-      );
-      if (result) {
-        setBookingId(result.id);
-        setFormattedBookingId(result.formattedId);
-        setBookingStatus("awaiting");
-        setStep(5);
-      } else {
-        toast.warning("Payment successful but booking details could not be saved");
-        setStep(5);
-      }
-    } catch (error) {
-      console.error("Error handling payment success:", error);
-      toast.error("Error processing payment success");
-      handlePaymentFailure("Error processing payment success");
+    const now = new Date();
+    // Create a new date object from the pickup date to avoid mutating the original
+    const selectedDateTime = new Date(pickupDate.getTime());
+    const timeParts = bookingDetails.time.split(":");
+    if (timeParts.length !== 2) {
+      console.error("Invalid time format:", bookingDetails.time);
+      toast.error("Invalid time format");
+      return false;
     }
-  };
 
-  // Handle payment failure
-  const handlePaymentFailure = async (errorMessage: string, orderId?: string) => {
-    try {
-      setPaymentSuccess(false);
-      setPaymentError(errorMessage);
-      setPaymentStatus('FAILED');
+    const hours = parseInt(timeParts[0], 10);
+    const minutes = parseInt(timeParts[1], 10);
 
-      // Create payment info for failed payment
-      const paymentInfo = {
-        paymentMethod: "CCAvenue",
-        amount: paymentDetails?.amount || 0,
-        timestamp: new Date().toISOString(),
-        status: "failed",
-        error: errorMessage,
-      };
-
-      // If we have an orderId from the payment response, update the existing booking
-      if (orderId) {
-        const updateSuccess = await updateBookingPaymentStatus(orderId, 'FAILED', paymentInfo);
-        if (updateSuccess) {
-          console.log("Payment status updated to FAILED for orderId:", orderId);
-        } else {
-          console.warn("Failed to update payment status for orderId:", orderId);
-        }
-        // Move to booking status step
-        setStep(5);
-        return;
-      }
-
-      // If no orderId (new booking), save to database
-      const { customerName, customerEmail, customerPhone } = getCustomerInfo();
-
-      const bookingData = {
-        orderId: orderId || `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-        vehicle: paymentDetails?.vehicle,
-        pickupLocation: paymentDetails?.pickupLocation,
-        dropoffLocation: paymentDetails?.dropoffLocation,
-        date: pickupDate,
-        time: paymentDetails?.time,
-        amount: paymentDetails?.amount || 0,
-        customerInfo: {
-          name: customerName,
-          email: customerEmail,
-          phone: customerPhone,
-        },
-        userId: currentUser?.uid,
-        type: "Chauffeur",
-      };
-
-      const result = await saveBookingToDatabase(
-        bookingData,
-        paymentInfo,
-        "failed",
-        "FAILED"
-      );
-      if (result) {
-        setBookingId(result.id);
-        setFormattedBookingId(result.formattedId);
-      }
-
-      // Move to booking status step
-      setStep(5);
-    } catch (error) {
-      console.error("Error handling payment failure:", error);
-      toast.error("Error processing payment failure");
-      setStep(5);
+    if (
+      isNaN(hours) ||
+      isNaN(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      console.error("Invalid time values:", { hours, minutes });
+      toast.error("Invalid time values");
+      return false;
     }
+
+    selectedDateTime.setHours(hours, minutes, 0, 0);
+
+    const timeDifference = selectedDateTime.getTime() - now.getTime();
+    const hoursDifference = timeDifference / (1000 * 60 * 60);
+
+    console.log("Validation debug:", {
+      now: now.toISOString(),
+      pickupDate: pickupDate.toISOString(),
+      selectedDateTime: selectedDateTime.toISOString(),
+      time: bookingDetails.time,
+      hours,
+      minutes,
+      timeDifference,
+      hoursDifference,
+    });
+
+    if (hoursDifference < 4) {
+      toast.error(
+        `Bookings must be made at least 4 hours in advance. Current time: ${now.toLocaleTimeString()}, Selected time: ${selectedDateTime.toLocaleTimeString()}, Difference: ${hoursDifference.toFixed(
+          2
+        )} hours`
+      );
+      return false;
+    }
+
+    return true;
   };
 
   // Form submission handler
@@ -875,20 +768,8 @@ const BookTaxiForm = () => {
         return;
       }
 
-      // Check if booking is at least 4 hours in advance
-      if (pickupDate) {
-        const now = new Date();
-        const selectedDateTime = new Date(pickupDate);
-        const [hours, minutes] = bookingDetails.time.split(":").map(Number);
-        selectedDateTime.setHours(hours, minutes, 0, 0);
-        
-        const timeDifference = selectedDateTime.getTime() - now.getTime();
-        const hoursDifference = timeDifference / (1000 * 60 * 60);
-        
-        if (hoursDifference < 4) {
-          toast.error("Bookings must be made at least 4 hours in advance");
-          return;
-        }
+      if (!validateBookingTime()) {
+        return;
       }
 
       // Only fetch transport types if we don't already have them
@@ -932,40 +813,10 @@ const BookTaxiForm = () => {
       // Get customer information from auth context
       const { customerName, customerEmail, customerPhone } = getCustomerInfo();
 
-      // Create booking details for payment step
-      const paymentDetailsObj = {
-        vehicle: selectedVehicle,
-        pickupLocation: selectedPickupLocation,
-        dropoffLocation: selectedDropoffLocation,
-        date: pickupDate
-          ? pickupDate.toLocaleDateString()
-          : new Date().toLocaleDateString(),
-        time: bookingDetails.time,
-        amount: estimatedFare,
-        customerInfo: {
-          name: customerName,
-          email: customerEmail,
-          phone: customerPhone,
-        },
-        userId: currentUser?.uid,
-      };
-
       // Generate an order ID using timestamp and random string
       const newOrderId = `ORD-${Date.now()}-${Math.random()
         .toString(36)
         .substring(2, 8)}`;
-
-      setPaymentDetails(paymentDetailsObj);
-      setOrderId(newOrderId);
-
-      // Save booking with PENDING status before proceeding to payment
-
-      const initialPaymentInfo = {
-        paymentMethod: "CCAvenue",
-        amount: estimatedFare,
-        timestamp: new Date().toISOString(),
-        status: "pending",
-      };
 
       const bookingData = {
         orderId: newOrderId,
@@ -982,12 +833,19 @@ const BookTaxiForm = () => {
         },
         userId: currentUser?.uid,
         type: "Chauffeur",
+        status: "pending_confirmation",
+        paymentStatus: "PENDING",
       };
 
-      // Save booking with PENDING status
+      // Save booking to database
       const result = await saveBookingToDatabase(
         bookingData,
-        initialPaymentInfo,
+        {
+          paymentMethod: "CCAvenue",
+          amount: estimatedFare,
+          timestamp: new Date().toISOString(),
+          status: "pending",
+        },
         "initiated",
         "PENDING"
       );
@@ -995,18 +853,14 @@ const BookTaxiForm = () => {
       if (result) {
         setBookingId(result.id);
         setFormattedBookingId(result.formattedId);
-        console.log("Booking saved with PENDING status, orderId:", newOrderId);
+        setOrderId(newOrderId);
+        setStep(4); // Move to payment step
       } else {
-        console.warn("Failed to save initial booking");
+        toast.error("Failed to create booking. Please try again.");
       }
-
-      // Move to payment step
-      setStep(4);
     }
   };
 
-  // Find the selected vehicle from vehicles array
-  const selectedVehicle = vehicles.find((v) => v.id === selectedCarModel);
 
   return (
     <div className="space-y-3">
@@ -1057,9 +911,12 @@ const BookTaxiForm = () => {
             <div className="flex items-start gap-2">
               <Clock className="h-4 w-4 text-blue-600 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-blue-800">Advance Booking Required</p>
+                <p className="font-medium text-blue-800">
+                  Advance Booking Required
+                </p>
                 <p className="text-blue-700 mt-1">
-                  Bookings must be made at least 4 hours in advance. This ensures we can provide the best service for your journey.
+                  Bookings must be made at least 4 hours in advance. This
+                  ensures we can provide the best service for your journey.
                 </p>
               </div>
             </div>
@@ -1070,7 +927,9 @@ const BookTaxiForm = () => {
             className="w-full h-9 text-white text-sm font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all rounded-md mt-2"
             onClick={() => handleSubmit(new Event("submit") as any)}
           >
-            Book Chauffeur
+            {loading.transportTypes || loading.checkingAvailability
+              ? "Loading..."
+              : "Book Chauffeur"}
           </Button>
         </>
       )}
@@ -1150,291 +1009,43 @@ const BookTaxiForm = () => {
         </>
       )}
 
-      {step === 4 && paymentDetails && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <div className="bg-white rounded-lg border p-5 mb-4">
-              <h2 className="text-lg font-medium mb-4">
-                Complete Your Payment
-              </h2>
-
-              <CCavenueCheckout
-                orderId={orderId}
-                amount={paymentDetails.amount || 0}
-                customerName={paymentDetails.customerInfo?.name || ""}
-                customerEmail={paymentDetails.customerInfo?.email || ""}
-                customerPhone={paymentDetails.customerInfo?.phone || ""}
-                onPaymentSuccess={handlePaymentSuccess}
-                onPaymentFailure={handlePaymentFailure}
-              />
-            </div>
-
-            {/* Test controls only shown in development/test mode */}
-            {isTestMode && (
-              <div className="mb-4">
-                <PaymentTestControls />
-              </div>
-            )}
-
+      {step === 4 && (
+        <>
+          <div className="mb-3">
+            <h4 className="text-sm font-medium">Complete Payment</h4>
+            <p className="text-xs text-gray-500 mt-1">
+              Secure payment via CCAvenue. Your booking will be confirmed after successful payment.
+            </p>
+          </div>
+          
+          {orderId && (
+            <CCavenueCheckout
+              orderId={orderId}
+              amount={calculateEstimatedFare()}
+              customerName={getCustomerInfo().customerName}
+              customerEmail={getCustomerInfo().customerEmail}
+              customerPhone={getCustomerInfo().customerPhone}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentFailure={handlePaymentFailure}
+            />
+          )}
+          
+          <div className="flex justify-between mt-3">
             <Button
               type="button"
               variant="outline"
               className="h-8 text-xs border-gray-300 hover:bg-gray-50 transition-all"
               onClick={() => setStep(3)}
             >
-              Back to Vehicle Selection
+              Back
             </Button>
           </div>
-
-          <div className="md:col-span-1">
-            <div className="bg-white rounded-lg border p-5 sticky top-5">
-              <h2 className="text-lg font-medium mb-3">Booking Summary</h2>
-
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Vehicle</span>
-                  <span className="font-medium">
-                    {paymentDetails.vehicle?.name || "Selected Vehicle"}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Pickup</span>
-                  <span className="font-medium text-right max-w-[60%]">
-                    {paymentDetails.pickupLocation?.name || "Pickup Location"}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Dropoff</span>
-                  <span className="font-medium text-right max-w-[60%]">
-                    {paymentDetails.dropoffLocation?.name || "Dropoff Location"}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Date & Time</span>
-                  <span className="font-medium">
-                    {paymentDetails.date} at {paymentDetails.time}
-                  </span>
-                </div>
-              </div>
-
-              <div className="border-t pt-3">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-gray-600">Total Amount</span>
-                  <span className="text-xl font-semibold text-fleet-red">
-                    AED {paymentDetails.amount?.toFixed(2) || "0.00"}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Includes all taxes and fees
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        </>
       )}
 
-      {/* New step 5: Booking Status */}
-      {step === 5 && (
-        <div className="space-y-6">
-          {paymentSuccess ? (
-            <div className="rounded-md bg-green-50 p-4 border border-green-200">
-              <div className="flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-green-500 mr-3"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <h3 className="text-green-800 font-medium">
-                  Payment Successful!
-                </h3>
-              </div>
-              <p className="text-green-700 text-sm mt-2">
-                Your booking has been confirmed. Booking ID:{" "}
-                {formattedBookingId || bookingId || orderId}
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-md bg-red-50 p-4 border border-red-200">
-              <div className="flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-red-500 mr-3"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <h3 className="text-red-800 font-medium">Payment Failed</h3>
-              </div>
-              <p className="text-red-700 text-sm mt-2">
-                {paymentError ||
-                  "There was an issue processing your payment. Please try again."}
-              </p>
-            </div>
-          )}
 
-          <div className="space-y-3">
-            <h3 className="font-medium">Booking Status</h3>
-            <div className="space-y-2">
-              {["initiated", "awaiting", "assigned", "pickup", "dropped"].map(
-                (status, index) => (
-                  <div key={status} className="flex items-center">
-                    <div
-                      className={`h-5 w-5 rounded-full mr-3 flex items-center justify-center ${
-                        status === "initiated" ||
-                        (status === "awaiting" && bookingStatus === "awaiting")
-                          ? "bg-green-500"
-                          : "bg-gray-200"
-                      }`}
-                    >
-                      {(status === "initiated" ||
-                        (status === "awaiting" &&
-                          bookingStatus === "awaiting")) && (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-3 w-3 text-white"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                    <span
-                      className={
-                        status === "initiated" ||
-                        (status === "awaiting" && bookingStatus === "awaiting")
-                          ? "font-medium"
-                          : "text-gray-500"
-                      }
-                    >
-                      {status === "initiated"
-                        ? "Booking Initiated"
-                        : status === "awaiting"
-                        ? "Awaiting Confirmation"
-                        : status === "assigned"
-                        ? "Driver Assigned"
-                        : status === "pickup"
-                        ? "Pickup Done"
-                        : "Dropped at Location"}
-                    </span>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
 
-          {paymentSuccess && completedPaymentDetails && (
-            <div className="bg-white rounded-lg border p-4">
-              <h3 className="font-medium mb-3">Booking Summary</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Pickup</span>
-                  <span className="font-medium">
-                    {completedPaymentDetails.pickupLocation?.name ||
-                      "Selected Location"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Dropoff</span>
-                  <span className="font-medium">
-                    {completedPaymentDetails.dropoffLocation?.name ||
-                      "Selected Location"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Date & Time</span>
-                  <span className="font-medium">
-                    {completedPaymentDetails.date} at{" "}
-                    {completedPaymentDetails.time}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Vehicle</span>
-                  <span className="font-medium">
-                    {completedPaymentDetails.vehicle?.name ||
-                      "Selected Vehicle"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Total Fare</span>
-                  <span className="font-bold text-fleet-red">
-                    AED {completedPaymentDetails.amount?.toFixed(2) || "0.00"}
-                  </span>
-                </div>
-                {completedPaymentDetails.paymentInfo && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Transaction ID</span>
-                    <span className="font-medium text-xs">
-                      {completedPaymentDetails.paymentInfo.transactionId}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
-          <div className="flex gap-3">
-            {paymentSuccess ? (
-              <>
-                <Button
-                  type="button"
-                  className="flex-1 text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90"
-                  onClick={() => navigate("/my-bookings")}
-                >
-                  View My Bookings
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={resetForm}
-                >
-                  Book Another Ride
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setStep(4)}
-                >
-                  Try Again
-                </Button>
-
-                <Button
-                  type="button"
-                  className="flex-1 text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90"
-                  onClick={resetForm}
-                >
-                  Start Over
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

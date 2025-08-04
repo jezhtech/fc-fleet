@@ -326,6 +326,21 @@ const SimpleMapSection = () => {
       setZones(zonesData);
     } catch (error) {
       console.error("Error fetching zones:", error);
+      // Use fallback zones if Firebase fetch fails
+      const fallbackZones = [
+        {
+          id: "default-zone",
+          name: "Default Zone",
+          coordinates: [
+            { lat: 25.2048, lng: 55.2708 }, // Dubai coordinates
+            { lat: 25.2048, lng: 55.3708 },
+            { lat: 25.1048, lng: 55.3708 },
+            { lat: 25.1048, lng: 55.2708 },
+          ],
+          surcharge: 0,
+        },
+      ];
+      setZones(fallbackZones);
     }
   };
 

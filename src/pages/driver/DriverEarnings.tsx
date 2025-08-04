@@ -6,6 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, BarChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Bar } from 'recharts';
 import { format } from 'date-fns';
 import { Calendar } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getDriver } from '@/services/userService';
+import { useState, useEffect } from 'react';
 
 // Sample earnings data
 const weeklyData = [
@@ -36,6 +39,40 @@ const recentPayments = [
 ];
 
 const DriverEarnings = () => {
+  const { currentUser } = useAuth();
+  const [driverData, setDriverData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDriverData = async () => {
+      if (!currentUser?.uid) return;
+      
+      try {
+        setLoading(true);
+        const response = await getDriver(currentUser.uid);
+        if (response.success && response.data) {
+          setDriverData(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching driver data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDriverData();
+  }, [currentUser?.uid]);
+
+  if (loading) {
+    return (
+      <DashboardLayout userType="driver">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fleet-red"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout userType="driver">
       <div className="flex justify-between items-center mb-6">
@@ -48,7 +85,7 @@ const DriverEarnings = () => {
             <CardTitle className="text-sm font-medium text-gray-500">Today's Earnings</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$150.75</div>
+            <div className="text-2xl font-bold">AED {(driverData?.earnings || 0).toFixed(2)}</div>
             <p className="text-xs text-green-600 flex items-center">
               <span>↑</span> 8% from yesterday
             </p>

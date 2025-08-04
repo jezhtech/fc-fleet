@@ -1,11 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
-import {
-  auth,
-  firestore,
-  firebaseInitialized,
-  firebaseError,
-} from "@/lib/firebase";
+import { auth, firestore, firebaseError } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import FirebaseErrorBanner from "@/components/FirebaseErrorBanner";
 
@@ -29,6 +31,7 @@ export type UserData = {
     vehicleTypeId: string;
     vehicleNumber: string;
   };
+  tempPassword?: string; // Add this for driver onboarding
 };
 
 type AuthContextType = {
@@ -36,11 +39,12 @@ type AuthContextType = {
   userData: UserData | null;
   loading: boolean;
   refreshUserData: () => Promise<void>;
-  firebaseReady: boolean;
   hasFirebaseError: boolean;
   userRole: "customer" | "driver" | "admin" | null;
   isDriver: boolean;
   isAdmin: boolean;
+  needsRegistration: boolean;
+  logout: () => Promise<void>; // Add logout function
 };
 
 // Create context
@@ -68,96 +72,158 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   >(null);
   const [isDriver, setIsDriver] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [needsRegistration, setNeedsRegistration] = useState(false);
 
-  // Fetch user data from Firestore
-  const fetchUserData = async (user: User) => {
-    if (!firebaseInitialized) {
-      console.warn("Firebase not properly initialized, cannot fetch user data");
-      return;
-    }
-
+  // Memoized logout function
+  const logout = useCallback(async () => {
     try {
-      const userDocRef = doc(firestore, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists()) {
-        const data = userDoc.data() as UserData;
-
-        // Check if user is blocked or inactive
-        if (
-          data.status === "blocked" ||
-          data.status === "inactive" ||
-          data.isVerified === false
-        ) {
-          await signOut(auth);
-          setUserData(null);
-          return;
-        }
-
-        // Determine user role
-        let role = data.role || "customer";
-        let isDriverUser = !!data.isDriver;
-        let isAdminUser = !!data.isAdmin;
-
-        // If role is not explicitly set, fall back to isDriver/isAdmin properties
-        if (!data.role) {
-          if (data.isAdmin) {
-            role = "admin";
-          } else if (data.isDriver) {
-            role = "driver";
-          } else {
-            role = "customer";
-          }
-        }
-
-        setUserData(data);
-        setUserRole(role as "customer" | "driver" | "admin");
-        setIsDriver(isDriverUser);
-        setIsAdmin(isAdminUser);
-      } else {
-        // Sign user out if their data doesn't exist in Firestore
-        await signOut(auth);
-        setUserData(null);
-        setUserRole(null);
-        setIsDriver(false);
-        setIsAdmin(false);
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
+      await signOut(auth);
+      // Clear all state
+      setCurrentUser(null);
       setUserData(null);
       setUserRole(null);
       setIsDriver(false);
       setIsAdmin(false);
+      setNeedsRegistration(false);
+    } catch (error) {
+      console.error("Error during logout:", error);
     }
-  };
+  }, []);
 
-  // Function to refresh user data
-  const refreshUserData = async () => {
-    if (currentUser) {
-      await fetchUserData(currentUser);
-    }
-  };
+  // Fetch user data from Firestore
+  const fetchUserData = useCallback(
+    async (user: User) => {
+      console.log("Fetching user data for UID:", currentUser);
 
-  // Listen to auth state changes
-  useEffect(() => {
-    // Skip auth listener if Firebase is not initialized
-    if (!firebaseInitialized) {
-      console.warn("Firebase not properly initialized, skipping auth listener");
-      setLoading(false);
-      return () => {};
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
-        setCurrentUser(user);
+        const userDocRef = doc(firestore, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
 
-        if (user) {
-          await fetchUserData(user);
+        console.log("User document exists:", userDoc.exists());
+
+        if (userDoc.exists()) {
+          const data = userDoc.data() as UserData;
+          console.log("User data retrieved:", data);
+
+          // Check if user is blocked or inactive
+          if (
+            data.status === "blocked" ||
+            data.status === "inactive" ||
+            data.isVerified === false
+          ) {
+            console.log("User is blocked/inactive, signing out");
+            await logout();
+            return;
+          }
+
+          // Determine user role with proper fallback logic
+          let role: "customer" | "driver" | "admin" = "customer";
+
+          const driverDocRef = doc(firestore, "drivers", user.uid);
+          const driverDoc = await getDoc(driverDocRef);
+          console.log("Driver document exists:", driverDoc.exists());
+
+          let isDriverUser = false;
+          let isAdminUser = false;
+
+          if (driverDoc.exists()) {
+            const driverData = driverDoc.data();
+            console.log("Driver data retrieved:", driverData);
+            role = "driver";
+            isDriverUser = true;
+            isAdminUser = false;
+          } else {
+            role = "customer";
+            isDriverUser = false;
+            isAdminUser = false;
+          }
+
+          // Check explicit role first
+          if (data.role) {
+            role = data.role;
+            isDriverUser = role === "driver";
+            isAdminUser = role === "admin";
+          } else {
+            // Fall back to boolean flags
+            isDriverUser = !!data.isDriver;
+            isAdminUser = !!data.isAdmin;
+
+            if (isAdminUser) {
+              role = "admin";
+            } else if (isDriverUser) {
+              role = "driver";
+            } else {
+              role = "customer";
+            }
+          }
+
+          console.log(
+            "Setting user role:",
+            role,
+            "isDriver:",
+            isDriverUser,
+            "isAdmin:",
+            isAdminUser
+          );
+
+          setUserData(data);
+          setUserRole(role);
+          setIsDriver(isDriverUser);
+          setIsAdmin(isAdminUser);
+          setNeedsRegistration(false);
         } else {
+          // User exists in Auth but not in Firestore - they need to complete registration
+          console.log(
+            "User authenticated but no Firestore data found - needs registration"
+          );
           setUserData(null);
           setUserRole(null);
           setIsDriver(false);
           setIsAdmin(false);
+          setNeedsRegistration(true);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        // Don't sign out on error, just clear user data
+        setUserData(null);
+        setUserRole(null);
+        setIsDriver(false);
+        setIsAdmin(false);
+        setNeedsRegistration(false);
+      }
+    },
+    [logout]
+  );
+
+  // Function to refresh user data
+  const refreshUserData = useCallback(async () => {
+    if (currentUser) {
+      await fetchUserData(currentUser);
+    }
+  }, [currentUser, fetchUserData]);
+
+  // Listen to auth state changes
+  useEffect(() => {
+    console.log("Setting up Firebase auth state listener...");
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      try {
+        console.log(
+          "Auth state changed:",
+          user ? `User ${user.uid} logged in` : "User logged out"
+        );
+        setCurrentUser(user);
+
+        if (user) {
+          console.log("Fetching user data for:", user.uid);
+          await fetchUserData(user);
+        } else {
+          console.log("No user, clearing all user data");
+          setUserData(null);
+          setUserRole(null);
+          setIsDriver(false);
+          setIsAdmin(false);
+          setNeedsRegistration(false);
         }
       } catch (error) {
         console.error("Error in auth state change handler:", error);
@@ -166,31 +232,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setUserRole(null);
         setIsDriver(false);
         setIsAdmin(false);
+        setNeedsRegistration(false);
       } finally {
         setLoading(false);
       }
     });
 
     return () => {
+      console.log("Cleaning up Firebase auth state listener");
       unsubscribe();
     };
-  }, []);
+  }, [fetchUserData]); // Add fetchUserData as dependency
 
-  // Context value
-  const value: AuthContextType = {
-    currentUser,
-    userData,
-    loading,
-    refreshUserData,
-    firebaseReady: firebaseInitialized,
-    hasFirebaseError: !!firebaseError,
-    userRole,
-    isDriver,
-    isAdmin,
-  };
+  // Memoized context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      currentUser,
+      userData,
+      loading,
+      refreshUserData,
+      hasFirebaseError: !!firebaseError,
+      userRole,
+      isDriver,
+      isAdmin,
+      needsRegistration,
+      logout,
+    }),
+    [
+      currentUser,
+      userData,
+      loading,
+      refreshUserData,
+      firebaseError,
+      userRole,
+      isDriver,
+      isAdmin,
+      needsRegistration,
+      logout,
+    ]
+  );
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={contextValue}>
       {showFirebaseError && (
         <FirebaseErrorBanner onClose={() => setShowFirebaseError(false)} />
       )}
@@ -198,7 +281,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         children
       ) : (
         <div className="flex justify-center items-center min-h-screen">
-          Loading authentication...
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading authentication...</p>
+          </div>
         </div>
       )}
     </AuthContext.Provider>

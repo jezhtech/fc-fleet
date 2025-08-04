@@ -80,7 +80,7 @@ const MyAccount = () => {
               <div className="border-t pt-4">
                 <h3 className="text-lg font-medium mb-2">Account Actions</h3>
                 <div className="flex flex-col space-y-2">
-                  <Button variant="outline" onClick={() => navigate('/my-bookings')}>
+                  <Button variant="outline" onClick={() => navigate('/user/my-bookings')}>
                     View My Bookings
                   </Button>
                   <Button variant="outline" className="text-red-500 hover:text-red-700 hover:bg-red-50">
