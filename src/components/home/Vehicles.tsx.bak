@@ -73,7 +73,7 @@ const Vehicles = () => {
   const [activeImageIndex, setActiveImageIndex] = useState<{[key: string]: number}>({});
 
   useEffect(() => {
-    console.log('Vehicles component mounted - fetching taxi types and vehicles');
+    
     fetchTaxiTypes();
     
     // Set number of visible items based on window width
@@ -110,7 +110,7 @@ const Vehicles = () => {
       // If we got taxi types from database, use them
       if (Object.keys(taxiTypesData).length > 0) {
         setTaxiTypes(taxiTypesData);
-        console.log('Loaded taxi types from database:', taxiTypesData);
+        
       } else {
         // Otherwise, use fallback
         setTaxiTypes(taxiTypeNames);
@@ -237,13 +237,9 @@ const Vehicles = () => {
       
       if (vehicleData.length > 0) {
         // Log image data for debugging
-        vehicleData.forEach(vehicle => {
-          console.log(`Vehicle ${vehicle.name} has ${vehicle.images.length} images:`, 
-            vehicle.images.length > 0 ? vehicle.images.map((img, i) => `Image ${i}: ${img.substring(0, 40)}...`) : 'No images');
-        });
         
         setVehicles(vehicleData);
-        console.log(`Loaded ${vehicleData.length} vehicles from database`);
+        
       } else {
         console.warn('No vehicles found in database');
         setVehicles([]);

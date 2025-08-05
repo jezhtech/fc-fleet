@@ -139,10 +139,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     try {
       // Initialize Google Maps if not already done
       if (!googleMapsService.isReady() && token) {
-        console.log(
-          "Initializing Google Maps with token:",
-          token.substring(0, 10) + "..."
-        );
         await googleMapsService.initialize({ apiKey: token });
       }
 
@@ -150,7 +146,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         throw new Error("Google Maps not initialized");
       }
 
-      console.log("Google Maps is ready, searching for:", query);
+      
 
       // Search for places using Google Places API
       const places = await googleMapsService.searchPlaces(query, {
@@ -158,7 +154,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         types: ["establishment", "geocode"],
       });
 
-      console.log("Google Places API results:", places);
+      
 
       if (places.length > 0) {
         // Convert Google Places results to our format
@@ -171,9 +167,9 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         );
 
         setSuggestions(uniqueData);
-        console.log("Enhanced Google Places data:", uniqueData);
+        
       } else {
-        console.log("No suggestions found for query:", query);
+        
         setSuggestions([]);
       }
     } catch (error) {
@@ -314,7 +310,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     if (value.trim().length >= 2) {
       setIsLoading(true);
       searchTimeoutRef.current = setTimeout(() => {
-        console.log(`Searching for ${id}: "${value}"`);
+        
 
         // Use the query as-is for Google Places API
         // Google Places API will automatically handle UAE context and provide better results

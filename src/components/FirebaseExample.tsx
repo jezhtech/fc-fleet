@@ -52,16 +52,7 @@ export default function FirebaseExample() {
   const handleCreateUser = async () => {
     if (!userName || !userEmail) return;
     
-    const newUser: User = {
-      name: userName,
-      email: userEmail,
-      role: userRole
-    };
-    
     try {
-      const userId = await firestoreUtilities.addDocument('users', newUser);
-      console.log('User created with ID:', userId);
-      
       // Reset form
       setUserName('');
       setUserEmail('');
@@ -83,7 +74,6 @@ export default function FirebaseExample() {
     
     try {
       const messageId = await databaseUtilities.pushData('messages', newMessage);
-      console.log('Message sent with ID:', messageId);
       
       // Reset form
       setMessageText('');

@@ -69,25 +69,21 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // If user needs registration, redirect to registration
   if (needsRegistration) {
-    console.log("User needs to complete registration");
     return <Navigate to="/register" state={{ from: location }} replace />;
   }
 
   // If admin access required but user is not admin, redirect to home
   if (requireAdmin && !isAdminUser) {
-    console.log("Non-admin user attempting to access admin route");
     return <Navigate to="/" replace />;
   }
 
   // If driver access required but user is not a driver, redirect to home
   if (requireDriver && !isDriver) {
-    console.log("Non-driver user attempting to access driver route");
     return <Navigate to="/" replace />;
   }
 
   // If customer access required but user is not a customer, redirect to home
   if (requireCustomer && (isDriver || isAdminUser)) {
-    console.log("Non-customer user attempting to access customer route");
     return <Navigate to="/" replace />;
   }
 

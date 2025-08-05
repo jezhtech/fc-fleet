@@ -181,7 +181,7 @@ const AdminDrivers = () => {
           ...doc.data(),
         })) as TaxiType[];
 
-        console.log("Fetched taxi types:", fetchedTaxiTypes);
+        
         setTaxiTypes(fetchedTaxiTypes);
 
         // Fetch vehicle types
@@ -201,14 +201,14 @@ const AdminDrivers = () => {
           } as VehicleType;
         });
 
-        console.log("Fetched vehicle types:", fetchedVehicleTypes);
+        
         setVehicleTypes(fetchedVehicleTypes);
 
         // Fetch drivers from API (which already combines user and driver data)
         try {
           const driversResponse = await getDrivers();
           const apiDrivers = driversResponse.data;
-          console.log("API drivers:", apiDrivers);
+          
 
           // Transform API response to match our Driver interface
           const transformedDrivers: Driver[] = apiDrivers.map((apiDriver) => ({
@@ -231,7 +231,7 @@ const AdminDrivers = () => {
             feedback: [], // Initialize empty feedback array
           }));
 
-          console.log("Transformed drivers:", transformedDrivers);
+          
           setDrivers(transformedDrivers);
         } catch (apiError) {
           console.error("Error fetching from API, falling back to Firestore:", apiError);
@@ -298,7 +298,7 @@ const AdminDrivers = () => {
   const handleTaxiTypeChange = (taxiTypeId: string) => {
     if (!currentDriver) return;
 
-    console.log("Taxi type selected:", taxiTypeId);
+    
 
     setCurrentDriver({
       ...currentDriver,
@@ -310,7 +310,7 @@ const AdminDrivers = () => {
     const filteredTypes = vehicleTypes.filter(
       (vehicle) => vehicle.taxiTypeId === taxiTypeId
     );
-    console.log("Filtered vehicle types:", filteredTypes);
+    
     setFilteredVehicleTypes(filteredTypes);
   };
 
@@ -320,14 +320,14 @@ const AdminDrivers = () => {
       // Edit existing driver
       setCurrentDriver({ ...driver });
 
-      console.log("Editing driver with taxiTypeId:", driver.taxiTypeId);
-      console.log("Available taxi types:", taxiTypes);
+      
+      
 
       // Set filtered vehicle types
       const filteredTypes = vehicleTypes.filter(
         (vehicle) => vehicle.taxiTypeId === driver.taxiTypeId
       );
-      console.log("Filtered vehicle types for edit:", filteredTypes);
+      
       setFilteredVehicleTypes(filteredTypes);
     } else {
       // Add new driver
@@ -336,9 +336,9 @@ const AdminDrivers = () => {
         (vehicle) => vehicle.taxiTypeId === defaultTaxiType
       );
 
-      console.log("Adding new driver, default taxi type:", defaultTaxiType);
-      console.log("Available taxi types:", taxiTypes);
-      console.log("Default filtered vehicle types:", defaultVehicleTypes);
+      
+      
+      
 
       setCurrentDriver({
         id: "",

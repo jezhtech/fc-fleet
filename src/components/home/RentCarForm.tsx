@@ -204,14 +204,12 @@ const RentCarForm = () => {
 
   // Handler for pickup location selection
   const handlePickupLocationSelect = (location: any) => {
-    console.log("Selected pickup location:", location);
     setSelectedPickupLocation(location);
     setFormData((prev) => ({ ...prev, pickupLocation: location.name }));
   };
 
   // Handler for dropoff location selection
   const handleDropoffLocationSelect = (location: any) => {
-    console.log("Selected dropoff location:", location);
     setSelectedDropoffLocation(location);
     setFormData((prev) => ({ ...prev, dropoffLocation: location.name }));
   };

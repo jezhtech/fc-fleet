@@ -45,7 +45,6 @@ const BookTaxiForm = () => {
       fourHoursFromNow.getMonth(),
       fourHoursFromNow.getDate()
     );
-    console.log("Initial pickup date:", initialDate.toISOString());
     return initialDate;
   });
 
@@ -56,11 +55,6 @@ const BookTaxiForm = () => {
     const hours = fourHoursFromNow.getHours().toString().padStart(2, "0");
     const minutes = fourHoursFromNow.getMinutes().toString().padStart(2, "0");
     const timeString = `${hours}:${minutes}`;
-    console.log("Initial time calculation:", {
-      now: now.toISOString(),
-      fourHoursFromNow: fourHoursFromNow.toISOString(),
-      timeString,
-    });
     return timeString;
   };
 
@@ -112,29 +106,6 @@ const BookTaxiForm = () => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  // Debug logging for date and time changes
-  useEffect(() => {
-    console.log("Date/Time changed:", {
-      pickupDate: pickupDate?.toISOString(),
-      time: bookingDetails.time,
-    });
-  }, [pickupDate, bookingDetails.time]);
-
-  // Debug function - can be called from console
-  const debugValidation = () => {
-    console.log("=== DEBUG VALIDATION ===");
-    console.log("pickupDate:", pickupDate);
-    console.log("bookingDetails.time:", bookingDetails.time);
-    console.log("Validation result:", validateBookingTime());
-  };
-
-  // Expose debug function to window for console access
-  useEffect(() => {
-    (window as any).debugBookingValidation = debugValidation;
-  }, [pickupDate, bookingDetails.time]);
-
-
-
   // Fetch transport types when component mounts
   useEffect(() => {
     fetchTransportTypes();
@@ -148,14 +119,14 @@ const BookTaxiForm = () => {
 
   // Handler for pickup location selection
   const handlePickupLocationSelect = (location: Location) => {
-    console.log("Selected pickup location:", location);
+    
     setSelectedPickupLocation(location);
     setBookingDetails((prev) => ({ ...prev, pickup: location.name }));
   };
 
   // Handler for dropoff location selection
   const handleDropoffLocationSelect = (location: Location) => {
-    console.log("Selected dropoff location:", location);
+    
     setSelectedDropoffLocation(location);
     setBookingDetails((prev) => ({ ...prev, dropoff: location.name }));
   };
@@ -450,7 +421,7 @@ const BookTaxiForm = () => {
 
   // Payment handlers
   const handlePaymentSuccess = (transactionId: string, orderId?: string) => {
-    console.log("Payment successful:", { transactionId, orderId });
+    
     setPaymentSuccess(true);
     setPaymentError(null);
     
@@ -677,8 +648,8 @@ const BookTaxiForm = () => {
 
       // Add document to Firestore
       const docRef = await addDoc(bookingRef, newBooking);
-      console.log("Booking saved with ID:", docRef.id);
-      console.log("Formatted booking ID:", formattedId);
+      
+      
 
       return { id: docRef.id, formattedId };
     } catch (error) {
@@ -695,7 +666,7 @@ const BookTaxiForm = () => {
   // Validate booking time is at least 4 hours in advance
   const validateBookingTime = () => {
     if (!pickupDate) {
-      console.log("No pickup date selected");
+      
       return false;
     }
 
@@ -729,17 +700,6 @@ const BookTaxiForm = () => {
 
     const timeDifference = selectedDateTime.getTime() - now.getTime();
     const hoursDifference = timeDifference / (1000 * 60 * 60);
-
-    console.log("Validation debug:", {
-      now: now.toISOString(),
-      pickupDate: pickupDate.toISOString(),
-      selectedDateTime: selectedDateTime.toISOString(),
-      time: bookingDetails.time,
-      hours,
-      minutes,
-      timeDifference,
-      hoursDifference,
-    });
 
     if (hoursDifference < 4) {
       toast.error(

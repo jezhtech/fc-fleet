@@ -66,7 +66,7 @@ const BookChauffeur = () => {
 
         // Update payment status if paymentStatus is provided in URL
         if (paymentStatus) {
-          console.log('Payment status from URL:', paymentStatus);
+          
           // Update the local state to reflect the payment status
           setBookingData(prev => prev ? {
             ...prev,

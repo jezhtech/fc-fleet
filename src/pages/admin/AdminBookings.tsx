@@ -341,10 +341,10 @@ const AdminBookings = () => {
           rating: driver.rating || 4.5
         }));
         
-        console.log('Loaded drivers for assignment:', driversData);
+        
         setDrivers(driversData);
       } else {
-        console.log('No active drivers found');
+        
         toast.error('No active drivers available for assignment');
         setDrivers([]);
       }

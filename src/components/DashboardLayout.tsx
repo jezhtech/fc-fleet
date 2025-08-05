@@ -48,15 +48,11 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
   useEffect(() => {
     if (!loading && userData) {
       if (userType === "admin" && !isAdmin) {
-        console.log("Unauthorized access: User is not an admin");
         navigate("/");
       } else if (userType === "driver" && !isDriver) {
-        console.log("Unauthorized access: User is not a driver");
         navigate("/");
       }
     } else if (!loading && !userData) {
-      // If not loading and no user data, redirect to login
-      console.log("No user logged in, redirecting to login");
       navigate("/login");
     }
   }, [loading, userData, isAdmin, isDriver, userType, navigate]);

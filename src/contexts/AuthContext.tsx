@@ -93,17 +93,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Fetch user data from Firestore
   const fetchUserData = useCallback(
     async (user: User) => {
-      console.log("Fetching user data for UID:", currentUser);
+      
 
       try {
         const userDocRef = doc(firestore, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
 
-        console.log("User document exists:", userDoc.exists());
+        
 
         if (userDoc.exists()) {
           const data = userDoc.data() as UserData;
-          console.log("User data retrieved:", data);
+          
 
           // Check if user is blocked or inactive
           if (
@@ -111,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             data.status === "inactive" ||
             data.isVerified === false
           ) {
-            console.log("User is blocked/inactive, signing out");
+            
             await logout();
             return;
           }
@@ -121,14 +121,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
           const driverDocRef = doc(firestore, "drivers", user.uid);
           const driverDoc = await getDoc(driverDocRef);
-          console.log("Driver document exists:", driverDoc.exists());
+          
 
           let isDriverUser = false;
           let isAdminUser = false;
 
           if (driverDoc.exists()) {
             const driverData = driverDoc.data();
-            console.log("Driver data retrieved:", driverData);
+            
             role = "driver";
             isDriverUser = true;
             isAdminUser = false;
@@ -157,25 +157,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             }
           }
 
-          console.log(
-            "Setting user role:",
-            role,
-            "isDriver:",
-            isDriverUser,
-            "isAdmin:",
-            isAdminUser
-          );
-
           setUserData(data);
           setUserRole(role);
           setIsDriver(isDriverUser);
           setIsAdmin(isAdminUser);
           setNeedsRegistration(false);
         } else {
-          // User exists in Auth but not in Firestore - they need to complete registration
-          console.log(
-            "User authenticated but no Firestore data found - needs registration"
-          );
+            // User exists in Auth but not in Firestore - they need to complete registration
+            
           setUserData(null);
           setUserRole(null);
           setIsDriver(false);
@@ -204,21 +193,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Listen to auth state changes
   useEffect(() => {
-    console.log("Setting up Firebase auth state listener...");
+    
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
-        console.log(
-          "Auth state changed:",
-          user ? `User ${user.uid} logged in` : "User logged out"
-        );
         setCurrentUser(user);
 
         if (user) {
-          console.log("Fetching user data for:", user.uid);
+          
           await fetchUserData(user);
         } else {
-          console.log("No user, clearing all user data");
+          
           setUserData(null);
           setUserRole(null);
           setIsDriver(false);
@@ -239,7 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
 
     return () => {
-      console.log("Cleaning up Firebase auth state listener");
+      
       unsubscribe();
     };
   }, [fetchUserData]); // Add fetchUserData as dependency

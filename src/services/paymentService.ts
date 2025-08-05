@@ -87,7 +87,7 @@ class PaymentService {
       if (!idToken) {
         throw new Error("Authentication token not available");
       }
-      console.log("Initializing payment with data:", this.baseUrl);
+      
       const response = await fetch(`${this.baseUrl}/payment/initialize`, {
         method: "POST",
         headers: {
@@ -367,7 +367,7 @@ class PaymentService {
             const parsed = JSON.parse(firebaseUser);
             // Return the access token from Firebase auth
             const accessToken = parsed.stsTokenManager?.accessToken;
-            console.log("Found Firebase access token:", !!accessToken);
+            
             return accessToken || "";
           } catch (error) {
             console.error("Error parsing Firebase user data:", error);
@@ -393,7 +393,7 @@ class PaymentService {
       }
 
       // Return empty string if no token found
-      console.log("No auth token found in localStorage");
+      
       return "";
     } catch (error) {
       console.error("Error getting auth token:", error);
@@ -412,11 +412,11 @@ class PaymentService {
 
       if (auth.currentUser) {
         const idToken = await auth.currentUser.getIdToken();
-        console.log("Got Firebase ID token:", !!idToken);
+        
         return idToken;
       }
 
-      console.log("No current user in Firebase auth");
+      
       return "";
     } catch (error) {
       console.error("Error getting Firebase ID token:", error);
@@ -430,7 +430,7 @@ class PaymentService {
   async isAuthenticated(): Promise<boolean> {
     try {
       const idToken = await this.getFirebaseIdToken();
-      console.log("Payment service auth check - ID Token found:", !!idToken);
+      
       return !!idToken;
     } catch (error) {
       console.error("Error checking authentication:", error);

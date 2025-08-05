@@ -64,7 +64,6 @@ const Register = () => {
   useEffect(() => {
     if (location.state?.phoneNumber) {
       const phoneFromLogin = location.state.phoneNumber;
-      console.log("Phone number from login:", phoneFromLogin);
 
       // Detect country code from the passed phone number
       const detectedCode = detectCountryCode(phoneFromLogin);
@@ -75,13 +74,6 @@ const Register = () => {
       if (phoneFromLogin.startsWith("+")) {
         numberWithoutCode = phoneFromLogin.substring(detectedCode.length);
       }
-
-      console.log(
-        "Detected code:",
-        detectedCode,
-        "Number without code:",
-        numberWithoutCode
-      );
 
       setUserData((prev) => ({
         ...prev,
@@ -148,8 +140,6 @@ const Register = () => {
   const handleSendVerificationCode = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("Starting registration process...");
-
     // Validate form fields
     if (
       !userData.firstName ||
@@ -179,7 +169,6 @@ const Register = () => {
       userData.phoneNumber,
       countryCode
     );
-    console.log("Formatted phone number:", fullPhoneNumber);
 
     // Check if the phone number is the admin number
     if (isAdminPhoneNumber(fullPhoneNumber)) {
@@ -193,9 +182,13 @@ const Register = () => {
     try {
       // Initialize reCAPTCHA only when needed
       if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-          size: "invisible",
-        })
+        window.recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container",
+          {
+            size: "invisible",
+          }
+        );
       }
       // Send OTP
       await sendOTP(fullPhoneNumber);
@@ -203,7 +196,6 @@ const Register = () => {
       // Set OTP sent to true
       setOtpSent(true);
       setError(null);
-      
     } catch (error: any) {
       console.error("Error sending verification code:", error);
 
@@ -221,7 +213,8 @@ const Register = () => {
         errorMessage =
           "reCAPTCHA configuration error. Please refresh the page and try again.";
       } else if (error.code === "auth/captcha-check-failed") {
-        errorMessage = "reCAPTCHA verification failed. Please refresh the page and try again.";
+        errorMessage =
+          "reCAPTCHA verification failed. Please refresh the page and try again.";
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -250,10 +243,8 @@ const Register = () => {
     setError(null);
 
     try {
-      console.log("Verifying OTP...");
       // Verify OTP
       const userCredential = await verifyOTP(otp);
-      console.log("OTP verified successfully, user:", userCredential.uid);
 
       // Save user data to Firestore
       await saveUserData(userCredential.uid, {
@@ -267,8 +258,6 @@ const Register = () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-
-      console.log("User data saved successfully");
 
       // Navigate to home page
       navigate("/");
@@ -301,7 +290,6 @@ const Register = () => {
   return (
     <Layout>
       <div className="container mx-auto py-8 max-w-md">
-        
         <Card>
           <CardHeader>
             <CardTitle className="text-3xl font-bold">
@@ -405,13 +393,6 @@ const Register = () => {
                     const fullPhoneNumber = formatPhoneNumber(
                       userData.phoneNumber,
                       countryCode
-                    );
-                    console.log("Test - Full phone number:", fullPhoneNumber);
-                    console.log("Test - User data:", userData);
-                    console.log("Test - Country code:", countryCode);
-                    console.log(
-                      "Test - Firebase initialized:",
-                      window.recaptchaVerifier ? "Yes" : "No"
                     );
                   }}
                 >

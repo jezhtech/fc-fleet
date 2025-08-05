@@ -94,7 +94,6 @@ const SimpleMapSection = () => {
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
     if (!isInitialized || !token) {
-      console.log("Waiting for Google Maps token to initialize...");
       return;
     }
 
@@ -129,7 +128,6 @@ const SimpleMapSection = () => {
 
         // Set map as loaded immediately after initialization
         setMapLoaded(true);
-        console.log("✓ Google Map initialized successfully");
       } catch (error) {
         console.error("Google Map initialization error:", error);
         setMapError(

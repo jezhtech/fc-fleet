@@ -24,6 +24,7 @@ import {
   checkUserExists,
   getUserData,
   checkAndLinkDriverAccount,
+  checkPhoneNumberRegistered,
 } from "@/lib/authUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { auth, firebaseError } from "@/lib/firebase";
@@ -51,6 +52,7 @@ const Login = () => {
 
   // State for errors and loading
   const [error, setError] = useState<string | null>(null);
+  const [showRegistrationPrompt, setShowRegistrationPrompt] = useState(false);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
@@ -58,9 +60,6 @@ const Login = () => {
   // Redirect if already logged in and has complete data
   useEffect(() => {
     if (currentUser && !needsRegistration) {
-      console.log(
-        "User already logged in with complete data, redirecting to", from
-      );
       navigate(from, { replace: true });
     }
   }, [currentUser, needsRegistration, navigate, from]);
@@ -72,7 +71,6 @@ const Login = () => {
   // Redirect to registration if user needs to complete profile
   useEffect(() => {
     if (currentUser && needsRegistration) {
-      console.log("User authenticated but needs to complete registration");
       const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/^0+/, "")}`;
       navigate("/register", { state: { phoneNumber: fullPhoneNumber } });
     }
@@ -91,10 +89,19 @@ const Login = () => {
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
 
-    // Remove only leading plus signs, not country codes
-    value = value.replace(/^\+/, "");
+    // Remove only leading plus signs, not country codes and it should accept empty
+    const regex = /^[0-9]+$|^$/;
+    if(!regex.test(value)) {
+      return;
+    }
 
     setPhoneNumber(value);
+    
+    // Clear registration prompt when phone number changes
+    if (showRegistrationPrompt) {
+      setShowRegistrationPrompt(false);
+      setError(null);
+    }
   };
 
   // Reset form and clear errors
@@ -103,6 +110,7 @@ const Login = () => {
     setOtp("");
     setOtpSent(false);
     setError(null);
+    setShowRegistrationPrompt(false);
     setLoginSuccess(false);
     setLoading(false);
     setVerifying(false);
@@ -124,8 +132,19 @@ const Login = () => {
     setError(null);
 
     try {
+      // Check if phone number is registered (except for admin numbers)
+      const isAdmin = isAdminPhoneNumber(formattedPhone);
+      if (!isAdmin) {
+        const isRegistered = await checkPhoneNumberRegistered(formattedPhone);
+        if (!isRegistered) {
+          setError("This phone number is not registered.");
+          setShowRegistrationPrompt(true);
+          setLoading(false);
+          return;
+        }
+      }
+
       // Create new recaptcha verifier
-      console.log("Recaptcha verifier:", window.recaptchaVerifier);
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = await new RecaptchaVerifier(
           auth,
@@ -191,22 +210,18 @@ const Login = () => {
     try {
       // Verify OTP
       const userCredential = await verifyOTP(otp);
-      console.log("OTP verified successfully, user:", userCredential.uid);
 
       // Check if the phone number is an admin number
       const isAdmin = isAdminPhoneNumber(fullPhoneNumber);
-      console.log("Is admin phone number:", isAdmin);
 
       // Check if this phone number belongs to a driver
       const driverCheck = await checkAndLinkDriverAccount(
         fullPhoneNumber,
         userCredential.uid
       );
-      console.log("Driver check result:", driverCheck);
 
       // Check if user exists in database
       const userExists = await checkUserExists(userCredential.uid);
-      console.log("User exists in database:", userExists);
 
       // If user doesn't exist or is admin, create/update user data
       if (!userExists) {
@@ -222,23 +237,12 @@ const Login = () => {
             status: "active",
             role: "admin",
           });
-          console.log("Admin user created");
-        } else if (driverCheck.isDriver) {
-          // Driver account was linked, no need to create new user data
-          console.log("Driver account linked:", driverCheck.message);
-        } else {
-          // For non-admin users, let the AuthContext handle the registration flow
-          console.log(
-            "New user detected, AuthContext will handle registration flow"
-          );
-          // Don't redirect here - let the useEffect handle it
         }
       } else {
         // User exists in Auth but check if their data is available
         const userData = await getUserData(userCredential.uid);
 
         if (!userData) {
-          console.log("User exists in Auth but no data found in database");
           setError(
             "Your account data is not available. Please contact customer care for assistance."
           );
@@ -260,12 +264,10 @@ const Login = () => {
             status: "active",
             role: "admin",
           });
-          console.log("Admin user updated");
         }
 
         // Check if the existing user is blocked or inactive
         if (userData.status === "blocked") {
-          console.log("User is blocked, preventing login");
           setError(
             "Your account has been blocked. Please contact customer care for further details."
           );
@@ -276,7 +278,6 @@ const Login = () => {
         }
 
         if (userData.status === "inactive" || userData.isVerified === false) {
-          console.log("User is inactive, preventing login");
           setError(
             "Your account is inactive. Please contact customer care for assistance."
           );
@@ -292,12 +293,6 @@ const Login = () => {
 
       // Set login success state
       setLoginSuccess(true);
-
-      // Wait a moment before redirecting (AuthContext will handle the redirect)
-      setTimeout(() => {
-        // The AuthContext useEffect will handle the redirect based on user data
-        console.log("Login successful, AuthContext will handle redirect");
-      }, 1000);
     } catch (error: any) {
       console.error("Error verifying OTP:", error);
 
@@ -393,6 +388,39 @@ const Login = () => {
               </Alert>
             )}
 
+            {showRegistrationPrompt && (
+              <Alert className="mb-6 border-blue-500 bg-blue-50">
+                <AlertDescription>
+                  <div className="flex flex-col space-y-2">
+                    <p>Don't have an account? Register now to get started.</p>
+                    <div className="flex space-x-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate("/register")}
+                        className="text-blue-600 border-blue-600 hover:bg-blue-100"
+                      >
+                        Register Now
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setShowRegistrationPrompt(false);
+                          setError(null);
+                        }}
+                        className="text-gray-600 border-gray-600 hover:bg-gray-100"
+                      >
+                        Try Different Number
+                      </Button>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {loginSuccess && (
               <Alert className="mb-6 bg-green-50 text-green-700 border-green-500">
                 <AlertDescription>
@@ -416,6 +444,7 @@ const Login = () => {
                       onChange={handlePhoneNumberChange}
                       placeholder="50 123 4567"
                       disabled={loading}
+                      maxLength={10}
                       className="flex-1"
                       type="tel"
                     />

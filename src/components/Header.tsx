@@ -14,11 +14,6 @@ const Header = () => {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  // Log authentication state changes for debugging
-  useEffect(() => {
-    console.log('Auth state in Header:', { currentUser, userData });
-  }, [currentUser, userData]);
-
   // Force re-render on location changes
   useEffect(() => {
     // Close mobile menu when route changes

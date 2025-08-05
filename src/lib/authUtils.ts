@@ -16,7 +16,7 @@ const BYPASS_RECAPTCHA = false; // Set to false to use standard reCAPTCHA
 // Simple reCAPTCHA initialization
 export const initializeRecaptcha = async (elementId: string): Promise<RecaptchaVerifier> => {
   try {
-    console.log('Initializing reCAPTCHA for element:', elementId);
+    
     
     // Clear any existing verifier
     if (window.recaptchaVerifier) {
@@ -32,10 +32,10 @@ export const initializeRecaptcha = async (elementId: string): Promise<RecaptchaV
     window.recaptchaVerifier = new RecaptchaVerifier(auth, elementId, {
       'size': 'invisible',
       'callback': (response: any) => {
-        console.log('reCAPTCHA solved successfully:', response);
+        
       },
       'expired-callback': () => {
-        console.log('reCAPTCHA expired');
+        
         window.recaptchaVerifier = null;
       },
       'error-callback': (error: any) => {
@@ -45,9 +45,9 @@ export const initializeRecaptcha = async (elementId: string): Promise<RecaptchaV
     });
     
     // IMPORTANT: Render the reCAPTCHA verifier
-    console.log('Rendering reCAPTCHA verifier...');
+    
     await window.recaptchaVerifier.render();
-    console.log('reCAPTCHA rendered successfully');
+    
     
     return window.recaptchaVerifier;
   } catch (error) {
@@ -59,12 +59,12 @@ export const initializeRecaptcha = async (elementId: string): Promise<RecaptchaV
 // Simple OTP sending
 export const sendOTP = async (phoneNumber: string): Promise<ConfirmationResult> => {
   try {
-    console.log('Sending OTP to:', phoneNumber);
+    
 
     const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
     window.confirmationResult = confirmationResult;
     
-    console.log('OTP sent successfully');
+    
     return confirmationResult;
   } catch (error: any) {
     console.error('Error sending OTP:', error);
@@ -87,18 +87,18 @@ export const sendOTP = async (phoneNumber: string): Promise<ConfirmationResult> 
 // Verify OTP
 export const verifyOTP = async (otp: string) => {
   try {
-    console.log('Checking confirmation result...');
+    
     if (!window.confirmationResult) {
       throw new Error('Confirmation result not found. Please request a new verification code.');
     }
     
-    console.log('Verifying OTP...');
+    
     const result = await window.confirmationResult.confirm(otp);
     
     // Clear confirmation result after successful verification
     window.confirmationResult = null;
     
-    console.log('OTP verified successfully');
+    
     return result.user;
   } catch (error: any) {
     console.error('Error verifying OTP:', error);
@@ -122,14 +122,14 @@ export const verifyOTP = async (otp: string) => {
 // Save user data to Firestore
 export const saveUserData = async (userId: string, userData: any) => {
   try {
-    console.log('Saving user data for:', userId);
+    
     const userDocRef = doc(firestore, 'users', userId);
     await setDoc(userDocRef, {
       ...userData,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
-    console.log('User data saved successfully for:', userId);
+    
     return true;
   } catch (error) {
     console.error('Error saving user data:', error);
@@ -140,7 +140,7 @@ export const saveUserData = async (userId: string, userData: any) => {
 // Create a driver user account with Firebase Authentication
 export const createDriverUserAccount = async (driverId: string, driverData: any) => {
   try {
-    console.log('Creating driver user account for:', driverData.name);
+    
     
     // Generate a temporary password
     const tempPassword = generateDriverPassword();
@@ -160,7 +160,7 @@ export const createDriverUserAccount = async (driverId: string, driverData: any)
         displayName: driverData.name
       });
       
-      console.log('Firebase Authentication user created:', authUser.uid);
+      
     } catch (authError: any) {
       console.error('Error creating Firebase Auth user:', authError);
       
@@ -175,7 +175,7 @@ export const createDriverUserAccount = async (driverId: string, driverData: any)
           displayName: driverData.name
         });
         
-        console.log('Firebase Authentication user created with unique email:', authUser.uid);
+        
       } else {
         throw authError;
       }
@@ -209,12 +209,12 @@ export const createDriverUserAccount = async (driverId: string, driverData: any)
     // Save to Firestore using the Firebase Auth UID
     await setDoc(doc(firestore, 'users', authUser.uid), userData);
     
-    console.log(`Created driver user account with Auth UID: ${authUser.uid}`);
+    
     
     // Send password reset email so driver can set their own password
     try {
       await sendPasswordResetEmail(auth, driverEmail);
-      console.log('Password reset email sent to driver');
+      
     } catch (emailError) {
       console.warn('Could not send password reset email:', emailError);
     }
@@ -241,7 +241,7 @@ export const createDriverAccountWithPhone = async (driverId: string, driverData:
   status: 'active' | 'inactive' | 'suspended';
 }) => {
   try {
-    console.log('Creating driver account with phone authentication for:', driverData.name);
+    
     
     // Format phone number to E.164 format if not already
     let phoneNumber = driverData.phone;
@@ -279,9 +279,9 @@ export const createDriverAccountWithPhone = async (driverId: string, driverData:
     // Save to Firestore with temporary ID
     await setDoc(doc(firestore, 'users', tempUserId), userData);
     
-    console.log(`Created temporary driver account with ID: ${tempUserId}`);
-    console.log(`Driver can now log in with phone number: ${phoneNumber}`);
-    console.log(`Temporary document ID: ${tempUserId}`);
+    
+    
+    
     
     return {
       tempUserId,
@@ -297,7 +297,7 @@ export const createDriverAccountWithPhone = async (driverId: string, driverData:
 // Function to link phone number to existing driver account
 export const linkPhoneToDriverAccount = async (tempUserId: string, authUid: string) => {
   try {
-    console.log('Linking phone number to driver account:', tempUserId, '->', authUid);
+    
     
     // Get the temporary user data
     const tempUserDoc = await getDoc(doc(firestore, 'users', tempUserId));
@@ -321,7 +321,7 @@ export const linkPhoneToDriverAccount = async (tempUserId: string, authUid: stri
     // Delete the temporary document
     await deleteDoc(doc(firestore, 'users', tempUserId));
     
-    console.log('Successfully linked phone number to driver account');
+    
     return authUid;
   } catch (error) {
     console.error('Error linking phone to driver account:', error);
@@ -336,6 +336,30 @@ export const checkUserExists = async (userId: string) => {
     return userDoc.exists();
   } catch (error) {
     console.error('Error checking if user exists:', error);
+    throw error;
+  }
+};
+
+// Check if phone number is registered
+export const checkPhoneNumberRegistered = async (phoneNumber: string) => {
+  try {
+    // Query users collection by phone number
+    const usersRef = collection(firestore, 'users');
+    const q = query(usersRef, where('phoneNumber', '==', phoneNumber));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return true;
+    }
+    
+    // Also check drivers collection
+    const driversRef = collection(firestore, 'drivers');
+    const driverQuery = query(driversRef, where('phone', '==', phoneNumber));
+    const driverSnapshot = await getDocs(driverQuery);
+    
+    return !driverSnapshot.empty;
+  } catch (error) {
+    console.error('Error checking if phone number is registered:', error);
     throw error;
   }
 };
@@ -407,7 +431,7 @@ export const generateDriverPassword = (): string => {
 // Check if phone number belongs to a driver and link account
 export const checkAndLinkDriverAccount = async (phoneNumber: string, authUid: string) => {
   try {
-    console.log('Checking if phone number belongs to a driver:', phoneNumber);
+    
     
     // Format phone number to E.164 format if not already
     let formattedPhone = phoneNumber;
@@ -424,11 +448,11 @@ export const checkAndLinkDriverAccount = async (phoneNumber: string, authUid: st
       const driverDoc = querySnapshot.docs[0];
       const driverData = driverDoc.data();
       
-      console.log('Found driver with phone number:', driverData);
+      
       
       // Check if this driver has a tempUserId (pending phone verification)
       if (driverData.tempUserId) {
-        console.log('Linking driver account with tempUserId:', driverData.tempUserId);
+        
         
         // Link the phone number to the driver account
         await linkPhoneToDriverAccount(driverData.tempUserId, authUid);
@@ -440,7 +464,7 @@ export const checkAndLinkDriverAccount = async (phoneNumber: string, authUid: st
           updatedAt: new Date()
         });
         
-        console.log('Successfully linked driver account');
+        
         return {
           isDriver: true,
           driverId: driverDoc.id,

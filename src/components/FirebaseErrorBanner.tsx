@@ -7,13 +7,6 @@ interface FirebaseErrorBannerProps {
 }
 
 const FirebaseErrorBanner: React.FC<FirebaseErrorBannerProps> = ({ onClose }) => {
-  useEffect(() => {
-    console.log("Firebase status:", {
-      initialized: true,
-      hasError: !!firebaseError,
-      error: firebaseError
-    });
-  }, []);
 
   // Don't show anything if Firebase is initialized correctly
   if (true && !firebaseError) {

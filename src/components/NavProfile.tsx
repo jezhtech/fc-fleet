@@ -170,12 +170,12 @@ export const NavProfile = ({
 
     return [
       {
-        to: "/my-account",
+        to: "/user/my-account",
         label: "My Account",
         icon: <User className="h-4 w-4" />,
       },
       {
-        to: "/my-bookings",
+        to: "/user/my-bookings",
         label: "My Bookings",
         icon: <BookOpen className="h-4 w-4" />,
       },

@@ -59,9 +59,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
   // Check if user is authenticated
   useEffect(() => {
     const checkAuth = async () => {
-      console.log("CCavenueCheckout - Checking authentication...");
-      console.log("Current user:", currentUser);
-
       if (!currentUser) {
         toast.error("Please log in to proceed with payment");
         onPaymentFailure("Authentication required", paymentData.orderId);
@@ -71,9 +68,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
       try {
         const isAuth = await paymentService.isAuthenticated();
         if (!isAuth) {
-          console.log(
-            "Payment service reports not authenticated, but user is logged in"
-          );
           // Don't fail immediately, let the user try to proceed
           // The backend will handle authentication validation
         }
@@ -136,12 +130,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
       });
 
       if (result.success && result.encRequest && result.access_code) {
-        console.log("Payment data received:", {
-          encRequest: result.encRequest.substring(0, 50) + "...",
-          access_code: result.access_code,
-          paymentUrl: result.paymentUrl,
-        });
-
         // Create and submit form to CCAvenue
         submitToCCavenue(
           result.encRequest,

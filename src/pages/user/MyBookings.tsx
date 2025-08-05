@@ -502,7 +502,7 @@ const MyBookings = () => {
   useEffect(() => {
     const fetchBookings = async () => {
       if (!currentUser) {
-        console.log("No current user, showing demo data");
+        
         setUseDemoData(true);
         setUpcomingBookings([
           DEMO_BOOKINGS[1],
@@ -517,7 +517,7 @@ const MyBookings = () => {
       try {
         setLoading(true);
         setError(null);
-        console.log("Fetching bookings for user:", currentUser.email);
+        
 
         // Reference to the bookings collection
         const bookingsRef = collection(firestore, "bookings");
@@ -528,7 +528,7 @@ const MyBookings = () => {
 
         // Approach 1: Try with customer email in customerInfo
         if (currentUser.email) {
-          console.log("Querying by customerInfo.email:", currentUser.email);
+          
           userBookingsQuery = query(
             bookingsRef,
             where("customerInfo.email", "==", currentUser.email)
@@ -536,9 +536,6 @@ const MyBookings = () => {
 
           try {
             querySnapshot = await getDocs(userBookingsQuery);
-            console.log(
-              `Found ${querySnapshot.size} bookings by email in customerInfo`
-            );
           } catch (err) {
             console.error("Error querying by customerInfo.email:", err);
           }
@@ -546,7 +543,7 @@ const MyBookings = () => {
 
         // Approach 2: Try with user ID if first approach returned no results
         if (!querySnapshot || querySnapshot.empty) {
-          console.log("Querying by userId:", currentUser.uid);
+          
           userBookingsQuery = query(
             bookingsRef,
             where("userId", "==", currentUser.uid)
@@ -554,7 +551,7 @@ const MyBookings = () => {
 
           try {
             querySnapshot = await getDocs(userBookingsQuery);
-            console.log(`Found ${querySnapshot.size} bookings by userId`);
+            
           } catch (err) {
             console.error("Error querying by userId:", err);
           }
@@ -562,7 +559,7 @@ const MyBookings = () => {
 
         // Approach 3: Try with user email field directly
         if (!querySnapshot || querySnapshot.empty) {
-          console.log("Querying by email field directly:", currentUser.email);
+          
           userBookingsQuery = query(
             bookingsRef,
             where("email", "==", currentUser.email)
@@ -570,9 +567,6 @@ const MyBookings = () => {
 
           try {
             querySnapshot = await getDocs(userBookingsQuery);
-            console.log(
-              `Found ${querySnapshot.size} bookings by direct email field`
-            );
           } catch (err) {
             console.error("Error querying by email field:", err);
           }
@@ -580,7 +574,7 @@ const MyBookings = () => {
 
         // Approach 4: Try with user phone number if available
         if ((!querySnapshot || querySnapshot.empty) && userData?.phoneNumber) {
-          console.log("Querying by phone number:", userData.phoneNumber);
+          
           userBookingsQuery = query(
             bookingsRef,
             where("phoneNumber", "==", userData.phoneNumber)
@@ -588,7 +582,7 @@ const MyBookings = () => {
 
           try {
             querySnapshot = await getDocs(userBookingsQuery);
-            console.log(`Found ${querySnapshot.size} bookings by phone number`);
+            
           } catch (err) {
             console.error("Error querying by phone number:", err);
           }
@@ -596,7 +590,7 @@ const MyBookings = () => {
 
         // NEW APPROACH 5: Try with customerInfo.email field (exact match from screenshot)
         if (!querySnapshot || querySnapshot.empty) {
-          console.log("Querying by exact customerInfo email field");
+          
           userBookingsQuery = query(
             bookingsRef,
             where("customerInfo.email", "==", "customer@example.com")
@@ -604,9 +598,7 @@ const MyBookings = () => {
 
           try {
             querySnapshot = await getDocs(userBookingsQuery);
-            console.log(
-              `Found ${querySnapshot.size} bookings by exact customerInfo email`
-            );
+            
           } catch (err) {
             console.error("Error querying by exact customerInfo email:", err);
           }
@@ -614,10 +606,10 @@ const MyBookings = () => {
 
         // NEW APPROACH 6: Get all bookings and filter client-side (last resort)
         if (!querySnapshot || querySnapshot.empty) {
-          console.log("Fetching all bookings and filtering client-side");
+          
           try {
             querySnapshot = await getDocs(collection(firestore, "bookings"));
-            console.log(`Found ${querySnapshot.size} total bookings`);
+            
 
             // If we have too many bookings, limit to reasonable number
             if (querySnapshot.size > 100) {
@@ -641,9 +633,7 @@ const MyBookings = () => {
 
         // If we still have no results, show demo data
         if (!querySnapshot || querySnapshot.empty) {
-          console.log(
-            "No bookings found with any query method, using demo data"
-          );
+          
           setUseDemoData(true);
           setUpcomingBookings([
             DEMO_BOOKINGS[1],
@@ -655,16 +645,16 @@ const MyBookings = () => {
           return;
         }
 
-        console.log(`Processing ${querySnapshot.size} bookings`);
+        
         const now = new Date();
         const upcoming: Booking[] = [];
         const past: Booking[] = [];
 
         querySnapshot.forEach((doc) => {
           try {
-            console.log(`Processing booking: ${doc.id}`);
+            
             const data = doc.data();
-            console.log("Booking data:", data);
+            
 
             // Process booking creation date
             let createdAt: Date | null = null;
@@ -674,11 +664,11 @@ const MyBookings = () => {
                 typeof data.createdAt.toDate === "function"
               ) {
                 createdAt = data.createdAt.toDate();
-                console.log("Using Firestore timestamp createdAt:", createdAt);
+                
               } else if (data.createdAt) {
                 // Handle other date formats
                 createdAt = new Date(data.createdAt);
-                console.log("Using string createdAt:", createdAt);
+                
               } else {
                 console.warn("No createdAt value found");
               }
@@ -693,13 +683,10 @@ const MyBookings = () => {
               if (data.pickupDateTime) {
                 if (typeof data.pickupDateTime.toDate === "function") {
                   bookingDate = data.pickupDateTime.toDate();
-                  console.log(
-                    "Using Firestore timestamp pickupDateTime:",
-                    bookingDate
-                  );
+                  
                 } else if (typeof data.pickupDateTime === "string") {
                   bookingDate = new Date(data.pickupDateTime);
-                  console.log("Using string pickupDateTime:", bookingDate);
+                  
                 } else {
                   bookingDate = new Date();
                   console.warn("Invalid pickupDateTime format");
@@ -709,10 +696,10 @@ const MyBookings = () => {
               else if (data.date) {
                 if (typeof data.date.toDate === "function") {
                   bookingDate = data.date.toDate();
-                  console.log("Using Firestore timestamp date:", bookingDate);
+                  
                 } else if (typeof data.date === "string") {
                   bookingDate = new Date(data.date);
-                  console.log("Using string date:", bookingDate);
+                  
                 } else {
                   bookingDate = new Date();
                   console.warn("Invalid date format");
@@ -819,9 +806,6 @@ const MyBookings = () => {
           // Continue without sorting if there's an error
         }
 
-        console.log(
-          `Processed ${upcoming.length} upcoming and ${past.length} past bookings`
-        );
         setUpcomingBookings(upcoming);
         setPastBookings(past);
         setUseDemoData(false);
@@ -832,7 +816,7 @@ const MyBookings = () => {
 
         // Use demo data after multiple failures
         if (retryCount >= 2) {
-          console.log("Using demo data after multiple failures");
+          
           setUseDemoData(true);
           setUpcomingBookings([
             DEMO_BOOKINGS[1],

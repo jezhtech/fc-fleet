@@ -86,25 +86,22 @@ export const validateAndFixPolygon = (polygon: any): GeoJSON.Polygon | null => {
  * Log zone information for debugging
  */
 export const logZoneInfo = (zone: Zone) => {
-  console.log('Zone ID:', zone.id);
-  console.log('Zone Name:', zone.name);
-  console.log('Has coordinates:', Boolean(zone.coordinates));
+  
+  
+  
   
   if (zone.coordinates) {
-    console.log('Coordinates type:', zone.coordinates.type);
+    
     
     if (zone.coordinates.coordinates) {
-      console.log('Has coordinate array:', Boolean(zone.coordinates.coordinates));
-      console.log('Outer array length:', zone.coordinates.coordinates.length);
+      
+      
       
       if (zone.coordinates.coordinates.length > 0) {
-        console.log('Inner array length:', zone.coordinates.coordinates[0]?.length);
+        
         
         // Check a few coordinate points
         if (zone.coordinates.coordinates[0]?.length > 0) {
-          console.log('Sample coordinates:', 
-            zone.coordinates.coordinates[0].slice(0, 3)
-          );
         }
       }
     }

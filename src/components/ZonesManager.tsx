@@ -114,12 +114,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
         return null;
       }
       
-      console.log('Converting polygon to Firestore format:', {
-        type: polygon.type,
-        coordinatesLength: polygon.coordinates.length,
-        innerArraysLength: polygon.coordinates.map(arr => Array.isArray(arr) ? arr.length : 0)
-      });
-      
       // Convert the nested arrays to an object-based format with no arrays
       const firestoreFormat: Record<string, any> = {
         type: polygon.type,
@@ -154,7 +148,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
       
       // Log the result size to check if it's reasonable
       const resultStr = JSON.stringify(firestoreFormat);
-      console.log(`Converted format size: ${resultStr.length} bytes`);
       
       return firestoreFormat;
     } catch (error) {
@@ -178,8 +171,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
       // Check which format we're dealing with (old or new)
       const isNewFormat = firestoreData.coordinateRings && firestoreData.ringCount !== undefined;
       const isOldFormat = firestoreData.coordinatesObject;
-      
-      console.log(`Restoring coordinates from Firestore (format: ${isNewFormat ? 'new' : isOldFormat ? 'old' : 'unknown'})`);
       
       const coordinates: number[][][] = [];
       
@@ -287,7 +278,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
           if (data.coordinatesData) {
             try {
               // New simplified string format (primary)
-              console.log(`Loading zone ${doc.id} from coordinatesData (string format)`);
               coordinates = JSON.parse(data.coordinatesData);
               loadMethod = 'coordinatesData';
             } catch (parseErr) {
@@ -298,7 +288,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
           // If that fails, try the JSON backup
           if (!coordinates && data.coordinatesJSON) {
             try {
-              console.log(`Loading zone ${doc.id} from coordinatesJSON (backup string)`);
               coordinates = JSON.parse(data.coordinatesJSON);
               loadMethod = 'coordinatesJSON';
             } catch (jsonErr) {
@@ -308,14 +297,12 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
           
           // If string formats fail, try object format (new version first)
           if (!coordinates && data.coordinatesFirestore) {
-            console.log(`Loading zone ${doc.id} from coordinatesFirestore (object format)`);
             coordinates = restoreCoordinatesFromFirestore(data.coordinatesFirestore);
             loadMethod = 'coordinatesFirestore';
           }
           
           // Last resort - try legacy format (direct coordinates)
           if (!coordinates && data.coordinates) {
-            console.log(`Loading zone ${doc.id} from legacy coordinates format`);
             // Direct coordinates may be a GeoJSON object or could be a raw object needing conversion
             if (data.coordinates.type === 'Polygon' && Array.isArray(data.coordinates.coordinates)) {
               coordinates = data.coordinates as GeoJSON.Polygon;
@@ -343,13 +330,11 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
                 
                 if (JSON.stringify(firstPoint) !== JSON.stringify(lastPoint)) {
                   ring.push([...firstPoint]); // Close the ring by adding a copy of the first point
-                  console.log(`Closed ring for zone ${doc.id}`);
                 }
               }
             });
           }
           
-          console.log(`Successfully loaded zone ${doc.id} using method: ${loadMethod}`);
         } catch (coordErr) {
           console.error(`Error processing coordinates for zone ${doc.id}:`, coordErr);
           coordinates = { 
@@ -370,7 +355,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
       });
       
       setZones(fetchedZones);
-      console.log(`Loaded ${fetchedZones.length} zones from Firestore`);
     } catch (error) {
       const errorMessage = logError(error, 'fetchZonesFromFirestore');
       toast.error(`Error loading zones: ${errorMessage}`);
@@ -382,11 +366,9 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
   const handleAddEdit = (zone: Zone | null) => {
     if (zone) {
       // Edit existing zone
-      console.log('Editing existing zone:', zone.id);
       setCurrentZone(zone);
     } else {
       // Create a new zone with default values and a temporary ID
-      console.log('Creating new zone');
       setCurrentZone({
         id: 'new', // Temporary ID that will be replaced when saved
         name: '',
@@ -473,7 +455,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
         if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
           // Close the polygon automatically
           ring.push([...firstPoint]);
-          console.log('Closed polygon automatically');
         }
       } else {
         console.error('Polygon has fewer than 3 points:', ring);
@@ -507,9 +488,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
         areaKm2: roundedAreaKm2
       });
       
-      // Log the full coordinates for debugging
-      console.log('Polygon coordinates:', JSON.stringify(feature.geometry.coordinates));
-      
       toast.success(`Zone drawn successfully (${roundedAreaKm2.toFixed(2)} km²)`);
     } catch (error) {
       console.error('Error processing polygon:', error);
@@ -524,7 +502,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
     
     try {
       setIsSubmitting(true);
-      console.log('Starting zone save process...');
       
       // Validate zone data
       if (!currentZone.name.trim()) {
@@ -535,12 +512,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
       
       // For the coordinates, we'll save in multiple formats for better resilience
       const zoneToSave = { ...currentZone };
-      console.log('Zone to save:', { 
-        id: zoneToSave.id,
-        name: zoneToSave.name,
-        hasCoordinates: Boolean(zoneToSave.coordinates),
-        coordinatesType: zoneToSave.coordinates?.type
-      });
       
       // Calculate area if possible and coordinates are valid
       try {
@@ -553,7 +524,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
           const turfPolygon = turf.polygon(zoneToSave.coordinates.coordinates);
           const area = turf.area(turfPolygon);
           zoneToSave.areaKm2 = Math.round(area / 1000000 * 100) / 100; // Convert m² to km² and round to 2 decimal places
-          console.log(`Calculated area for zone ${zoneToSave.name}: ${zoneToSave.areaKm2} km²`);
           
           // Save coordinates in string format (most reliable for Firestore)
           zoneToSave.coordinatesData = JSON.stringify(zoneToSave.coordinates);
@@ -601,8 +571,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
             areaKm2: zoneToSave.areaKm2
           };
           
-          console.log('Saving zone with Firestore-safe data structure');
-          
           // Use the doc function with both collection reference and ID
           const newDocRef = doc(firestore, 'zones', customId);
           
@@ -610,7 +578,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
           await setDoc(newDocRef, firestoreSafeZone);
           
           toast.success('Zone created successfully');
-          console.log('New zone created with ID:', customId);
           
           // Fetch updated zones
           setIsDialogOpen(false);
@@ -646,7 +613,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
         await updateDoc(zoneRef, firestoreSafeUpdate);
         
         toast.success('Zone updated successfully');
-        console.log('Zone updated:', zoneToSave.id);
         
         // Fetch updated zones
         setIsDialogOpen(false);
@@ -700,15 +666,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
         return;
       }
       
-      console.log(`Zone ${zone.id} (${zone.name}) coordinates details:`, {
-        type: zone.coordinates.type,
-        rings: coords.length,
-        points: outerRing.length,
-        firstPoint: outerRing[0],
-        lastPoint: outerRing[outerRing.length - 1],
-        isClosed: JSON.stringify(outerRing[0]) === JSON.stringify(outerRing[outerRing.length - 1])
-      });
-      
       // Verify the points are valid numbers
       let hasInvalidPoints = false;
       outerRing.forEach((point, idx) => {
@@ -731,9 +688,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
   // Convert zones to GeoJSON FeatureCollection
   const zonesAsGeoJSON = (): GeoJSON.FeatureCollection => {
     try {
-      // Log current zones for debugging
-      console.log(`Converting ${zones.length} zones to GeoJSON...`);
-      
       const features: GeoJSON.Feature[] = zones
         .filter(zone => {
           // Filter out invalid zones
@@ -806,7 +760,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
                 
                 // If first and last points don't match, close the polygon
                 if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
-                  console.log(`Closing ring for zone ${zone.id}`);
                   ring.push([...firstPoint]); // Add copy of first point to close
                 }
               } else if (!Array.isArray(ring) || ring.length < 3) {
@@ -816,7 +769,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
             }
             
             // Log success
-            console.log(`Zone ${zone.id} (${zone.name}) using coordinates from ${coordSource}`);
           } catch (error) {
             console.error(`Error processing coordinates for zone ${zone.id}:`, error);
             coordinates = {
@@ -898,7 +850,6 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
       }}`;
     };
     
-    console.log(`${label} Structure:`, helper(obj));
   };
   
   // Create a default zone with preset shape

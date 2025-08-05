@@ -137,7 +137,7 @@ const DriverDashboard = () => {
               }
             }
           } else {
-            console.log('No driver data found in API');
+            
           }
         } catch (apiError) {
           console.error('Error fetching from API, falling back to Firestore:', apiError);
@@ -174,7 +174,7 @@ const DriverDashboard = () => {
               }
             }
           } else {
-            console.log('No driver data found');
+            
           }
         }
         
