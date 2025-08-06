@@ -159,12 +159,15 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
     // Create a form element
     const form = document.createElement("form");
     form.method = "POST";
+    form.id = "nonseamless";
+    form.name = "redirect";
     form.action = paymentUrl;
     form.style.display = "none";
 
     // Add encRequest field
     const encRequestInput = document.createElement("input");
     encRequestInput.type = "hidden";
+    encRequestInput.id = "encRequest";
     encRequestInput.name = "encRequest";
     encRequestInput.value = encRequest;
     form.appendChild(encRequestInput);
@@ -172,6 +175,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
     // Add access_code field
     const accessCodeInput = document.createElement("input");
     accessCodeInput.type = "hidden";
+    accessCodeInput.id = "access_code";
     accessCodeInput.name = "access_code";
     accessCodeInput.value = access_code;
     form.appendChild(accessCodeInput);
