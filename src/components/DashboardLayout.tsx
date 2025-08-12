@@ -159,7 +159,7 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-white fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out border-r",
+          "bg-white fixed inset-y-0 left-0 z-20 w-64 transform transition-transform duration-300 ease-in-out border-r",
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >

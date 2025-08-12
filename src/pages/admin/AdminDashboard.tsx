@@ -1,109 +1,703 @@
-import React from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, BarChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Bar } from 'recharts';
-import { formatCurrency } from '@/utils/currency';
-import CurrencyNotice from '@/components/CurrencyNotice';
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  LineChart,
+  BarChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Bar,
+} from "recharts";
+import { formatCurrency } from "@/utils/currency";
+import CurrencyNotice from "@/components/CurrencyNotice";
+import {
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  Timestamp,
+} from "firebase/firestore";
+import { firestore } from "@/lib/firebase";
 
-const data = [
-  { name: 'Jan', bookings: 400, revenue: 2400 },
-  { name: 'Feb', bookings: 300, revenue: 1398 },
-  { name: 'Mar', bookings: 520, revenue: 3800 },
-  { name: 'Apr', bookings: 480, revenue: 3908 },
-  { name: 'May', bookings: 400, revenue: 4800 },
-  { name: 'Jun', bookings: 380, revenue: 3800 },
-  { name: 'Jul', bookings: 440, revenue: 4300 },
-];
+// Types for Firebase data
+interface FirebaseBooking {
+  id: string;
+  userId: string;
+  pickupLocation: {
+    name: string;
+    address: string;
+  };
+  dropoffLocation: {
+    name: string;
+    address: string;
+  };
+  vehicleType: string;
+  fare: number;
+  status: "pending" | "confirmed" | "completed" | "cancelled";
+  paymentStatus: "pending" | "paid" | "failed";
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  user?: {
+    displayName?: string;
+    email?: string;
+  };
+}
 
-// Custom formatter for chart tooltip
-const currencyFormatter = (value: number) => formatCurrency(value);
+interface FirebaseUser {
+  id: string;
+  email: string;
+  displayName?: string;
+  phoneNumber?: string;
+  createdAt: Timestamp;
+  role: "user" | "admin";
+}
+
+interface FirebaseDriver {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: "active" | "inactive" | "suspended";
+  vehicleNumber?: string;
+  rating?: number;
+  createdAt: Timestamp;
+}
+
+interface DashboardStats {
+  totalBookings: number;
+  totalRevenue: number;
+  totalUsers: number;
+  activeDrivers: number;
+  monthlyBookings: number;
+  monthlyRevenue: number;
+  recentBookings: FirebaseBooking[];
+}
 
 const AdminDashboard = () => {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalBookings: 0,
+    totalRevenue: 0,
+    totalUsers: 0,
+    activeDrivers: 0,
+    monthlyBookings: 0,
+    monthlyRevenue: 0,
+    recentBookings: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [allBookings, setAllBookings] = useState<FirebaseBooking[]>([]);
+  const [allUsers, setAllUsers] = useState<FirebaseUser[]>([]);
+  const [allDrivers, setAllDrivers] = useState<FirebaseDriver[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<"today" | "yesterday" | "7days" | "30days" | "6months">("7days");
+
+  // Fetch data from Firebase
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch bookings
+        const bookingsRef = collection(firestore, "bookings");
+        const bookingsSnapshot = await getDocs(bookingsRef);
+        const fetchedBookings = bookingsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as FirebaseBooking[];
+        setAllBookings(fetchedBookings);
+
+        // Fetch users
+        const usersRef = collection(firestore, "users");
+        const usersSnapshot = await getDocs(usersRef);
+        const fetchedUsers = usersSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as FirebaseUser[];
+        setAllUsers(fetchedUsers);
+
+        // Fetch drivers
+        const driversRef = collection(firestore, "drivers");
+        const driversSnapshot = await getDocs(driversRef);
+        const fetchedDrivers = driversSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as FirebaseDriver[];
+        setAllDrivers(fetchedDrivers);
+
+        // Calculate dashboard statistics
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        // Calculate total bookings and revenue
+        const totalBookings = fetchedBookings.length;
+        const totalRevenue = fetchedBookings.reduce(
+          (sum, booking) => sum + (booking.fare || 0),
+          0
+        );
+
+        // Calculate monthly stats
+        const monthlyBookings = fetchedBookings.filter((booking) => {
+          const createdAt = booking.createdAt?.toDate?.() || new Date();
+          return createdAt >= startOfMonth && createdAt <= endOfMonth;
+        }).length;
+
+        const monthlyRevenue = fetchedBookings
+          .filter((booking) => {
+            const createdAt = booking.createdAt?.toDate?.() || new Date();
+            return createdAt >= startOfMonth && createdAt <= endOfMonth;
+          })
+          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
+
+        // Get recent bookings (last 5) with user information
+        const recentBookings = fetchedBookings
+          .sort((a, b) => {
+            const dateA = a.createdAt?.toDate?.() || new Date();
+            const dateB = b.createdAt?.toDate?.() || new Date();
+            return dateB.getTime() - dateA.getTime();
+          })
+          .slice(0, 5)
+          .map((booking) => {
+            // Find user information for this booking
+            const user = fetchedUsers.find((u) => u.id === booking.userId);
+            return {
+              ...booking,
+              user: user
+                ? {
+                    displayName: user.displayName,
+                    email: user.email,
+                  }
+                : undefined,
+            };
+          });
+
+        // Calculate total users (excluding drivers)
+        const totalUsers = fetchedUsers.filter(
+          (user) => user.role === "user"
+        ).length;
+
+        // Calculate active drivers
+        const activeDrivers = fetchedDrivers.filter(
+          (driver) => driver.status === "active"
+        ).length;
+
+        setStats({
+          totalBookings,
+          totalRevenue,
+          totalUsers,
+          activeDrivers,
+          monthlyBookings,
+          monthlyRevenue,
+          recentBookings,
+        });
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Get date range based on selection
+  const getDateRange = useCallback((range: string) => {
+    const now = new Date();
+    const start = new Date();
+    
+    switch (range) {
+      case "today":
+        start.setHours(0, 0, 0, 0);
+        return { start, end: now };
+      case "yesterday":
+        start.setDate(start.getDate() - 1);
+        start.setHours(0, 0, 0, 0);
+        const endYesterday = new Date(start);
+        endYesterday.setHours(23, 59, 59, 999);
+        return { start, end: endYesterday };
+      case "7days":
+        start.setDate(start.getDate() - 7);
+        start.setHours(0, 0, 0, 0);
+        return { start, end: now };
+      case "30days":
+        start.setDate(start.getDate() - 30);
+        start.setHours(0, 0, 0, 0);
+        return { start, end: now };
+      case "6months":
+        start.setMonth(start.getMonth() - 6);
+        start.setHours(0, 0, 0, 0);
+        return { start, end: now };
+      default:
+        start.setDate(start.getDate() - 7);
+        start.setHours(0, 0, 0, 0);
+        return { start, end: now };
+    }
+  }, []);
+
+  // Prepare chart data based on selected date range - memoized to prevent unnecessary recalculations
+  const chartData = useMemo(() => {
+    const { start, end } = getDateRange(dateRange);
+    const data = [];
+    
+    if (dateRange === "today" || dateRange === "yesterday") {
+      // For today/yesterday, show hourly data
+      const hours = [];
+      for (let i = 0; i < 24; i++) {
+        const hour = new Date(start);
+        hour.setHours(i, 0, 0, 0);
+        const nextHour = new Date(hour);
+        nextHour.setHours(i + 1, 0, 0, 0);
+        
+        const hourBookings = allBookings.filter((booking) => {
+          const createdAt = booking.createdAt?.toDate?.() || new Date();
+          return createdAt >= hour && createdAt < nextHour;
+        }).length;
+        
+        const hourRevenue = allBookings
+          .filter((booking) => {
+            const createdAt = booking.createdAt?.toDate?.() || new Date();
+            return createdAt >= hour && createdAt < nextHour;
+          })
+          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
+        
+        hours.push({
+          name: `${hour.getHours()}:00`,
+          bookings: hourBookings,
+          revenue: hourRevenue,
+        });
+      }
+      return hours;
+    } else if (dateRange === "7days") {
+      // For 7 days, show daily data
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+        
+        const dayBookings = allBookings.filter((booking) => {
+          const createdAt = booking.createdAt?.toDate?.() || new Date();
+          return createdAt >= date && createdAt < nextDate;
+        }).length;
+        
+        const dayRevenue = allBookings
+          .filter((booking) => {
+            const createdAt = booking.createdAt?.toDate?.() || new Date();
+            return createdAt >= date && createdAt < nextDate;
+          })
+          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
+        
+        data.push({
+          name: date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+          bookings: dayBookings,
+          revenue: dayRevenue,
+        });
+      }
+      return data;
+    } else if (dateRange === "30days") {
+      // For 30 days, show weekly data
+      for (let i = 3; i >= 0; i--) {
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - (i * 7));
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        
+        const weekBookings = allBookings.filter((booking) => {
+          const createdAt = booking.createdAt?.toDate?.() || new Date();
+          return createdAt >= weekStart && createdAt < weekEnd;
+        }).length;
+        
+        const weekRevenue = allBookings
+          .filter((booking) => {
+            const createdAt = booking.createdAt?.toDate?.() || new Date();
+            return createdAt >= weekStart && createdAt < weekEnd;
+          })
+          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
+        
+        data.push({
+          name: `Week ${4 - i}`,
+          bookings: weekBookings,
+          revenue: weekRevenue,
+        });
+      }
+      return data;
+    } else {
+      // For 6 months, show monthly data
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        date.setDate(1);
+        date.setHours(0, 0, 0, 0);
+        const nextMonth = new Date(date);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        
+        const monthBookings = allBookings.filter((booking) => {
+          const createdAt = booking.createdAt?.toDate?.() || new Date();
+          return createdAt >= date && createdAt < nextMonth;
+        }).length;
+        
+        const monthRevenue = allBookings
+          .filter((booking) => {
+            const createdAt = booking.createdAt?.toDate?.() || new Date();
+            return createdAt >= date && createdAt < nextMonth;
+          })
+          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
+        
+        data.push({
+          name: date.toLocaleDateString("en-US", { month: "short" }),
+          bookings: monthBookings,
+          revenue: monthRevenue,
+        });
+      }
+      return data;
+    }
+  }, [allBookings, dateRange, getDateRange]);
+
+  // Custom formatter for chart tooltip - memoized to prevent recreation on every render
+  const currencyFormatter = useCallback(
+    (value: number) => formatCurrency(value),
+    []
+  );
+
+  if (loading) {
+    return (
+      <DashboardLayout userType="admin">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading dashboard data...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show error message if Firebase queries failed
+  if (error) {
+    return (
+      <DashboardLayout userType="admin">
+        <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+        <CurrencyNotice className="mb-6" />
+        <div className="text-center py-12">
+          <div className="text-lg text-red-500 mb-4">
+            Error loading dashboard data
+          </div>
+          <div className="text-sm text-gray-400">{error}</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show message if no data is available
+  if (
+    allBookings.length === 0 &&
+    allUsers.length === 0 &&
+    allDrivers.length === 0
+  ) {
+    return (
+      <DashboardLayout userType="admin">
+        <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+        <CurrencyNotice className="mb-6" />
+        <div className="text-center py-12">
+          <div className="text-lg text-gray-500 mb-4">No data available</div>
+          <div className="text-sm text-gray-400">
+            Start by creating some bookings, users, or drivers to see dashboard
+            statistics.
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setError(null);
+    // Trigger a re-fetch by calling the useEffect again
+    const fetchData = async () => {
+      try {
+        // Fetch bookings
+        const bookingsRef = collection(firestore, "bookings");
+        const bookingsSnapshot = await getDocs(bookingsRef);
+        const fetchedBookings = bookingsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as FirebaseBooking[];
+        setAllBookings(fetchedBookings);
+
+        // Fetch users
+        const usersRef = collection(firestore, "users");
+        const usersSnapshot = await getDocs(usersRef);
+        const fetchedUsers = usersSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as FirebaseUser[];
+        setAllUsers(fetchedUsers);
+
+        // Fetch drivers
+        const driversRef = collection(firestore, "drivers");
+        const driversSnapshot = await getDocs(driversRef);
+        const fetchedDrivers = driversSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as FirebaseDriver[];
+        setAllDrivers(fetchedDrivers);
+
+        // Recalculate stats
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        const totalBookings = fetchedBookings.length;
+        const totalRevenue = fetchedBookings.reduce(
+          (sum, booking) => sum + (booking.fare || 0),
+          0
+        );
+
+        const monthlyBookings = fetchedBookings.filter((booking) => {
+          const createdAt = booking.createdAt?.toDate?.() || new Date();
+          return createdAt >= startOfMonth && createdAt <= endOfMonth;
+        }).length;
+
+        const monthlyRevenue = fetchedBookings
+          .filter((booking) => {
+            const createdAt = booking.createdAt?.toDate?.() || new Date();
+            return createdAt >= startOfMonth && createdAt <= endOfMonth;
+          })
+          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
+
+        const recentBookings = fetchedBookings
+          .sort((a, b) => {
+            const dateA = a.createdAt?.toDate?.() || new Date();
+            const dateB = b.createdAt?.toDate?.() || new Date();
+            return dateB.getTime() - dateA.getTime();
+          })
+          .slice(0, 5)
+          .map((booking) => {
+            const user = fetchedUsers.find((u) => u.id === booking.userId);
+            return {
+              ...booking,
+              user: user
+                ? {
+                    displayName: user.displayName,
+                    email: user.email,
+                  }
+                : undefined,
+            };
+          });
+
+        const totalUsers = fetchedUsers.filter(
+          (user) => user.role === "user"
+        ).length;
+        const activeDrivers = fetchedDrivers.filter(
+          (driver) => driver.status === "active"
+        ).length;
+
+        setStats({
+          totalBookings,
+          totalRevenue,
+          totalUsers,
+          activeDrivers,
+          monthlyBookings,
+          monthlyRevenue,
+          recentBookings,
+        });
+      } catch (err) {
+        console.error("Error refreshing dashboard data:", err);
+        setError(err instanceof Error ? err.message : "Failed to refresh data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  };
+
   return (
     <DashboardLayout userType="admin">
-      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
-      
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+        <Button
+          onClick={handleRefresh}
+          disabled={loading}
+          variant="outline"
+          size="sm"
+        >
+          {loading ? "Refreshing..." : "Refresh Data"}
+        </Button>
+      </div>
+
       <CurrencyNotice className="mb-6" />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Total Bookings</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Total Bookings
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2,892</div>
+            <div className="text-2xl font-bold">
+              {stats.totalBookings.toLocaleString()}
+            </div>
             <p className="text-xs text-green-600 flex items-center">
-              <span>↑</span> 12% from last month
+              <span>↑</span> {stats.monthlyBookings} this month
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Total Revenue
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(42389)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(stats.totalRevenue)}
+            </div>
             <p className="text-xs text-green-600 flex items-center">
-              <span>↑</span> 8% from last month
+              <span>↑</span> {formatCurrency(stats.monthlyRevenue)} this month
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Total Users
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,483</div>
+            <div className="text-2xl font-bold">
+              {stats.totalUsers.toLocaleString()}
+            </div>
             <p className="text-xs text-green-600 flex items-center">
-              <span>↑</span> 5% from last month
+              <span>↑</span> Active users
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Active Drivers</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Active Drivers
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">48</div>
+            <div className="text-2xl font-bold">{stats.activeDrivers}</div>
             <p className="text-xs text-green-600 flex items-center">
-              <span>↑</span> 2 new this month
+              <span>↑</span> Available for bookings
             </p>
           </CardContent>
         </Card>
       </div>
-      
+
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Chart Data Range</h2>
+          <Select value={dateRange} onValueChange={(value: any) => setDateRange(value)}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select date range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="yesterday">Yesterday</SelectItem>
+              <SelectItem value="7days">Last 7 Days</SelectItem>
+              <SelectItem value="30days">Last 30 Days</SelectItem>
+              <SelectItem value="6months">Last 6 Months</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Summary cards for selected date range */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-sm text-gray-500">Bookings in Range</div>
+              <div className="text-xl font-bold">
+                {chartData.reduce((sum, item) => sum + item.bookings, 0)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-sm text-gray-500">Revenue in Range</div>
+              <div className="text-xl font-bold">
+                {formatCurrency(chartData.reduce((sum, item) => sum + item.revenue, 0))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-sm text-gray-500">Average per {dateRange === "today" || dateRange === "yesterday" ? "Hour" : 
+                dateRange === "7days" ? "Day" : 
+                dateRange === "30days" ? "Week" : "Month"}</div>
+              <div className="text-xl font-bold">
+                {formatCurrency(chartData.length > 0 ? 
+                  chartData.reduce((sum, item) => sum + item.revenue, 0) / chartData.length : 0
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>Revenue Overview</CardTitle>
+            <CardTitle>
+              Revenue Overview - {dateRange === "today" ? "Today" : 
+                dateRange === "yesterday" ? "Yesterday" : 
+                dateRange === "7days" ? "Last 7 Days" : 
+                dateRange === "30days" ? "Last 30 Days" : 
+                "Last 6 Months"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data}>
+              <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip formatter={currencyFormatter} />
                 <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#ea384c" 
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#ea384c"
                   strokeWidth={2}
-                  activeDot={{ r: 8 }} 
+                  activeDot={{ r: 8 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        
+
         <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>Booking Stats</CardTitle>
+            <CardTitle>
+              Booking Stats - {dateRange === "today" ? "Today" : 
+                dateRange === "yesterday" ? "Yesterday" : 
+                dateRange === "7days" ? "Last 7 Days" : 
+                dateRange === "30days" ? "Last 30 Days" : 
+                "Last 6 Months"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
+              <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -115,7 +709,7 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardHeader>
@@ -127,38 +721,65 @@ const AdminDashboard = () => {
                 <table className="w-full caption-bottom text-sm">
                   <thead>
                     <tr className="border-b bg-gray-50">
-                      <th className="h-12 px-4 text-left font-medium text-gray-500">ID</th>
-                      <th className="h-12 px-4 text-left font-medium text-gray-500">User</th>
-                      <th className="h-12 px-4 text-left font-medium text-gray-500">Service Type</th>
-                      <th className="h-12 px-4 text-left font-medium text-gray-500">Status</th>
-                      <th className="h-12 px-4 text-left font-medium text-gray-500">Amount</th>
+                      <th className="h-12 px-4 text-left font-medium text-gray-500">
+                        ID
+                      </th>
+                      <th className="h-12 px-4 text-left font-medium text-gray-500">
+                        User
+                      </th>
+                      <th className="h-12 px-4 text-left font-medium text-gray-500">
+                        Service Type
+                      </th>
+                      <th className="h-12 px-4 text-left font-medium text-gray-500">
+                        Status
+                      </th>
+                      <th className="h-12 px-4 text-left font-medium text-gray-500">
+                        Amount
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { id: 'BK-1001', user: 'John Doe', type: 'Taxi', status: 'Completed', amount: 24.50 },
-                      { id: 'BK-1002', user: 'Jane Smith', type: 'Rental', status: 'Active', amount: 135.00 },
-                      { id: 'BK-1003', user: 'Mike Johnson', type: 'Taxi', status: 'Cancelled', amount: 0.00 },
-                      { id: 'BK-1004', user: 'Sarah Williams', type: 'Rental', status: 'Pending', amount: 78.50 },
-                      { id: 'BK-1005', user: 'Robert Brown', type: 'Taxi', status: 'Completed', amount: 32.75 },
-                    ].map((booking) => (
-                      <tr key={booking.id} className="border-b">
-                        <td className="p-4">{booking.id}</td>
-                        <td className="p-4">{booking.user}</td>
-                        <td className="p-4">{booking.type}</td>
-                        <td className="p-4">
-                          <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                            booking.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                            booking.status === 'Active' ? 'bg-blue-100 text-blue-800' :
-                            booking.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {booking.status}
-                          </span>
+                    {stats.recentBookings.length > 0 ? (
+                      stats.recentBookings.map((booking) => (
+                        <tr key={booking.id} className="border-b">
+                          <td className="p-4">{booking.id}</td>
+                          <td className="p-4">
+                            {booking.user?.displayName ||
+                              booking.user?.email ||
+                              "Unknown User"}
+                          </td>
+                          <td className="p-4">{booking.vehicleType}</td>
+                          <td className="p-4">
+                            <span
+                              className={`inline-block px-2 py-1 text-xs rounded-full ${
+                                booking.status === "completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : booking.status === "confirmed"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : booking.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {booking.status.charAt(0).toUpperCase() +
+                                booking.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            {formatCurrency(booking.fare || 0)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="p-4 text-center text-gray-500"
+                        >
+                          No recent bookings found
                         </td>
-                        <td className="p-4">{formatCurrency(booking.amount)}</td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>

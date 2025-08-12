@@ -156,7 +156,7 @@ export const initiateCCavenuePayment = async (paymentData: {
     email: string;
     phone: string;
   };
-  redirectUrl: string;
+  returnUrl: string;
   cancelUrl: string;
   token: string;
 }): Promise<{
@@ -186,7 +186,7 @@ export const initiateCCavenuePayment = async (paymentData: {
         customerName: paymentData.customerData.name,
         customerEmail: paymentData.customerData.email,
         customerPhone: paymentData.customerData.phone,
-        returnUrl: paymentData.redirectUrl,
+        returnUrl: paymentData.returnUrl,
         cancelUrl: paymentData.cancelUrl,
       }),
     });
