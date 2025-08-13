@@ -450,7 +450,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
   return (
     <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
       <label className="text-xs font-medium text-gray-700">Date & Time</label>
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -488,7 +488,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
             type="button" // Explicitly set to button type
             variant="outline"
             onClick={handleTimeButtonClick}
-            className={`h-9 w-36 text-left font-normal justify-start pl-7 text-sm border-gray-300 hover:border-fleet-red/30 transition-colors overflow-hidden group ${timeError ? 'border-red-300 bg-red-50' : ''}`}
+            className={`h-9 w-full sm:w-36 text-left font-normal justify-start pl-7 text-sm border-gray-300 hover:border-fleet-red/30 transition-colors overflow-hidden group ${timeError ? 'border-red-300 bg-red-50' : ''}`}
           >
             <Clock className={`absolute left-2 top-2.5 h-3.5 w-3.5 ${timeError ? 'text-red-500' : 'text-gray-500 group-hover:text-fleet-red'} pointer-events-none`} />
             <span className={timeError ? 'text-red-600' : 'text-gray-700'}>{formattedTime}</span>

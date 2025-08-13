@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, Car, BookOpen, Settings, LogOut } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import BookTaxiForm from "./home/BookTaxiForm";
 import RentCarForm from "./home/RentCarForm";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +17,6 @@ interface NavbarProps {
 }
 
 const Navbar = ({ position = "sticky" }: NavbarProps) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { currentUser, userData } = useAuth();
   const { language, setLanguage, translate } = useTranslation();
@@ -85,36 +85,158 @@ const Navbar = ({ position = "sticky" }: NavbarProps) => {
             >
               {language === "en" ? "EN" : "AR"}
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setIsOpen(!isOpen)}
-              className={`border-2 ${
-                scrolled || position === "sticky"
-                  ? "text-white border-white"
-                  : "text-white border-white"
-              }`}
-            >
-              {isOpen ? <X /> : <Menu />}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={`border-2 ${
+                    scrolled || position === "sticky"
+                      ? "text-fleet-dark border-fleet-dark"
+                      : "text-fleet-dark border-fleet-dark"
+                  }`}
+                >
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                {/* Main Navigation */}
+                <DropdownMenuItem asChild>
+                  <Link to="/" className="flex items-center">
+                    {translate("nav.home")}
+                  </Link>
+                </DropdownMenuItem>
+                
+                {/* Sub-menu items */}
+                <DropdownMenuItem asChild>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button className="w-full text-left flex items-center text-sm px-2 py-1.5 hover:bg-slate-100 rounded-md">
+                        {translate("nav.book_chauffeur")}
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <div className="p-4">
+                        <h3 className="text-xl font-bold mb-4 text-fleet-dark">
+                          {translate("booking.book_chauffeur")}
+                        </h3>
+                        <BookTaxiForm />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem asChild>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button className="w-full text-left flex items-center text-sm px-2 py-1.5 hover:bg-slate-100 rounded-md">
+                        {translate("nav.hourly")}
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <div className="p-4">
+                        <h3 className="text-xl font-bold mb-4 text-fleet-dark">
+                          {translate("booking.hourly")}
+                        </h3>
+                        <RentCarForm />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem asChild>
+                  <Link to="/about" className="flex items-center">
+                    {translate("nav.about")}
+                  </Link>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem asChild>
+                  <Link to="/contact" className="flex items-center">
+                    {translate("nav.contact")}
+                  </Link>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem asChild>
+                  <Link to="/faq" className="flex items-center">
+                    {translate("nav.faq")}
+                  </Link>
+                </DropdownMenuItem>
+
+                {/* User Profile Section */}
+                {currentUser && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-8 h-8 bg-fleet-red rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                          {userData?.firstName?.[0] || userData?.name?.[0] || "U"}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-fleet-dark text-sm">
+                            {userData?.firstName && userData?.lastName 
+                              ? `${userData.firstName} ${userData.lastName}`
+                              : userData?.name || "User"
+                            }
+                          </div>
+                          {userData?.role === "admin" && (
+                            <div className="bg-fleet-red text-white text-xs px-2 py-1 rounded">
+                              Administrator
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Admin Navigation Links */}
+                      {userData?.role === "admin" && (
+                        <div className="space-y-1">
+                          <DropdownMenuItem asChild>
+                            <Link to="/admin/dashboard" className="flex items-center space-x-3">
+                              <User className="w-4 h-4" />
+                              <span>Dashboard</span>
+                            </Link>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem asChild>
+                            <Link to="/admin/drivers" className="flex items-center space-x-3">
+                              <Car className="w-4 h-4" />
+                              <span>Manage Drivers</span>
+                            </Link>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem asChild>
+                            <Link to="/admin/bookings" className="flex items-center space-x-3">
+                              <BookOpen className="w-4 h-4" />
+                              <span>All Bookings</span>
+                            </Link>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem asChild>
+                            <Link to="/admin/settings" className="flex items-center space-x-3">
+                              <Settings className="w-4 h-4" />
+                              <span>Settings</span>
+                            </Link>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              // Handle logout logic here
+                            }}
+                            className="flex items-center space-x-3 text-fleet-red focus:text-fleet-red"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>Logout</span>
+                          </DropdownMenuItem>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        {/* Mobile menu */}
-        {isOpen && (
-          <div className="md:hidden py-4 animate-fade-in bg-white/95 backdrop-blur-md rounded-b-lg shadow-lg">
-            <div className="flex flex-col space-y-4">
-              <NavLinks mobile />
-              <div className="flex flex-col space-y-2 pt-2 border-t">
-                <NavProfile
-                  mobile
-                  currentUser={currentUser}
-                  userData={userData}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Remove the old mobile menu code since we're using DropdownMenu now */}
       </div>
     </nav>
   );

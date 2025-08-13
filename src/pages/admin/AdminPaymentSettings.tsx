@@ -464,8 +464,8 @@ const AdminPaymentSettings = () => {
                     <Input
                       type="number"
                       className="rounded-l-none"
-                      placeholder="50.00"
-                      defaultValue="50.00"
+                      placeholder="5.00"
+                      defaultValue="5.00"
                     />
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
