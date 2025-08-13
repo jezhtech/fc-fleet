@@ -82,6 +82,7 @@ const AdminBookings = () => {
   const [isUpdatingIds, setIsUpdatingIds] = useState(false);
   const [cancellationReason, setCancellationReason] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
   
   // Filtering and sorting
   const [selectedTab, setSelectedTab] = useState('all');
@@ -362,6 +363,8 @@ const AdminBookings = () => {
     if (!selectedBooking) return;
     
     try {
+      setIsProcessingAction(true);
+      
       if (dialogType === 'confirm') {
         const response = await confirmBooking(selectedBooking.id);
         if (response.success) {
@@ -489,6 +492,8 @@ const AdminBookings = () => {
     } catch (error) {
       console.error('Error updating booking:', error);
       toast.error('Failed to update booking');
+    } finally {
+      setIsProcessingAction(false);
     }
   };
   
@@ -922,6 +927,7 @@ const AdminBookings = () => {
                                   onClick={() => openDialog(booking, 'invoice')}
                                   title="Download Invoice"
                                   className="h-7 w-7"
+                                  disabled={isProcessingAction}
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
@@ -933,6 +939,7 @@ const AdminBookings = () => {
                                     onClick={() => openDialog(booking, 'confirm')}
                                     title="Confirm Booking"
                                     className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    disabled={isProcessingAction}
                                   >
                                     <CheckCircle className="h-4 w-4" />
                                   </Button>
@@ -945,6 +952,7 @@ const AdminBookings = () => {
                                     onClick={() => openDialog(booking, 'assign')}
                                     title="Assign Driver"
                                     className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                    disabled={isProcessingAction}
                                   >
                                     <UserCheck className="h-4 w-4" />
                                   </Button>
@@ -957,6 +965,7 @@ const AdminBookings = () => {
                                     onClick={() => openDialog(booking, 'cancel')}
                                     title="Cancel Booking"
                                     className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    disabled={isProcessingAction}
                                   >
                                     <X className="h-4 w-4" />
                                   </Button>
@@ -1083,6 +1092,7 @@ const AdminBookings = () => {
                                           variant="default" 
                                           className="bg-blue-500 hover:bg-blue-600 text-white"
                                           onClick={() => openDialog(booking, 'confirm')}
+                                          disabled={isProcessingAction}
                                         >
                                           <CheckCircle className="h-4 w-4 mr-2" />
                                           Confirm Booking
@@ -1094,6 +1104,7 @@ const AdminBookings = () => {
                                           variant="default" 
                                           className="bg-indigo-500 hover:bg-indigo-600 text-white"
                                           onClick={() => openDialog(booking, 'assign')}
+                                          disabled={isProcessingAction}
                                         >
                                           <UserCheck className="h-4 w-4 mr-2" />
                                           Assign Driver
@@ -1104,6 +1115,7 @@ const AdminBookings = () => {
                                         <Button 
                                           variant="destructive"
                                           onClick={() => openDialog(booking, 'cancel')}
+                                          disabled={isProcessingAction}
                                         >
                                           <X className="h-4 w-4 mr-2" />
                                           Cancel Ride
@@ -1114,6 +1126,7 @@ const AdminBookings = () => {
                                         variant="outline" 
                                         className="flex items-center gap-2"
                                         onClick={() => openDialog(booking, 'invoice')}
+                                        disabled={isProcessingAction}
                                       >
                                         <Download className="h-4 w-4" />
                                         Invoice
@@ -1245,15 +1258,20 @@ const AdminBookings = () => {
           <DialogFooter>
             {dialogType !== 'invoice' && (
               <>
-                <Button variant="outline" onClick={() => {
-                  setDialogOpen(false);
-                  setCancellationReason('');
-                }}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setDialogOpen(false);
+                    setCancellationReason('');
+                  }}
+                  disabled={isProcessingAction}
+                >
                   Cancel
                 </Button>
                 <Button 
                   onClick={updateBookingStatus}
                   disabled={
+                    isProcessingAction ||
                     (dialogType === 'assign' && !selectedDriver) ||
                     (dialogType === 'cancel' && !cancellationReason.trim())
                   }
@@ -1263,8 +1281,18 @@ const AdminBookings = () => {
                     'bg-red-500 hover:bg-red-600'
                   }
                 >
-                  {dialogType === 'confirm' ? 'Confirm Booking' : 
-                   dialogType === 'assign' ? 'Assign Driver' : 'Cancel Booking'}
+                  {isProcessingAction ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {dialogType === 'confirm' ? 'Confirming...' : 
+                       dialogType === 'assign' ? 'Assigning...' : 'Cancelling...'}
+                    </>
+                  ) : (
+                    <>
+                      {dialogType === 'confirm' ? 'Confirm Booking' : 
+                       dialogType === 'assign' ? 'Assign Driver' : 'Cancel Booking'}
+                    </>
+                  )}
                 </Button>
               </>
             )}

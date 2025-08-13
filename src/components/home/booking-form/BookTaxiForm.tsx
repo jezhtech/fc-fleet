@@ -119,14 +119,12 @@ const BookTaxiForm = () => {
 
   // Handler for pickup location selection
   const handlePickupLocationSelect = (location: Location) => {
-    
     setSelectedPickupLocation(location);
     setBookingDetails((prev) => ({ ...prev, pickup: location.name }));
   };
 
   // Handler for dropoff location selection
   const handleDropoffLocationSelect = (location: Location) => {
-    
     setSelectedDropoffLocation(location);
     setBookingDetails((prev) => ({ ...prev, dropoff: location.name }));
   };
@@ -421,15 +419,14 @@ const BookTaxiForm = () => {
 
   // Payment handlers
   const handlePaymentSuccess = (transactionId: string, orderId?: string) => {
-    
     setPaymentSuccess(true);
     setPaymentError(null);
-    
+
     // Redirect to booking confirmation page
     if (orderId) {
       const bookingParams = new URLSearchParams({
         orderId: orderId,
-        paymentStatus: 'success'
+        paymentStatus: "success",
       });
       navigate(`/user/book-chauffeur?${bookingParams.toString()}`);
     }
@@ -439,12 +436,12 @@ const BookTaxiForm = () => {
     console.error("Payment failed:", { errorMessage, orderId });
     setPaymentError(errorMessage);
     setPaymentSuccess(false);
-    
+
     // Redirect to booking confirmation page with error
     if (orderId) {
       const bookingParams = new URLSearchParams({
         orderId: orderId,
-        paymentStatus: 'failed'
+        paymentStatus: "failed",
       });
       navigate(`/user/book-chauffeur?${bookingParams.toString()}`);
     }
@@ -520,27 +517,12 @@ const BookTaxiForm = () => {
     const perKmPrice = selectedVehicle.perKmPrice || 0;
     const perMinutePrice = selectedVehicle.perMinutePrice || 0;
 
-    // Check if we're in peak hours (7-9 AM or 5-7 PM on weekdays)
-    const now = new Date();
-    const hour = now.getHours();
-    const isWeekday = now.getDay() >= 1 && now.getDay() <= 5; // Monday to Friday
-    const isPeakHour =
-      isWeekday && ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19));
-
-    // Apply surge pricing during peak hours
-    const surgeMultiplier = isPeakHour ? 1.2 : 1.0;
-
     // Calculate total fare
     let totalFare =
       basePrice + distanceKm * perKmPrice + timeMins * perMinutePrice;
 
-    // Apply surge multiplier if in peak hours
-    if (isPeakHour) {
-      totalFare *= surgeMultiplier;
-    }
-
     // Ensure minimum fare
-    const minFare = 20; // Minimum fare in AED
+    const minFare = 5; // Minimum fare in AED
     if (totalFare < minFare) {
       totalFare = minFare;
     }
@@ -648,8 +630,6 @@ const BookTaxiForm = () => {
 
       // Add document to Firestore
       const docRef = await addDoc(bookingRef, newBooking);
-      
-      
 
       return { id: docRef.id, formattedId };
     } catch (error) {
@@ -661,12 +641,9 @@ const BookTaxiForm = () => {
     }
   };
 
-
-
   // Validate booking time is at least 4 hours in advance
   const validateBookingTime = () => {
     if (!pickupDate) {
-      
       return false;
     }
 
@@ -720,13 +697,13 @@ const BookTaxiForm = () => {
     // Check if user is authenticated
     if (!currentUser) {
       toast.error("Please login to book a chauffeur");
-      navigate("/login", { 
-        state: { 
-          from: { 
+      navigate("/login", {
+        state: {
+          from: {
             pathname: window.location.pathname,
-            search: window.location.search 
-          } 
-        } 
+            search: window.location.search,
+          },
+        },
       });
       return;
     }
@@ -835,20 +812,18 @@ const BookTaxiForm = () => {
     }
   };
 
-
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 max-h-[500px] overflow-y-auto">
       {/* Login notice for unauthenticated users */}
       {!currentUser && step === 1 && (
         <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-3">
           <div className="flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
             <div className="text-sm">
-              <p className="font-medium text-amber-800">
-                Login Required
-              </p>
+              <p className="font-medium text-amber-800">Login Required</p>
               <p className="text-amber-700 mt-1">
-                Please login to book a chauffeur. You'll be redirected to the login page when you click "Book Chauffeur".
+                Please login to book a chauffeur. You'll be redirected to the
+                login page when you click "Book Chauffeur".
               </p>
             </div>
           </div>
@@ -920,9 +895,9 @@ const BookTaxiForm = () => {
           >
             {loading.transportTypes || loading.checkingAvailability
               ? "Loading..."
-              : !currentUser 
-                ? "Login to Book Chauffeur"
-                : "Book Chauffeur"}
+              : !currentUser
+              ? "Login to Book Chauffeur"
+              : "Book Chauffeur"}
           </Button>
         </>
       )}
@@ -1007,10 +982,11 @@ const BookTaxiForm = () => {
           <div className="mb-3">
             <h4 className="text-sm font-medium">Complete Payment</h4>
             <p className="text-xs text-gray-500 mt-1">
-              Secure payment via CCAvenue. Your booking will be confirmed after successful payment.
+              Secure payment via CCAvenue. Your booking will be confirmed after
+              successful payment.
             </p>
           </div>
-          
+
           {orderId && (
             <CCavenueCheckout
               orderId={orderId}
@@ -1022,7 +998,7 @@ const BookTaxiForm = () => {
               onPaymentFailure={handlePaymentFailure}
             />
           )}
-          
+
           <div className="flex justify-between mt-3">
             <Button
               type="button"
@@ -1035,10 +1011,6 @@ const BookTaxiForm = () => {
           </div>
         </>
       )}
-
-
-
-
     </div>
   );
 };

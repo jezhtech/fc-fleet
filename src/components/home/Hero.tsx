@@ -12,7 +12,7 @@ const Hero = () => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden pt-16">
+    <section className="relative min-h-screen flex items-center overflow-hidden pt-16 md:py-0 py-10">
       {/* Background video with overlay */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <video 
@@ -33,7 +33,7 @@ const Hero = () => {
       {/* Red accent line */}
       <div className="absolute left-0 top-0 bottom-0 w-1 md:w-2 bg-fleet-red z-10"></div>
       
-      <div className="container mx-auto px-4 relative z-10 py-20">
+      <div className="container mx-auto px-4 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
           <motion.div 
             initial={{ opacity: 0, x: -50 }}

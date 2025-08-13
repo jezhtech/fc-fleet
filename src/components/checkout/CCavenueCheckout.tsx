@@ -131,11 +131,12 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
 
       if (result.success && result.encRequest && result.access_code) {
         // Create and submit form to CCAvenue
-        submitToCCavenue(
-          result.encRequest,
-          result.access_code,
-          result.paymentUrl
-        );
+        // submitToCCavenue(
+        //   result.encRequest,
+        //   result.access_code,
+        //   result.paymentUrl
+        // );
+        window.location.href = returnUrl;
       } else {
         throw new Error(result.error || "Payment initialization failed");
       }

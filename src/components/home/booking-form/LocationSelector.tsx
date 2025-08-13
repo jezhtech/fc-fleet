@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Location } from "./types";
 import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
 import { googleMapsService, PlaceResult } from "@/services/googleMapsService";
+import { cn } from "@/lib/utils";
 
 interface LocationSelectorProps {
   id: string;
@@ -15,90 +16,6 @@ interface LocationSelectorProps {
   placeholder: string;
 }
 
-// Famous places in UAE with coordinates
-const FAMOUS_PLACES = [
-  {
-    place_id: "famous-1",
-    mainName: "Burj Khalifa",
-    secondaryAddress: "Downtown Dubai",
-    display_name: "Burj Khalifa, Downtown Dubai, Dubai, United Arab Emirates",
-    lat: "25.197197",
-    lon: "55.274376",
-  },
-  {
-    place_id: "famous-2",
-    mainName: "Dubai Mall",
-    secondaryAddress: "Downtown Dubai",
-    display_name: "Dubai Mall, Downtown Dubai, Dubai, United Arab Emirates",
-    lat: "25.198765",
-    lon: "55.279499",
-  },
-  {
-    place_id: "famous-3",
-    mainName: "Palm Jumeirah",
-    secondaryAddress: "Dubai",
-    display_name: "Palm Jumeirah, Dubai, United Arab Emirates",
-    lat: "25.112288",
-    lon: "55.138592",
-  },
-  {
-    place_id: "famous-4",
-    mainName: "Dubai Marina",
-    secondaryAddress: "Dubai",
-    display_name: "Dubai Marina, Dubai, United Arab Emirates",
-    lat: "25.071093",
-    lon: "55.130042",
-  },
-  {
-    place_id: "famous-5",
-    mainName: "Sheikh Zayed Grand Mosque",
-    secondaryAddress: "Abu Dhabi",
-    display_name: "Sheikh Zayed Grand Mosque, Abu Dhabi, United Arab Emirates",
-    lat: "24.412834",
-    lon: "54.475127",
-  },
-  {
-    place_id: "famous-6",
-    mainName: "Emirates Palace",
-    secondaryAddress: "Abu Dhabi",
-    display_name: "Emirates Palace, Abu Dhabi, United Arab Emirates",
-    lat: "24.460719",
-    lon: "54.317341",
-  },
-  {
-    place_id: "famous-7",
-    mainName: "Global Village",
-    secondaryAddress: "Dubai",
-    display_name: "Global Village, Dubai, United Arab Emirates",
-    lat: "25.067475",
-    lon: "55.301651",
-  },
-  {
-    place_id: "famous-8",
-    mainName: "Al Ain Zoo",
-    secondaryAddress: "Al Ain",
-    display_name: "Al Ain Zoo, Al Ain, United Arab Emirates",
-    lat: "24.175321",
-    lon: "55.736567",
-  },
-  {
-    place_id: "famous-9",
-    mainName: "Dubai International Airport",
-    secondaryAddress: "Dubai",
-    display_name: "Dubai International Airport, Dubai, United Arab Emirates",
-    lat: "25.252777",
-    lon: "55.364445",
-  },
-  {
-    place_id: "famous-10",
-    mainName: "Sharjah Corniche",
-    secondaryAddress: "Sharjah",
-    display_name: "Sharjah Corniche, Sharjah, United Arab Emirates",
-    lat: "25.357152",
-    lon: "55.383621",
-  },
-];
-
 const LocationSelector: React.FC<LocationSelectorProps> = ({
   id,
   label,
@@ -108,7 +25,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   placeholder,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<any[]>(FAMOUS_PLACES);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [locationSelected, setLocationSelected] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -119,11 +36,27 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   // Initialize Google Maps
   const { token, isInitialized, error: tokenError } = useGoogleMapsToken();
 
+  // Handle outside clicks to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // Google Places API for geocoding
   const fetchSuggestions = async (query: string) => {
     if (!query || query.length < 2) {
-      // Show famous places if query is empty or too short
-      setSuggestions(FAMOUS_PLACES);
+      setSuggestions([]);
       return;
     }
 
@@ -134,7 +67,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
 
     lastSearchRef.current = query;
     setIsLoading(true);
-    setIsOpen(true);
 
     try {
       // Initialize Google Maps if not already done
@@ -146,15 +78,14 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         throw new Error("Google Maps not initialized");
       }
 
-      
+      // Create UAE center location (Dubai)
+      const uaeCenter = new google.maps.LatLng(25.2048, 55.2708);
 
-      // Search for places using Google Places API
+      // Search for places using Google Places API with UAE focus
       const places = await googleMapsService.searchPlaces(query, {
         limit: 10,
         types: ["establishment", "geocode"],
       });
-
-      
 
       if (places.length > 0) {
         // Convert Google Places results to our format
@@ -167,9 +98,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         );
 
         setSuggestions(uniqueData);
-        
       } else {
-        
         setSuggestions([]);
       }
     } catch (error) {
@@ -179,75 +108,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Add more context and useful info to location data
-  const enrichLocationData = (item: any) => {
-    // Extract the main place name more intelligently
-    const displayParts = item.display_name.split(", ");
-
-    // Prioritize English name
-    let mainName = displayParts[0];
-    if (item.namedetails) {
-      // Try to get English name from namedetails
-      mainName =
-        item.namedetails.name || item.namedetails.name_en || displayParts[0];
-
-      // If the name has Arabic characters, use English alternatives
-      if (/[\u0600-\u06FF]/.test(mainName)) {
-        mainName =
-          item.namedetails.alt_name ||
-          item.namedetails.name_en ||
-          displayParts[0];
-        // If still has Arabic, use first part of display name which should be in English
-        if (/[\u0600-\u06FF]/.test(mainName)) {
-          mainName = displayParts[0];
-        }
-      }
-    }
-
-    // Check for business names in extra tags
-    let locationType = "";
-    if (item.extratags) {
-      const businessName =
-        item.extratags.name || item.extratags.brand || item.extratags.operator;
-      if (businessName && !/[\u0600-\u06FF]/.test(businessName)) {
-        mainName = businessName;
-      }
-
-      // Extract business type information
-      if (item.extratags.shop) {
-        locationType = `${item.extratags.shop} shop`;
-      } else if (item.extratags.amenity) {
-        locationType = item.extratags.amenity;
-      } else if (item.extratags.office) {
-        locationType = `${item.extratags.office} office`;
-      } else if (item.extratags.building) {
-        locationType = item.extratags.building;
-      }
-    }
-
-    // Use category from tags if available
-    if (!locationType && item.type) {
-      locationType = item.type;
-    }
-
-    // Create a more user-friendly secondary address by removing redundant info
-    // and ensuring it's only in English
-    const secondaryParts = displayParts
-      .slice(1, Math.min(displayParts.length, 3))
-      .filter(Boolean)
-      // Filter out parts containing Arabic characters
-      .filter((part) => !/[\u0600-\u06FF]/.test(part));
-
-    const secondaryAddress = secondaryParts.join(", ");
-
-    return {
-      ...item,
-      mainName,
-      secondaryAddress,
-      type: locationType,
-    };
   };
 
   // Convert Google Places API results to our format
@@ -310,15 +170,11 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     if (value.trim().length >= 2) {
       setIsLoading(true);
       searchTimeoutRef.current = setTimeout(() => {
-        
-
-        // Use the query as-is for Google Places API
-        // Google Places API will automatically handle UAE context and provide better results
         fetchSuggestions(value);
-      }, 300); // Reduced debounce delay for better responsiveness
+      }, 300);
     } else {
-      // Show famous places when input is empty or has fewer than 2 characters
-      setSuggestions(FAMOUS_PLACES);
+      // Only show suggestions if user has typed something
+      setSuggestions([]);
       setIsLoading(false);
     }
 
@@ -327,7 +183,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [value, id, locationSelected]);
+  }, [value, locationSelected]);
 
   const handleLocationSelect = (item: any) => {
     try {
@@ -365,86 +221,48 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
 
       // Close the dropdown
       setIsOpen(false);
-
-      // Blur input to remove focus
-      if (inputRef.current) {
-        inputRef.current.blur();
-      }
     } catch (error) {
       console.error("Error processing selected location:", error);
       toast.error("Could not process selected location. Please try again.");
     }
   };
 
-  // Guaranteed to show dropdown on click, but only if no location has been selected yet
-  const handleInputClick = () => {
-    // Only open dropdown if no location is selected or user has typed something new
-    if (!locationSelected) {
-      // Force dropdown to open and show suggestions
-      setIsOpen(true);
-      setSuggestions(suggestions.length > 0 ? suggestions : FAMOUS_PLACES);
-    }
-
-    // Focus the input
-    if (inputRef.current) {
-      inputRef.current.focus();
+  const handleInputChange = (newValue: string) => {
+    onChange(newValue);
+    // If user types, clear the selected flag and allow searching again
+    if (locationSelected) {
+      setLocationSelected(false);
     }
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  const handleInputFocus = () => {
+    setIsOpen(true);
+  };
 
   return (
-    <div className="space-y-1 relative" ref={containerRef}>
+    <div className="space-y-1 relative">
       {label && (
         <label htmlFor={id} className="text-xs font-medium text-gray-700">
           {label}
         </label>
       )}
-      <div className="relative">
+
+      <div className="relative" ref={containerRef}>
         <MapPin className="absolute left-2 top-2.5 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
         <Input
           ref={inputRef}
           id={id}
           name={id}
           value={value}
-          onChange={(e) => {
-            onChange(e.target.value);
-            // If user types, clear the selected flag and allow searching again
-            if (locationSelected) {
-              setLocationSelected(false);
-            }
-          }}
-          onClick={handleInputClick}
-          onFocus={() => {
-            // Only open dropdown on focus if no location is selected or user has changed the value
-            if (!locationSelected) {
-              handleInputClick();
-            }
-          }}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onFocus={handleInputFocus}
           placeholder={placeholder}
-          className={`pl-7 py-1.5 h-9 text-sm rounded-md w-full text-gray-800 bg-white border-gray-200 ${
-            locationSelected ? "bg-gray-50" : ""
-          }`}
+          className="pl-7 py-1.5 h-9 text-sm rounded-md w-full text-gray-800 bg-white border-gray-200"
           required
           autoComplete="off"
         />
 
-        {isOpen && (
+        {isOpen && (suggestions.length > 0 || isLoading) && (
           <div className="absolute z-50 w-full mt-0.5 bg-white rounded-md shadow-lg border border-gray-200">
             <div className="rounded-md overflow-hidden">
               <div className="max-h-[250px] overflow-y-auto">
@@ -455,50 +273,35 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
                       Searching locations...
                     </span>
                   </div>
-                ) : suggestions.length === 0 ? (
-                  <div className="p-3 text-center">
-                    <div className="text-xs text-gray-600 mb-1">
-                      {value.length < 2
-                        ? "Popular locations shown below"
-                        : "No locations found"}
-                    </div>
-                    {value.length >= 2 && (
-                      <div className="text-[10px] text-gray-500">
-                        Try adding more details like city name or landmark
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <div className="px-2 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 border-b border-gray-200">
-                      {value.length < 2
-                        ? "Popular Places in UAE"
-                        : "Locations in UAE"}
-                    </div>
-                    <div>
-                      {suggestions.map((item) => (
-                        <div
-                          key={item.place_id}
-                          className="py-1.5 px-2 cursor-pointer hover:bg-gray-100 transition-colors"
-                          onClick={() => handleLocationSelect(item)}
-                        >
-                          <div className="flex items-start gap-1.5">
-                            <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-500" />
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium leading-tight text-gray-800">
-                                {item.mainName}
-                              </span>
-                              {item.secondaryAddress && (
-                                <span className="text-[10px] text-gray-500 truncate max-w-[220px]">
-                                  {item.secondaryAddress}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                ) : suggestions.length > 0 ? (
+                  suggestions.map((item) => (
+                    <div
+                      key={item.place_id}
+                      className="py-1.5 px-2 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleLocationSelect(item)}
+                    >
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-500" />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium leading-tight text-gray-800">
+                            {item.mainName}
+                          </span>
+                          {item.secondaryAddress && (
+                            <span className="text-[10px] text-gray-500 truncate max-w-[220px]">
+                              {item.secondaryAddress}
+                            </span>
+                          )}
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  </div>
+                  ))
+                ) : (
+                  value &&
+                  value.length >= 2 && (
+                    <div className="py-4 px-3 text-center text-sm text-gray-500">
+                      No locations found.
+                    </div>
+                  )
                 )}
               </div>
             </div>
