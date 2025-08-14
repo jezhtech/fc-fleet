@@ -12,7 +12,6 @@ import AdminTaxiTypes from "./pages/admin/AdminTaxiTypes";
 import AdminFareSettings from "./pages/admin/AdminFareSettings";
 import AdminGeofencing from "./pages/admin/AdminGeofencing";
 import AdminVehicleTypes from "./pages/admin/AdminVehicleTypes";
-import AdminRentalVehicles from "./pages/admin/AdminRentalVehicles";
 import AdminPaymentSettings from "./pages/admin/AdminPaymentSettings";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminDrivers from "./pages/admin/AdminDrivers";
@@ -40,6 +39,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import TranslationProvider from "./contexts/TranslationContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import React, { Component, ErrorInfo } from "react";
+import DriverStartRide from "./pages/driver/DriverStartRide";
 
 const queryClient = new QueryClient();
 
@@ -161,6 +161,10 @@ const App = () => {
                     <Route path="welcome" element={<DriverWelcome />} />
                     <Route path="profile" element={<DriverProfile />} />
                     <Route path="rides" element={<DriverRides />} />
+                    <Route
+                      path="start-ride/:rideId"
+                      element={<DriverStartRide />}
+                    />
                     <Route path="earnings" element={<DriverEarnings />} />
                     <Route
                       path="bank-details"

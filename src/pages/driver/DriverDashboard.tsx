@@ -10,6 +10,7 @@ import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firesto
 import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { getDriver } from '@/services/userService';
+import { useNavigate } from 'react-router-dom';
 
 // Define interfaces for driver and booking data
 interface DriverData {
@@ -53,24 +54,9 @@ interface BookingData {
   [key: string]: any; // Allow additional properties
 }
 
-const earningsData = [
-  { name: 'Mon', earnings: 120 },
-  { name: 'Tue', earnings: 145 },
-  { name: 'Wed', earnings: 105 },
-  { name: 'Thu', earnings: 190 },
-  { name: 'Fri', earnings: 210 },
-  { name: 'Sat', earnings: 250 },
-  { name: 'Sun', earnings: 180 },
-];
-
-const performanceData = [
-  { name: 'Week 1', rides: 32, rating: 4.7 },
-  { name: 'Week 2', rides: 28, rating: 4.8 },
-  { name: 'Week 3', rides: 35, rating: 4.9 },
-  { name: 'Week 4', rides: 42, rating: 4.8 },
-];
-
 const DriverDashboard = () => {
+  const navigate = useNavigate();
+  
   const { userData, currentUser, isDriver, loading } = useAuth();
   const [driverData, setDriverData] = useState<DriverData | null>(null);
   const [assignedRides, setAssignedRides] = useState<BookingData[]>([]);
@@ -410,7 +396,7 @@ const DriverDashboard = () => {
                       </div>
                       
                       <div className="mt-3 flex gap-2">
-                        <Button variant="default" size="sm">
+                        <Button onClick={() => navigate(`/driver/start-ride/${ride.id}`)} variant="default" size="sm">
                           Start Ride
                         </Button>
                         <Button variant="outline" size="sm">
