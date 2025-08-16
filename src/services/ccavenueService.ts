@@ -156,8 +156,6 @@ export const initiateCCavenuePayment = async (paymentData: {
     email: string;
     phone: string;
   };
-  returnUrl: string;
-  cancelUrl: string;
   token: string;
 }): Promise<{
   success: boolean;
@@ -186,8 +184,6 @@ export const initiateCCavenuePayment = async (paymentData: {
         customerName: paymentData.customerData.name,
         customerEmail: paymentData.customerData.email,
         customerPhone: paymentData.customerData.phone,
-        returnUrl: paymentData.returnUrl,
-        cancelUrl: paymentData.cancelUrl,
       }),
     });
 

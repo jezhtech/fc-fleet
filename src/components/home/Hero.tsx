@@ -12,7 +12,7 @@ const Hero = () => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden pt-16 md:py-0 py-10">
+    <section className="relative min-h-screen flex items-center overflow-hidden pt-24 pb-10">
       {/* Background video with overlay */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <video 

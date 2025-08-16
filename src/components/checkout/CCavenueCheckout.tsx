@@ -108,11 +108,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
     setLoading(true);
 
     try {
-      // Process payment through CCAvenue using the new service
-      // Redirect back to the booking form page with payment response
-      const returnUrl = `${window.location.origin}/user/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=success`;
-      const cancelUrl = `${window.location.origin}/user/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=cancel`;
-
       const token = await currentUser.getIdToken();
 
       const result = await initiateCCavenuePayment({
@@ -124,8 +119,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
           email: paymentData.customerEmail,
           phone: paymentData.customerPhone,
         },
-        returnUrl,
-        cancelUrl,
         token,
       });
 

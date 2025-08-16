@@ -166,13 +166,13 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
             <RadioGroupItem value={car.id} id={car.id} className="sr-only" />
 
             {/* Vehicle Image Section */}
-            <div className="relative h-40 w-full bg-gray-100">
+            <div className="relative h-60 w-full bg-gray-100">
               {car.images && car.images.length > 0 ? (
                 <>
                   <img
                     src={car.images[activeImageIndex[car.id] || 0]}
                     alt={car.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full"
                   />
 
                   {/* Image navigation if multiple images exist */}

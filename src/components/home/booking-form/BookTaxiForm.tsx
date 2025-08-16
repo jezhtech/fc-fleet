@@ -18,7 +18,6 @@ import {
   DateTimePicker,
   TransportTypeSelector,
   VehicleSelector,
-  BookingSummary,
   BookingDetails,
   Location,
   Vehicle,
@@ -97,14 +96,7 @@ const BookTaxiForm = () => {
     savingBooking: false,
   });
 
-  // Booking status states
-  const [bookingId, setBookingId] = useState<string>("");
-  const [formattedBookingId, setFormattedBookingId] = useState<string>("");
   const [orderId, setOrderId] = useState<string>("");
-
-  // Payment states
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Fetch transport types when component mounts
   useEffect(() => {
@@ -419,9 +411,6 @@ const BookTaxiForm = () => {
 
   // Payment handlers
   const handlePaymentSuccess = (transactionId: string, orderId?: string) => {
-    setPaymentSuccess(true);
-    setPaymentError(null);
-
     // Redirect to booking confirmation page
     if (orderId) {
       const bookingParams = new URLSearchParams({
@@ -434,9 +423,6 @@ const BookTaxiForm = () => {
 
   const handlePaymentFailure = (errorMessage: string, orderId?: string) => {
     console.error("Payment failed:", { errorMessage, orderId });
-    setPaymentError(errorMessage);
-    setPaymentSuccess(false);
-
     // Redirect to booking confirmation page with error
     if (orderId) {
       const bookingParams = new URLSearchParams({
@@ -475,11 +461,7 @@ const BookTaxiForm = () => {
     setSelectedCarModel("");
     setSelectedPickupLocation(undefined);
     setSelectedDropoffLocation(undefined);
-    setBookingId("");
-    setFormattedBookingId("");
     setOrderId("");
-    setPaymentSuccess(false);
-    setPaymentError(null);
   };
 
   // Calculate estimated fare based on vehicle and distance
@@ -507,19 +489,8 @@ const BookTaxiForm = () => {
       dropoffCoords.lng
     );
 
-    // Estimate travel time based on distance (assuming average speed of 30 km/h in city traffic)
-    const averageSpeedKmh = 30;
-    const estimatedTravelTimeHours = distanceKm / averageSpeedKmh;
-    const timeMins = Math.ceil(estimatedTravelTimeHours * 60);
-
-    // Apply pricing
-    const basePrice = selectedVehicle.basePrice || 0;
-    const perKmPrice = selectedVehicle.perKmPrice || 0;
-    const perMinutePrice = selectedVehicle.perMinutePrice || 0;
-
     // Calculate total fare
-    let totalFare =
-      basePrice + distanceKm * perKmPrice + timeMins * perMinutePrice;
+    let totalFare = selectedVehicle.basePrice + distanceKm * selectedVehicle.perKmPrice;
 
     // Ensure minimum fare
     const minFare = 5; // Minimum fare in AED
@@ -802,8 +773,6 @@ const BookTaxiForm = () => {
       );
 
       if (result) {
-        setBookingId(result.id);
-        setFormattedBookingId(result.formattedId);
         setOrderId(newOrderId);
         setStep(4); // Move to payment step
       } else {
@@ -813,7 +782,7 @@ const BookTaxiForm = () => {
   };
 
   return (
-    <div className="space-y-3 max-h-[500px] overflow-y-auto">
+    <div className="space-y-3">
       {/* Login notice for unauthenticated users */}
       {!currentUser && step === 1 && (
         <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-3">
@@ -864,6 +833,7 @@ const BookTaxiForm = () => {
           </div>
 
           <DateTimePicker
+            label="Date & Time"
             date={pickupDate}
             time={bookingDetails.time}
             onDateChange={setPickupDate}

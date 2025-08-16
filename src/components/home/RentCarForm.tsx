@@ -1,35 +1,22 @@
+import { toast } from "sonner";
+import { format } from "date-fns";
 import React, { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card } from "@/components/ui/card";
+import { Link } from "react-router-dom";
+import { CreditCard, Check, FileText, Book, Clock, Info } from "lucide-react";
+
 import {
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
   SelectValue,
+  SelectContent,
+  SelectTrigger,
 } from "@/components/ui/select";
-import { format } from "date-fns";
-import {
-  Calendar as CalendarIcon,
-  MapPin,
-  CreditCard,
-  Check,
-  FileText,
-  Book,
-  Clock,
-  Info,
-} from "lucide-react";
-import { toast } from "sonner";
-import { Link } from "react-router-dom";
-import { LocationSelector, RouteMap } from "./booking-form";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+import { DateTimePicker, LocationSelector, RouteMap } from "./booking-form";
 
 // Emirates and their tour options
 const emiratesData = {
@@ -173,12 +160,21 @@ const rentalStatuses = [
   { id: "returned", label: "Car Returned", completed: false },
 ];
 
+const getInitialTime = () => {
+  const now = new Date();
+  const fourHoursFromNow = new Date(now.getTime() + 4 * 70 * 60 * 1000);
+  const hours = fourHoursFromNow.getHours().toString().padStart(2, "0");
+  const minutes = fourHoursFromNow.getMinutes().toString().padStart(2, "0");
+  const timeString = `${hours}:${minutes}`;
+  return timeString;
+};
+
 const RentCarForm = () => {
   const [selectedEmirate, setSelectedEmirate] = useState<
     "dubai" | "otherEmirates"
   >("dubai");
   const [pickupDate, setPickupDate] = useState<Date | undefined>(new Date());
-  const [pickupTime, setPickupTime] = useState<string>("");
+  const [pickupTime, setPickupTime] = useState<string>(getInitialTime());
   const [selectedCategory, setSelectedCategory] = useState("economy");
   const [selectedCarModel, setSelectedCarModel] = useState("");
   const [selectedHourlyTour, setSelectedHourlyTour] = useState("");
@@ -412,57 +408,13 @@ const RentCarForm = () => {
             </Select>
           </div>
 
-          {/* Pickup Date and Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="pickup-date" className="text-sm font-medium">
-                Pickup Date
-              </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="pickup-date"
-                    variant={"outline"}
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {pickupDate ? (
-                      format(pickupDate, "PPP")
-                    ) : (
-                      <span>Select Date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={pickupDate}
-                    onSelect={setPickupDate}
-                    initialFocus
-                    disabled={isDateDisabled}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="pickup-time" className="text-sm font-medium">
-                Pickup Time
-              </label>
-              <Select value={pickupTime} onValueChange={setPickupTime}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAvailableTimeOptions(pickupDate).map((time) => (
-                    <SelectItem key={time} value={time}>
-                      {time}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <DateTimePicker
+            label="Pickup Date & Time"
+            date={pickupDate}
+            time={pickupTime}
+            onDateChange={setPickupDate}
+            onTimeChange={setPickupTime}
+          />
 
           {/* Information Icon */}
           <div className="flex items-center gap-2 text-sm text-gray-600">
