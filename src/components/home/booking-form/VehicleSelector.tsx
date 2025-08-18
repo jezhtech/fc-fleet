@@ -3,6 +3,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Loader2,
   Image as ImageIcon,
+  Users,
+  Briefcase,
+  ChevronDown,
 } from "lucide-react";
 import { Vehicle, Location } from "./types";
 import { formatCurrency } from "@/utils/currency";
@@ -70,7 +73,7 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
     let totalPrice =
       vehicle.basePrice +
       vehicle.perKmPrice * distanceKm +
-      vehicle.perMinutePrice * estimatedMinutes;
+      vehicle.perKmPrice * estimatedMinutes;
 
     // Ensure minimum fare
     const minFare = 5; // Minimum fare in AED
@@ -107,8 +110,6 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
     return deg * (Math.PI / 180);
   };
 
-
-
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -119,93 +120,81 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
   }
 
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium">Available Cars</label>
+    <div className="space-y-4">
+      <div className="text-center space-y-2">
+        <h2 className="text-xl font-semibold text-gray-900">
+          Select a vehicle class
+        </h2>
+        <p className="text-sm text-gray-600">
+          All prices include estimated VAT, fees, and tolls
+        </p>
+      </div>
+
       <RadioGroup
         value={selectedCarModel}
         onValueChange={onSelect}
-        className="space-y-3"
+        className="space-y-0"
       >
         {vehicles.map((car) => (
           <div
             key={car.id}
-            className={`border bg-background rounded-md overflow-hidden hover:border-fleet-red cursor-pointer transition-colors ${
+            className={`border rounded-lg p-4 hover:border-fleet-red cursor-pointer transition-all ${
               selectedCarModel === car.id
-                ? "border-fleet-red bg-fleet-red/10"
-                : ""
+                ? "border-fleet-red bg-fleet-red/5 shadow-sm"
+                : "border-gray-200 hover:shadow-sm"
             }`}
             onClick={() => onSelect(car.id)}
           >
             <RadioGroupItem value={car.id} id={car.id} className="sr-only" />
 
-            {/* Vehicle Image Section */}
-            <div className="flex h-60 w-full border-b">
-              {/* Main Image */}
-              <div className="flex-1 relative flex items-center justify-center">
-                {car.images && car.images.length > 0 ? (
-                  <img
-                    src={car.images[activeImageIndex[car.id] || 0]}
-                    alt={car.name}
-                    className="max-w-full max-h-full object-contain"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon size={48} className="text-gray-300" />
-                  </div>
-                )}
+            <div className="flex items-center gap-4">
+              {/* Vehicle Image */}
+              <div className="flex-shrink-0">
+                <div className="w-fit h-20 rounded-lg overflow-hidden bg-gray-100">
+                  {car.images && car.images.length > 0 ? (
+                    <img
+                      src={car.images[activeImageIndex[car.id] || 0]}
+                      alt={car.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon size={24} className="text-gray-400" />
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Side Image Panel - Always Show */}
-              <div className="w-20 border-l border-gray-200 p-2 space-y-2 overflow-y-auto">
-                {car.images && car.images.length > 0 ? (
-                  car.images.map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        setActiveImageIndex((prev) => ({
-                          ...prev,
-                          [car.id]: index,
-                        }));
-                      }}
-                      className={`w-full aspect-square rounded-md overflow-hidden border-2 transition-all ${
-                        index === (activeImageIndex[car.id] || 0)
-                          ? "border-fleet-red shadow-md"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <img
-                        src={image}
-                        alt={`${car.name} view ${index + 1}`}
-                        className="w-full h-full object-contain"
-                      />
-                    </button>
-                  ))
-                ) : (
-                  // Placeholder for when no images exist
-                  <div className="w-full aspect-square rounded-md bg-gray-200 flex items-center justify-center">
-                    <ImageIcon size={16} className="text-gray-400" />
-                  </div>
-                )}
-              </div>
-            </div>
+              {/* Vehicle Details */}
+              <div className="flex-1 space-y-2">
+                {/* Vehicle Class Name */}
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {car.name}
+                </h3>
 
-            {/* Vehicle Details Section */}
-            <div className="p-3">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h4 className="font-medium">{car.name}</h4>
-                  <p className="text-xs text-gray-500">{car.description}</p>
-                  <div className="flex items-center text-xs mt-1">
-                    <span className="mr-2">👥 {car.capacity} seats</span>
+                {/* Capacity Icons */}
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    <span>{car.capacity}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Briefcase className="h-4 w-4" />
+                    <span>{Math.min(car.capacity - 1, 5)}</span>
                   </div>
                 </div>
+
+                {/* Description/Model */}
+                <p className="text-sm text-gray-500">{car.description}</p>
+              </div>
+
+              {/* Price and Chevron */}
+              <div className="flex items-center gap-2">
                 <div className="text-right">
-                  <p className="text-lg font-bold text-fleet-red">
-                    {formatCurrency(getEstimatedPrice(car))}
+                  <p className="text-xl font-bold text-gray-900">
+                    {getEstimatedPrice(car)}
                   </p>
-                  <p className="text-xs text-gray-500">Estimated fare</p>
+                  <p className="text-xs text-gray-500">AED</p>
                 </div>
               </div>
             </div>

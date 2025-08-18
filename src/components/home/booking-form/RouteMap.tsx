@@ -35,27 +35,6 @@ const RouteMap: React.FC<RouteMapProps> = ({
     }
   }, [tokenError]);
 
-  // Create luxury car icon element for pickup marker
-  const createLuxuryCarElement = () => {
-    const el = document.createElement("div");
-    el.className = "luxury-car-marker";
-    el.style.width = "40px";
-    el.style.height = "40px";
-    el.style.display = "flex";
-    el.style.justifyContent = "center";
-    el.style.alignItems = "center";
-    el.style.borderRadius = "50%";
-    el.style.backgroundColor = "white";
-    el.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
-    el.style.fontSize = "22px";
-    el.style.paddingBottom = "4px";
-
-    // Use car emoji instead of SVG
-    el.textContent = "🚗";
-
-    return el;
-  };
-
   // Get actual driving route using Google Directions API
   const getDirectionsRoute = async (pickup: Location, dropoff: Location) => {
     try {

@@ -17,6 +17,7 @@ export interface TransportType {
   name: string;
   description: string;
   emoji: string;
+  carModels?: string;
 }
 
 export interface Vehicle {
