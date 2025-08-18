@@ -17,9 +17,12 @@ import {
   User,
   Phone,
   Car as CarIcon,
+  CreditCard,
+  Star,
+  Navigation,
 } from "lucide-react";
 import { format } from "date-fns";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   collection,
   query,
@@ -46,7 +49,7 @@ import { formatExistingBookingId } from "@/utils/booking";
 // Booking type definition
 interface Booking {
   id: string;
-  formattedId?: string;
+  orderId: string;
   type: string;
   status: string;
   date: Date;
@@ -55,8 +58,8 @@ interface Booking {
   vehicle: string;
   amount: string;
   paymentInfo?: {
-    transactionId?: string;
-    paymentMethod?: string;
+    trackingId?: string;
+    paymentMode?: string;
     timestamp?: string;
   };
   customerInfo?: {
@@ -77,6 +80,9 @@ interface TrackingStep {
   label: string;
   status: "completed" | "current" | "upcoming";
   details?: React.ReactNode;
+  icon: React.ReactNode;
+  description: string;
+  estimatedTime?: string;
 }
 
 // TrackingDialog component
@@ -108,10 +114,27 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
     {
       label: "Payment Confirmed",
       status: currentStepIndex >= 1 ? "completed" : "upcoming",
+      icon: <CreditCard className="h-5 w-5" />,
+      description: "Your payment has been successfully processed",
+      estimatedTime: "Immediate",
       details: booking.paymentInfo && (
-        <div className="text-sm text-gray-600 mt-1">
-          <p>Transaction ID: {booking.paymentInfo.transactionId || "N/A"}</p>
-          <p>Method: {booking.paymentInfo.paymentMethod || "N/A"}</p>
+        <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-md">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className="font-medium text-green-800">Tracking ID</p>
+              <p className="text-green-700">{booking.paymentInfo.trackingId || "N/A"}</p>
+            </div>
+            <div>
+              <p className="font-medium text-green-800">Payment Method</p>
+              <p className="text-green-700">{booking.paymentInfo.paymentMode || "N/A"}</p>
+            </div>
+          </div>
+          {booking.paymentInfo.timestamp && (
+            <div className="mt-2 pt-2 border-t border-green-200">
+              <p className="font-medium text-green-800">Payment Time</p>
+              <p className="text-green-700">{new Date(booking.paymentInfo.timestamp).toLocaleString()}</p>
+            </div>
+          )}
         </div>
       ),
     },
@@ -123,6 +146,27 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
           : currentStepIndex === 1
           ? "current"
           : "upcoming",
+      icon: <FileText className="h-5 w-5" />,
+      description: "Your booking request is being processed",
+      estimatedTime: "2-5 minutes",
+      details: currentStepIndex >= 2 && (
+        <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
+          <div className="space-y-2">
+            <div>
+              <p className="font-medium text-blue-800">Order ID</p>
+              <p className="text-blue-700 font-mono">{booking.orderId}</p>
+            </div>
+            <div>
+              <p className="font-medium text-blue-800">Service Type</p>
+              <p className="text-blue-700">{booking.type}</p>
+            </div>
+            <div>
+              <p className="font-medium text-blue-800">Status</p>
+              <p className="text-blue-700">Processing</p>
+            </div>
+          </div>
+        </div>
+      ),
     },
     {
       label: "Booking Confirmed",
@@ -132,6 +176,23 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
           : currentStepIndex === 2
           ? "current"
           : "upcoming",
+      icon: <CheckCircle2 className="h-5 w-5" />,
+      description: "Your booking has been confirmed and verified",
+      estimatedTime: "5-10 minutes",
+      details: currentStepIndex >= 3 && (
+        <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-md">
+          <div className="space-y-2">
+            <div>
+              <p className="font-medium text-green-800">Confirmation Time</p>
+              <p className="text-green-700">{new Date().toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="font-medium text-green-800">Next Step</p>
+              <p className="text-green-700">Driver assignment in progress</p>
+            </div>
+          </div>
+        </div>
+      ),
     },
     {
       label: "Driver Assigned",
@@ -141,22 +202,65 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
           : currentStepIndex === 3
           ? "current"
           : "upcoming",
+      icon: <User className="h-5 w-5" />,
+      description: "A professional driver has been assigned to your ride",
+      estimatedTime: "10-15 minutes",
       details: currentStepIndex >= 4 && booking.driverInfo && (
-        <div className="text-sm text-gray-600 mt-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <span>Driver: {booking.driverInfo.name || "Not assigned yet"}</span>
+        <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-blue-600" />
+              <div>
+                <p className="font-medium text-blue-800">Driver Name</p>
+                <p className="text-blue-700">{booking.driverInfo.name || "Not assigned yet"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-blue-600" />
+              <div>
+                <p className="font-medium text-blue-800">Driver Phone</p>
+                <p className="text-blue-700">{booking.driverInfo.phone || "Not available"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <CarIcon className="h-4 w-4 text-blue-600" />
+              <div>
+                <p className="font-medium text-blue-800">Vehicle Number</p>
+                <p className="text-blue-700">{booking.driverInfo.vehicleNumber || "Not available"}</p>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-blue-200">
+              <p className="text-blue-700 text-xs">Your driver will contact you shortly to confirm pickup details.</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4" />
-            <span>Phone: {booking.driverInfo.phone || "Not available"}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CarIcon className="h-4 w-4" />
-            <span>
-              Vehicle Number:{" "}
-              {booking.driverInfo.vehicleNumber || "Not available"}
-            </span>
+        </div>
+      ),
+    },
+    {
+      label: "Driver En Route",
+      status:
+        currentStepIndex >= 5
+          ? "completed"
+          : currentStepIndex === 4
+          ? "current"
+          : "upcoming",
+      icon: <Navigation className="h-5 w-5" />,
+      description: "Your driver is on the way to pickup location",
+      estimatedTime: "15-30 minutes",
+      details: currentStepIndex >= 5 && (
+        <div className="text-sm text-gray-600 bg-yellow-50 p-3 rounded-md">
+          <div className="space-y-2">
+            <div>
+              <p className="font-medium text-yellow-800">Estimated Arrival</p>
+              <p className="text-yellow-700">Calculating...</p>
+            </div>
+            <div>
+              <p className="font-medium text-yellow-800">Current Location</p>
+              <p className="text-yellow-700">Driver is en route</p>
+            </div>
+            <div className="pt-2 border-t border-yellow-200">
+              <p className="text-yellow-700 text-xs">Please be ready at the pickup location 5 minutes before the scheduled time.</p>
+            </div>
           </div>
         </div>
       ),
@@ -169,59 +273,210 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
           : currentStepIndex === 5
           ? "current"
           : "upcoming",
+      icon: <Map className="h-5 w-5" />,
+      description: "Your journey has begun",
+      estimatedTime: "Based on route",
+      details: currentStepIndex >= 6 && (
+        <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-md">
+          <div className="space-y-2">
+            <div>
+              <p className="font-medium text-green-800">Start Time</p>
+              <p className="text-green-700">{new Date().toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="font-medium text-green-800">Route</p>
+              <p className="text-green-700">{booking.pickup} → {booking.dropoff}</p>
+            </div>
+            <div className="pt-2 border-t border-green-200">
+              <p className="text-green-700 text-xs">Enjoy your ride! Your driver will take the best route to your destination.</p>
+            </div>
+          </div>
+        </div>
+      ),
     },
     {
-      label: "Ride Ended",
+      label: "Ride Completed",
       status:
         currentStepIndex >= 7
           ? "completed"
           : currentStepIndex === 6
           ? "current"
           : "upcoming",
+      icon: <CheckCircle2 className="h-5 w-5" />,
+      description: "You have reached your destination",
+      estimatedTime: "Journey complete",
+      details: currentStepIndex >= 7 && (
+        <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-md">
+          <div className="space-y-2">
+            <div>
+              <p className="font-medium text-green-800">Completion Time</p>
+              <p className="text-green-700">{new Date().toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="font-medium text-green-800">Total Amount</p>
+              <p className="text-green-700">{booking.amount}</p>
+            </div>
+            <div className="pt-2 border-t border-green-200">
+              <p className="text-green-700 text-xs">Thank you for choosing First Class Fleet! Please rate your experience.</p>
+            </div>
+          </div>
+        </div>
+      ),
     },
     {
-      label: "Rating",
+      label: "Rate & Review",
       status: currentStepIndex === 7 ? "current" : "upcoming",
+      icon: <Star className="h-5 w-5" />,
+      description: "Share your experience and rate your ride",
+      estimatedTime: "2-3 minutes",
+      details: currentStepIndex === 7 && (
+        <div className="text-sm text-gray-600 bg-purple-50 p-3 rounded-md">
+          <div className="space-y-2">
+            <div>
+              <p className="font-medium text-purple-800">Service Quality</p>
+              <p className="text-purple-700">Rate your experience</p>
+            </div>
+            <div>
+              <p className="font-medium text-purple-800">Driver Rating</p>
+              <p className="text-purple-700">Rate your driver</p>
+            </div>
+            <div className="pt-2 border-t border-purple-200">
+              <p className="text-purple-700 text-xs">Your feedback helps us improve our service for future customers.</p>
+            </div>
+          </div>
+        </div>
+      ),
     },
   ];
 
   return (
     <div className="py-4">
-      <div className="space-y-6">
+      {/* Header with current status */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-fleet-red to-fleet-accent rounded-lg text-white">
+        <h3 className="text-lg font-semibold mb-2">Current Status</h3>
+        <p className="text-sm opacity-90">
+          {steps[currentStepIndex]?.label} - {steps[currentStepIndex]?.description}
+        </p>
+        {steps[currentStepIndex]?.estimatedTime && (
+          <p className="text-xs opacity-75 mt-1">
+            Estimated time: {steps[currentStepIndex]?.estimatedTime}
+          </p>
+        )}
+      </div>
+
+      {/* Progress steps */}
+      <div>
         {steps.map((step, index) => (
           <div key={index} className="flex">
             <div className="flex flex-col items-center mr-4">
               {step.status === "completed" ? (
-                <CheckCircle2 className="h-6 w-6 text-green-500" />
+                <div className="h-8 w-8 p-2 bg-green-500 rounded-full flex items-center justify-center text-white">
+                  {step.icon}
+                </div>
               ) : step.status === "current" ? (
-                <Circle className="h-6 w-6 text-fleet-red fill-fleet-red/20 stroke-fleet-red" />
+                <div className="h-8 w-8 p-2 bg-yellow-500 rounded-full flex items-center justify-center text-white animate-pulse">
+                  {step.icon}
+                </div>
               ) : (
-                <Circle className="h-6 w-6 text-gray-300" />
+                <div className="h-8 w-8 p-2 bg-gray-300 rounded-full flex items-center justify-center text-gray-500">
+                  {step.icon}
+                </div>
               )}
               {index < steps.length - 1 && (
                 <div
-                  className={`h-12 w-0.5 ${
-                    step.status === "completed" ? "bg-green-500" : "bg-gray-200"
+                  className={`h-full min-h-8 w-0.5 ${
+                    step.status === "completed"
+                      ? "bg-green-500"
+                      : step.status === "current"
+                      ? "bg-yellow-500"
+                      : "bg-gray-200"
                   }`}
                 />
               )}
             </div>
-            <div className="pt-1 pb-8">
-              <p
-                className={`font-medium ${
-                  step.status === "completed"
-                    ? "text-green-700"
-                    : step.status === "current"
-                    ? "text-fleet-red"
-                    : "text-gray-500"
-                }`}
-              >
-                {step.label}
-              </p>
-              {step.details && <div className="mt-1">{step.details}</div>}
+            <div className="flex-1 pb-4">
+              <div>
+                <h4
+                  className={`font-semibold text-lg ${
+                    step.status === "completed"
+                      ? "text-green-700"
+                      : step.status === "current"
+                      ? "text-yellow-600"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {step.label}
+                </h4>
+                <p
+                  className={`text-sm ${
+                    step.status === "completed"
+                      ? "text-green-600"
+                      : step.status === "current"
+                      ? "text-yellow-600"
+                      : "text-gray-400"
+                  }`}
+                >
+                  {step.description}
+                </p>
+                {step.estimatedTime && (
+                  <p
+                    className={`text-xs mt-1 ${
+                      step.status === "completed"
+                        ? "text-green-500"
+                        : step.status === "current"
+                        ? "text-yellow-500"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    ⏱️ {step.estimatedTime}
+                  </p>
+                )}
+              </div>
+              
+              {/* Step details */}
+              {step.details && (
+                <div className="mt-3">
+                  {step.details}
+                </div>
+              )}
+              
+              {/* Additional info for current step */}
+              {step.status === "current" && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-sm text-yellow-800 font-medium">
+                    🎯 This is your current step
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    We're working on this right now. You'll be notified when it's complete.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Summary at the bottom */}
+      <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+        <h4 className="font-medium text-gray-800 mb-2">Booking Summary</h4>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-gray-600">Order ID</p>
+            <p className="font-medium text-gray-800">{booking.orderId}</p>
+          </div>
+          <div>
+            <p className="text-gray-600">Service Type</p>
+            <p className="font-medium text-gray-800">{booking.type}</p>
+          </div>
+          <div>
+            <p className="text-gray-600">Pickup</p>
+            <p className="font-medium text-gray-800">{booking.pickup}</p>
+          </div>
+          <div>
+            <p className="text-gray-600">Dropoff</p>
+            <p className="font-medium text-gray-800">{booking.dropoff}</p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -252,8 +507,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
   const [showTracking, setShowTracking] = useState(false);
 
   // Use the formattedId if available, otherwise generate one
-  const bookingId =
-    booking.formattedId || formatExistingBookingId(booking.id, booking.date);
+  const bookingId = booking.orderId;
 
   const handleInvoiceSuccess = () => {
     toast.success("Invoice downloaded successfully");
@@ -368,9 +622,15 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                     <span className="hidden sm:inline">Track</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Tracking Booking {bookingId}</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-fleet-red" />
+                      Track Booking: {bookingId}
+                    </DialogTitle>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Real-time updates on your {booking.type.toLowerCase()} service
+                    </p>
                   </DialogHeader>
                   <TrackingDialog booking={booking} />
                 </DialogContent>
@@ -383,113 +643,8 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
   );
 };
 
-// Demo bookings to show when Firebase fails or for development
-const DEMO_BOOKINGS: Booking[] = [
-  {
-    id: "BK123456",
-    type: "Chauffeur",
-    status: "completed",
-    date: new Date(), // Current date
-    pickup: "Dubai Mall, Dubai",
-    dropoff: "Palm Jumeirah, Dubai",
-    vehicle: "Mercedes S-Class",
-    amount: "AED 320.00",
-    customerInfo: {
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "+971 50 123 4567",
-    },
-    driverInfo: {
-      name: "Ahmed Mohammed",
-      phone: "+971 55 987 6543",
-      vehicleNumber: "DXB 12345",
-    },
-    paymentInfo: {
-      transactionId: "TX12345",
-      paymentMethod: "Credit Card",
-      timestamp: new Date().toISOString(),
-    },
-  },
-  {
-    id: "BK789012",
-    type: "Hourly",
-    status: "driver_assigned",
-    date: (() => {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return tomorrow;
-    })(), // Tomorrow
-    pickup: "Dubai International Airport",
-    dropoff: "Burj Al Arab",
-    vehicle: "Cadillac Escalade",
-    amount: "AED 450.00",
-    customerInfo: {
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "+971 50 123 4567",
-    },
-    driverInfo: {
-      name: "Samir Khan",
-      phone: "+971 54 876 5432",
-      vehicleNumber: "DXB 54321",
-    },
-    paymentInfo: {
-      transactionId: "TX67890",
-      paymentMethod: "Debit Card",
-      timestamp: new Date().toISOString(),
-    },
-  },
-  {
-    id: "BK345678",
-    type: "Chauffeur",
-    status: "initiated",
-    date: (() => {
-      const dayAfterTomorrow = new Date();
-      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
-      return dayAfterTomorrow;
-    })(), // Day after tomorrow
-    pickup: "Dubai Marina",
-    dropoff: "Abu Dhabi Grand Mosque",
-    vehicle: "BMW 7 Series",
-    amount: "AED 550.00",
-    customerInfo: {
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "+971 50 123 4567",
-    },
-    paymentInfo: {
-      transactionId: "TX24680",
-      paymentMethod: "Credit Card",
-      timestamp: new Date().toISOString(),
-    },
-  },
-  {
-    id: "BK567890",
-    type: "Chauffeur",
-    status: "awaiting",
-    date: (() => {
-      const inThreeDays = new Date();
-      inThreeDays.setDate(inThreeDays.getDate() + 3);
-      return inThreeDays;
-    })(), // In three days
-    pickup: "Dubai Healthcare City",
-    dropoff: "Dubai Mall",
-    vehicle: "Lexus ES",
-    amount: "AED 280.00",
-    customerInfo: {
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "+971 50 123 4567",
-    },
-    paymentInfo: {
-      transactionId: "TX13579",
-      paymentMethod: "Wallet",
-      timestamp: new Date().toISOString(),
-    },
-  },
-];
-
 const MyBookings = () => {
+  const navigate = useNavigate();
   const { currentUser, userData } = useAuth();
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
   const [pastBookings, setPastBookings] = useState<Booking[]>([]);
@@ -502,22 +657,12 @@ const MyBookings = () => {
   useEffect(() => {
     const fetchBookings = async () => {
       if (!currentUser) {
-        
-        setUseDemoData(true);
-        setUpcomingBookings([
-          DEMO_BOOKINGS[1],
-          DEMO_BOOKINGS[2],
-          DEMO_BOOKINGS[3],
-        ]);
-        setPastBookings([DEMO_BOOKINGS[0]]);
-        setLoading(false);
-        return;
+        navigate("/login");
       }
 
       try {
         setLoading(true);
         setError(null);
-        
 
         // Reference to the bookings collection
         const bookingsRef = collection(firestore, "bookings");
@@ -528,7 +673,6 @@ const MyBookings = () => {
 
         // Approach 1: Try with customer email in customerInfo
         if (currentUser.email) {
-          
           userBookingsQuery = query(
             bookingsRef,
             where("customerInfo.email", "==", currentUser.email)
@@ -543,7 +687,6 @@ const MyBookings = () => {
 
         // Approach 2: Try with user ID if first approach returned no results
         if (!querySnapshot || querySnapshot.empty) {
-          
           userBookingsQuery = query(
             bookingsRef,
             where("userId", "==", currentUser.uid)
@@ -551,7 +694,6 @@ const MyBookings = () => {
 
           try {
             querySnapshot = await getDocs(userBookingsQuery);
-            
           } catch (err) {
             console.error("Error querying by userId:", err);
           }
@@ -559,7 +701,6 @@ const MyBookings = () => {
 
         // Approach 3: Try with user email field directly
         if (!querySnapshot || querySnapshot.empty) {
-          
           userBookingsQuery = query(
             bookingsRef,
             where("email", "==", currentUser.email)
@@ -574,7 +715,6 @@ const MyBookings = () => {
 
         // Approach 4: Try with user phone number if available
         if ((!querySnapshot || querySnapshot.empty) && userData?.phoneNumber) {
-          
           userBookingsQuery = query(
             bookingsRef,
             where("phoneNumber", "==", userData.phoneNumber)
@@ -582,7 +722,6 @@ const MyBookings = () => {
 
           try {
             querySnapshot = await getDocs(userBookingsQuery);
-            
           } catch (err) {
             console.error("Error querying by phone number:", err);
           }
@@ -590,7 +729,6 @@ const MyBookings = () => {
 
         // NEW APPROACH 5: Try with customerInfo.email field (exact match from screenshot)
         if (!querySnapshot || querySnapshot.empty) {
-          
           userBookingsQuery = query(
             bookingsRef,
             where("customerInfo.email", "==", "customer@example.com")
@@ -598,7 +736,6 @@ const MyBookings = () => {
 
           try {
             querySnapshot = await getDocs(userBookingsQuery);
-            
           } catch (err) {
             console.error("Error querying by exact customerInfo email:", err);
           }
@@ -606,26 +743,8 @@ const MyBookings = () => {
 
         // NEW APPROACH 6: Get all bookings and filter client-side (last resort)
         if (!querySnapshot || querySnapshot.empty) {
-          
           try {
             querySnapshot = await getDocs(collection(firestore, "bookings"));
-            
-
-            // If we have too many bookings, limit to reasonable number
-            if (querySnapshot.size > 100) {
-              console.warn(
-                "Large number of bookings found, using demo data instead"
-              );
-              setUseDemoData(true);
-              setUpcomingBookings([
-                DEMO_BOOKINGS[1],
-                DEMO_BOOKINGS[2],
-                DEMO_BOOKINGS[3],
-              ]);
-              setPastBookings([DEMO_BOOKINGS[0]]);
-              setLoading(false);
-              return;
-            }
           } catch (err) {
             console.error("Error fetching all bookings:", err);
           }
@@ -633,28 +752,17 @@ const MyBookings = () => {
 
         // If we still have no results, show demo data
         if (!querySnapshot || querySnapshot.empty) {
-          
-          setUseDemoData(true);
-          setUpcomingBookings([
-            DEMO_BOOKINGS[1],
-            DEMO_BOOKINGS[2],
-            DEMO_BOOKINGS[3],
-          ]);
-          setPastBookings([DEMO_BOOKINGS[0]]);
-          setLoading(false);
+          navigate("/");
           return;
         }
 
-        
         const now = new Date();
         const upcoming: Booking[] = [];
         const past: Booking[] = [];
 
         querySnapshot.forEach((doc) => {
           try {
-            
             const data = doc.data();
-            
 
             // Process booking creation date
             let createdAt: Date | null = null;
@@ -664,11 +772,9 @@ const MyBookings = () => {
                 typeof data.createdAt.toDate === "function"
               ) {
                 createdAt = data.createdAt.toDate();
-                
               } else if (data.createdAt) {
                 // Handle other date formats
                 createdAt = new Date(data.createdAt);
-                
               } else {
                 console.warn("No createdAt value found");
               }
@@ -683,10 +789,8 @@ const MyBookings = () => {
               if (data.pickupDateTime) {
                 if (typeof data.pickupDateTime.toDate === "function") {
                   bookingDate = data.pickupDateTime.toDate();
-                  
                 } else if (typeof data.pickupDateTime === "string") {
                   bookingDate = new Date(data.pickupDateTime);
-                  
                 } else {
                   bookingDate = new Date();
                   console.warn("Invalid pickupDateTime format");
@@ -696,10 +800,8 @@ const MyBookings = () => {
               else if (data.date) {
                 if (typeof data.date.toDate === "function") {
                   bookingDate = data.date.toDate();
-                  
                 } else if (typeof data.date === "string") {
                   bookingDate = new Date(data.date);
-                  
                 } else {
                   bookingDate = new Date();
                   console.warn("Invalid date format");
@@ -731,7 +833,7 @@ const MyBookings = () => {
 
             const booking: Booking = {
               id: doc.id,
-              formattedId: data.formattedId,
+              orderId: data.orderId,
               type: data.type || data.bookingType || "Chauffeur",
               status: data.status || "initiated",
               date: bookingDate,
@@ -816,14 +918,7 @@ const MyBookings = () => {
 
         // Use demo data after multiple failures
         if (retryCount >= 2) {
-          
-          setUseDemoData(true);
-          setUpcomingBookings([
-            DEMO_BOOKINGS[1],
-            DEMO_BOOKINGS[2],
-            DEMO_BOOKINGS[3],
-          ]);
-          setPastBookings([DEMO_BOOKINGS[0]]);
+          navigate("/");
         }
         setLoading(false);
       }

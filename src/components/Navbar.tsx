@@ -37,7 +37,7 @@ const Navbar = ({ position = "sticky" }: NavbarProps) => {
   return (
     <nav
       className={cn(
-        "top-0 w-full z-50 transition-all duration-300",
+        "top-0 w-full z-20 transition-all duration-300",
         scrolled
           ? "bg-black/20 shadow-md backdrop-blur-md"
           : "bg-transparent backdrop-blur-sm",

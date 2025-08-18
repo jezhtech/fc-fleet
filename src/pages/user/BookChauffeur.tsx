@@ -69,32 +69,30 @@ const BookChauffeur = () => {
     try {
       setLoading(true);
       const bookingsRef = collection(firestore, "bookings");
-      const q = query(bookingsRef, where("orderId", "==", orderId));
-      const snapshot = await getDocs(q);
+      const q = query(bookingsRef);
 
-      if (!snapshot.empty) {
-        const bookingDoc = snapshot.docs[0];
-        const data = bookingDoc.data() as BookingData;
-        setBookingData({
-          id: bookingDoc.id,
-          ...data,
+      const snapshots = await getDocs(q);
+
+      if (snapshots) {
+        const bookingDoc = snapshots.docs.find((doc) => {
+          if (doc.data()["orderId"] === orderId) {
+            return doc;
+          }
         });
+        if (!bookingDoc) {
+          toast.error("Booking not found with this order ID");
+          // navigate("/");
+        }
+        const data = bookingDoc.data() as BookingData;
 
         // Update payment status if paymentStatus is provided in URL
-        if (bookingData.paymentStatus) {
+        if (data.status) {
           // Update the local state to reflect the payment status
-          setBookingData((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  paymentStatus: bookingData.paymentStatus,
-                }
-              : null
-          );
+          setBookingData(data);
         }
       } else {
         toast.error("Booking not found with this order ID");
-        navigate("/");
+        // navigate("/");
       }
     } catch (error) {
       console.error("Error fetching booking by order ID:", error);
@@ -163,8 +161,8 @@ const BookChauffeur = () => {
   };
 
   const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case "SUCCESS":
+    switch (status.toUpperCase()) {
+      case "PAID":
         return "text-green-600 bg-green-50";
       case "FAILED":
         return "text-red-600 bg-red-50";
@@ -258,9 +256,9 @@ const BookChauffeur = () => {
                   bookingData.paymentStatus
                 )}`}
               >
-                {bookingData.paymentStatus === "SUCCESS"
+                {bookingData.paymentStatus.toUpperCase() === "PAID"
                   ? "Payment Successful"
-                  : bookingData.paymentStatus === "FAILED"
+                  : bookingData.paymentStatus.toUpperCase() === "FAILED"
                   ? "Payment Failed"
                   : "Payment Pending"}
               </div>
@@ -319,9 +317,7 @@ const BookChauffeur = () => {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-sm text-gray-600">Order ID</p>
-                  <p className="font-mono font-medium">
-                    {bookingData.orderId}
-                  </p>
+                  <p className="font-mono font-medium">{bookingData.orderId}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Tracking ID</p>
@@ -401,7 +397,7 @@ const BookChauffeur = () => {
           {/* Action Buttons */}
           <div className="flex gap-4">
             <Button
-              onClick={() => navigate("/my-bookings")}
+              onClick={() => navigate("/user/my-bookings")}
               className="bg-fleet-red hover:bg-fleet-red/90"
             >
               View All Bookings
