@@ -57,10 +57,12 @@ interface Booking {
   dropoff: string;
   vehicle: string;
   amount: string;
+  paymentMethod?: string;
   paymentInfo?: {
     trackingId?: string;
     paymentMode?: string;
     timestamp?: string;
+    method?: string;
   };
   customerInfo?: {
     name: string;
@@ -115,24 +117,51 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
       label: "Payment Confirmed",
       status: currentStepIndex >= 1 ? "completed" : "upcoming",
       icon: <CreditCard className="h-5 w-5" />,
-      description: "Your payment has been successfully processed",
+      description:
+        booking.paymentMethod === "cash"
+          ? "Cash payment selected - Amount due at pickup"
+          : "Your payment has been successfully processed",
       estimatedTime: "Immediate",
-      details: booking.paymentInfo && (
+      details: currentStepIndex >= 1 && (
         <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-md">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <p className="font-medium text-green-800">Tracking ID</p>
-              <p className="text-green-700">{booking.paymentInfo.trackingId || "N/A"}</p>
+          {booking.paymentMethod === "cash" ? (
+            <div className="space-y-2">
+              <div>
+                <p className="font-medium text-green-800">Payment Method</p>
+                <p className="text-green-700">Cash Payment</p>
+              </div>
+              <div>
+                <p className="font-medium text-green-800">Amount Due</p>
+                <p className="text-green-700">{booking.amount}</p>
+              </div>
+              <div className="pt-2 border-t border-green-200">
+                <p className="text-green-700 text-xs">
+                  Please have exact amount ready when driver arrives
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium text-green-800">Payment Method</p>
-              <p className="text-green-700">{booking.paymentInfo.paymentMode || "N/A"}</p>
-            </div>
-          </div>
-          {booking.paymentInfo.timestamp && (
-            <div className="mt-2 pt-2 border-t border-green-200">
-              <p className="font-medium text-green-800">Payment Time</p>
-              <p className="text-green-700">{new Date(booking.paymentInfo.timestamp).toLocaleString()}</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="font-medium text-green-800">Tracking ID</p>
+                <p className="text-green-700">
+                  {booking.paymentInfo?.trackingId || "N/A"}
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-green-800">Payment Method</p>
+                <p className="text-green-700">
+                  {booking.paymentInfo?.paymentMode || "N/A"}
+                </p>
+              </div>
+              {booking.paymentInfo?.timestamp && (
+                <div className="mt-2 pt-2 border-t border-green-200">
+                  <p className="font-medium text-green-800">Payment Time</p>
+                  <p className="text-green-700">
+                    {new Date(booking.paymentInfo.timestamp).toLocaleString()}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -164,6 +193,14 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
               <p className="font-medium text-blue-800">Status</p>
               <p className="text-blue-700">Processing</p>
             </div>
+            {booking.paymentMethod === "cash" && (
+              <div>
+                <p className="font-medium text-blue-800">Payment Method</p>
+                <p className="text-blue-700">
+                  Cash Payment - Amount: {booking.amount}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       ),
@@ -190,6 +227,14 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
               <p className="font-medium text-green-800">Next Step</p>
               <p className="text-green-700">Driver assignment in progress</p>
             </div>
+            {booking.paymentMethod === "cash" && (
+              <div>
+                <p className="font-medium text-green-800">Payment Reminder</p>
+                <p className="text-green-700">
+                  Cash payment confirmed - Amount due: {booking.amount}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       ),
@@ -212,25 +257,33 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
               <User className="h-4 w-4 text-blue-600" />
               <div>
                 <p className="font-medium text-blue-800">Driver Name</p>
-                <p className="text-blue-700">{booking.driverInfo.name || "Not assigned yet"}</p>
+                <p className="text-blue-700">
+                  {booking.driverInfo.name || "Not assigned yet"}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-blue-600" />
               <div>
                 <p className="font-medium text-blue-800">Driver Phone</p>
-                <p className="text-blue-700">{booking.driverInfo.phone || "Not available"}</p>
+                <p className="text-blue-700">
+                  {booking.driverInfo.phone || "Not available"}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <CarIcon className="h-4 w-4 text-blue-600" />
               <div>
                 <p className="font-medium text-blue-800">Vehicle Number</p>
-                <p className="text-blue-700">{booking.driverInfo.vehicleNumber || "Not available"}</p>
+                <p className="text-blue-700">
+                  {booking.driverInfo.vehicleNumber || "Not available"}
+                </p>
               </div>
             </div>
             <div className="pt-2 border-t border-blue-200">
-              <p className="text-blue-700 text-xs">Your driver will contact you shortly to confirm pickup details.</p>
+              <p className="text-blue-700 text-xs">
+                Your driver will contact you shortly to confirm pickup details.
+              </p>
             </div>
           </div>
         </div>
@@ -259,7 +312,15 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
               <p className="text-yellow-700">Driver is en route</p>
             </div>
             <div className="pt-2 border-t border-yellow-200">
-              <p className="text-yellow-700 text-xs">Please be ready at the pickup location 5 minutes before the scheduled time.</p>
+              <p className="text-yellow-700 text-xs">
+                Please be ready at the pickup location 5 minutes before the
+                scheduled time.
+              </p>
+              {booking.paymentMethod === "cash" && (
+                <p className="text-yellow-700 text-xs mt-1">
+                  💵 Remember to have the exact amount ready: {booking.amount}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -285,10 +346,15 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
             </div>
             <div>
               <p className="font-medium text-green-800">Route</p>
-              <p className="text-green-700">{booking.pickup} → {booking.dropoff}</p>
+              <p className="text-green-700">
+                {booking.pickup} → {booking.dropoff}
+              </p>
             </div>
             <div className="pt-2 border-t border-green-200">
-              <p className="text-green-700 text-xs">Enjoy your ride! Your driver will take the best route to your destination.</p>
+              <p className="text-green-700 text-xs">
+                Enjoy your ride! Your driver will take the best route to your
+                destination.
+              </p>
             </div>
           </div>
         </div>
@@ -317,7 +383,10 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
               <p className="text-green-700">{booking.amount}</p>
             </div>
             <div className="pt-2 border-t border-green-200">
-              <p className="text-green-700 text-xs">Thank you for choosing First Class Fleet! Please rate your experience.</p>
+              <p className="text-green-700 text-xs">
+                Thank you for choosing First Class Fleet! Please rate your
+                experience.
+              </p>
             </div>
           </div>
         </div>
@@ -341,7 +410,9 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
               <p className="text-purple-700">Rate your driver</p>
             </div>
             <div className="pt-2 border-t border-purple-200">
-              <p className="text-purple-700 text-xs">Your feedback helps us improve our service for future customers.</p>
+              <p className="text-purple-700 text-xs">
+                Your feedback helps us improve our service for future customers.
+              </p>
             </div>
           </div>
         </div>
@@ -355,12 +426,23 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
       <div className="mb-6 p-4 bg-gradient-to-r from-fleet-red to-fleet-accent rounded-lg text-white">
         <h3 className="text-lg font-semibold mb-2">Current Status</h3>
         <p className="text-sm opacity-90">
-          {steps[currentStepIndex]?.label} - {steps[currentStepIndex]?.description}
+          {steps[currentStepIndex]?.label} -{" "}
+          {steps[currentStepIndex]?.description}
         </p>
         {steps[currentStepIndex]?.estimatedTime && (
           <p className="text-xs opacity-75 mt-1">
             Estimated time: {steps[currentStepIndex]?.estimatedTime}
           </p>
+        )}
+
+        {/* Cash Payment Notice */}
+        {booking.paymentMethod === "cash" && (
+          <div className="mt-3 p-2 bg-white/20 rounded border border-white/30">
+            <p className="text-xs text-white/90">
+              💵 Cash Payment: Please have exact amount ready when driver
+              arrives
+            </p>
+          </div>
         )}
       </div>
 
@@ -432,14 +514,10 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
                   </p>
                 )}
               </div>
-              
+
               {/* Step details */}
-              {step.details && (
-                <div className="mt-3">
-                  {step.details}
-                </div>
-              )}
-              
+              {step.details && <div className="mt-3">{step.details}</div>}
+
               {/* Additional info for current step */}
               {step.status === "current" && (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
@@ -447,7 +525,8 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
                     🎯 This is your current step
                   </p>
                   <p className="text-xs text-yellow-700 mt-1">
-                    We're working on this right now. You'll be notified when it's complete.
+                    We're working on this right now. You'll be notified when
+                    it's complete.
                   </p>
                 </div>
               )}
@@ -629,7 +708,8 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                       Track Booking: {bookingId}
                     </DialogTitle>
                     <p className="text-sm text-gray-600 mt-1">
-                      Real-time updates on your {booking.type.toLowerCase()} service
+                      Real-time updates on your {booking.type.toLowerCase()}{" "}
+                      service
                     </p>
                   </DialogHeader>
                   <TrackingDialog booking={booking} />
@@ -853,6 +933,7 @@ const MyBookings = () => {
                 data.car ||
                 "Standard Vehicle",
               amount: amount,
+              paymentMethod: data.paymentMethod || data.paymentInfo?.method,
               paymentInfo: data.paymentInfo || {},
               customerInfo: data.customerInfo || {
                 name: userData?.firstName

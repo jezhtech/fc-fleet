@@ -377,7 +377,7 @@ const AdminBookings = () => {
       else if (dialogType === 'assign' && selectedDriver) {
         const response = await assignDriver(selectedBooking.id, selectedDriver);
         if (response.success) {
-          const emailStatus = response.emailsSent;
+          const emailStatus = response.notifications;
           let message = 'Driver assigned successfully';
           if (emailStatus.customer && emailStatus.driver) {
             message += ' and emails sent to both customer and driver';

@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   Image as ImageIcon,
 } from "lucide-react";
 import { Vehicle, Location } from "./types";
@@ -109,32 +107,7 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
     return deg * (Math.PI / 180);
   };
 
-  // Functions to navigate images
-  const handleNextImage = (
-    e: React.MouseEvent,
-    carId: string,
-    imagesLength: number
-  ) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setActiveImageIndex((prev) => ({
-      ...prev,
-      [carId]: (prev[carId] + 1) % imagesLength,
-    }));
-  };
 
-  const handlePrevImage = (
-    e: React.MouseEvent,
-    carId: string,
-    imagesLength: number
-  ) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setActiveImageIndex((prev) => ({
-      ...prev,
-      [carId]: (prev[carId] - 1 + imagesLength) % imagesLength,
-    }));
-  };
 
   if (loading) {
     return (
@@ -156,7 +129,7 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
         {vehicles.map((car) => (
           <div
             key={car.id}
-            className={`border rounded-md overflow-hidden hover:border-fleet-red cursor-pointer transition-colors ${
+            className={`border bg-background rounded-md overflow-hidden hover:border-fleet-red cursor-pointer transition-colors ${
               selectedCarModel === car.id
                 ? "border-fleet-red bg-fleet-red/10"
                 : ""
@@ -166,64 +139,56 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
             <RadioGroupItem value={car.id} id={car.id} className="sr-only" />
 
             {/* Vehicle Image Section */}
-            <div className="relative h-60 w-full bg-gray-100">
-              {car.images && car.images.length > 0 ? (
-                <>
+            <div className="flex h-60 w-full border-b">
+              {/* Main Image */}
+              <div className="flex-1 relative flex items-center justify-center">
+                {car.images && car.images.length > 0 ? (
                   <img
                     src={car.images[activeImageIndex[car.id] || 0]}
                     alt={car.name}
-                    className="w-full h-full"
+                    className="max-w-full max-h-full object-contain"
                   />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImageIcon size={48} className="text-gray-300" />
+                  </div>
+                )}
+              </div>
 
-                  {/* Image navigation if multiple images exist */}
-                  {car.images.length > 1 && (
-                    <>
-                      <button
-                        onClick={(e) =>
-                          handlePrevImage(e, car.id, car.images.length)
-                        }
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-                      <button
-                        onClick={(e) =>
-                          handleNextImage(e, car.id, car.images.length)
-                        }
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-
-                      {/* Image indicators */}
-                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
-                        {car.images.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              setActiveImageIndex((prev) => ({
-                                ...prev,
-                                [car.id]: index,
-                              }));
-                            }}
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              index === (activeImageIndex[car.id] || 0)
-                                ? "bg-white"
-                                : "bg-white/50"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <ImageIcon size={48} className="text-gray-300" />
-                </div>
-              )}
+              {/* Side Image Panel - Always Show */}
+              <div className="w-20 border-l border-gray-200 p-2 space-y-2 overflow-y-auto">
+                {car.images && car.images.length > 0 ? (
+                  car.images.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setActiveImageIndex((prev) => ({
+                          ...prev,
+                          [car.id]: index,
+                        }));
+                      }}
+                      className={`w-full aspect-square rounded-md overflow-hidden border-2 transition-all ${
+                        index === (activeImageIndex[car.id] || 0)
+                          ? "border-fleet-red shadow-md"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`${car.name} view ${index + 1}`}
+                        className="w-full h-full object-contain"
+                      />
+                    </button>
+                  ))
+                ) : (
+                  // Placeholder for when no images exist
+                  <div className="w-full aspect-square rounded-md bg-gray-200 flex items-center justify-center">
+                    <ImageIcon size={16} className="text-gray-400" />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Vehicle Details Section */}

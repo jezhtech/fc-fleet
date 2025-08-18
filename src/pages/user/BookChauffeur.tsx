@@ -28,6 +28,7 @@ interface BookingData {
   orderId: string;
   status: string;
   paymentStatus: string;
+  paymentMethod: string;
   vehicle: any;
   pickupLocation: any;
   dropoffLocation: any;
@@ -43,6 +44,7 @@ interface BookingData {
     paymentMode: string;
     cardName: string;
     transactionDate: string;
+    status?: string;
   };
 }
 
@@ -84,6 +86,7 @@ const BookChauffeur = () => {
           // navigate("/");
         }
         const data = bookingDoc.data() as BookingData;
+        console.log("data", data);
 
         // Update payment status if paymentStatus is provided in URL
         if (data.status) {
@@ -96,31 +99,6 @@ const BookChauffeur = () => {
       }
     } catch (error) {
       console.error("Error fetching booking by order ID:", error);
-      toast.error("Failed to load booking details");
-      navigate("/");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchBookingDetails = async (id: string) => {
-    try {
-      setLoading(true);
-      const bookingRef = doc(firestore, "bookings", id);
-      const bookingSnap = await getDoc(bookingRef);
-
-      if (bookingSnap.exists()) {
-        const data = bookingSnap.data() as BookingData;
-        setBookingData({
-          id: bookingSnap.id,
-          ...data,
-        });
-      } else {
-        toast.error("Booking not found");
-        navigate("/");
-      }
-    } catch (error) {
-      console.error("Error fetching booking:", error);
       toast.error("Failed to load booking details");
       navigate("/");
     } finally {
@@ -166,8 +144,37 @@ const BookChauffeur = () => {
         return "text-green-600 bg-green-50";
       case "FAILED":
         return "text-red-600 bg-red-50";
-      default:
+      case "PENDING":
         return "text-yellow-600 bg-yellow-50";
+      default:
+        return "text-gray-600 bg-gray-50";
+    }
+  };
+
+  const getPaymentMethodText = (paymentMethod?: string, paymentStatus?: string) => {
+    if (paymentMethod === 'cash') {
+      return 'Cash Payment';
+    }
+    if (paymentStatus === 'paid') {
+      return 'Online Payment';
+    }
+    return 'Payment Method';
+  };
+
+  const getPaymentStatusText = (paymentStatus: string, paymentMethod?: string) => {
+    if (paymentMethod === 'cash') {
+      return 'Cash Payment Pending';
+    }
+    
+    switch (paymentStatus.toUpperCase()) {
+      case "PAID":
+        return "Payment Successful";
+      case "FAILED":
+        return "Payment Failed";
+      case "PENDING":
+        return "Payment Pending";
+      default:
+        return "Payment Status Unknown";
     }
   };
 
@@ -221,10 +228,13 @@ const BookChauffeur = () => {
       <div className="bg-gradient-to-r from-fleet-red to-fleet-accent py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Booking Confirmation
+            {bookingData.paymentMethod === 'cash' ? 'Cash Payment Confirmed' : 'Booking Confirmation'}
           </h1>
           <p className="text-white/90 text-lg max-w-2xl mx-auto">
-            Your booking has been successfully created. Here are the details.
+            {bookingData.paymentMethod === 'cash' 
+              ? 'Your booking is confirmed with cash payment. Here are the details.'
+              : 'Your booking has been successfully created. Here are the details.'
+            }
           </p>
         </div>
       </div>
@@ -249,18 +259,14 @@ const BookChauffeur = () => {
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
                 <CreditCard className="h-5 w-5 text-gray-600" />
-                <span className="font-medium">Payment Status</span>
+                <span className="font-medium">{getPaymentMethodText(bookingData.paymentMethod, bookingData.paymentStatus)}</span>
               </div>
               <div
                 className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPaymentStatusColor(
                   bookingData.paymentStatus
                 )}`}
               >
-                {bookingData.paymentStatus.toUpperCase() === "PAID"
-                  ? "Payment Successful"
-                  : bookingData.paymentStatus.toUpperCase() === "FAILED"
-                  ? "Payment Failed"
-                  : "Payment Pending"}
+                {getPaymentStatusText(bookingData.paymentStatus, bookingData.paymentMethod)}
               </div>
             </div>
 
@@ -312,17 +318,39 @@ const BookChauffeur = () => {
               </div>
             </div>
 
+            {/* Cash Payment Notice */}
+            {bookingData.paymentMethod === 'cash' && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-green-600 font-bold text-lg">$</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-green-800">Cash Payment Details</h4>
+                    <p className="text-green-700 text-sm">
+                      Amount due: <strong>AED {bookingData.amount?.toFixed(2) || "0.00"}</strong> - Please have exact change ready when your driver arrives.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Booking ID and Amount */}
             <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="flex justify-between items-center">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Order ID</p>
                   <p className="font-mono font-medium">{bookingData.orderId}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Tracking ID</p>
+                  <p className="text-sm text-gray-600">
+                    {bookingData.paymentMethod === 'cash' ? 'Payment Method' : 'Tracking ID'}
+                  </p>
                   <p className="font-mono font-medium">
-                    {bookingData.paymentInfo?.trackingId}
+                    {bookingData.paymentMethod === 'cash' 
+                      ? 'Cash Payment' 
+                      : bookingData.paymentInfo?.trackingId || 'N/A'
+                    }
                   </p>
                 </div>
                 <div className="text-right">
@@ -341,7 +369,25 @@ const BookChauffeur = () => {
               Next Steps
             </h3>
             <div className="space-y-4">
-              {bookingData.paymentStatus === "PENDING" && (
+              {/* Cash Payment Notice */}
+              {bookingData.paymentMethod === 'cash' && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-green-800">
+                        Cash Payment Selected
+                      </h4>
+                      <p className="text-green-700 text-sm mt-1">
+                        Your booking is confirmed with cash payment. Please have the exact amount ready when your driver arrives.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Online Payment Pending */}
+              {!bookingData.paymentMethod && bookingData.paymentStatus === "PENDING" && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
@@ -361,7 +407,8 @@ const BookChauffeur = () => {
                 </div>
               )}
 
-              {bookingData.paymentStatus === "SUCCESS" && (
+              {/* Online Payment Success */}
+              {!bookingData.paymentMethod && bookingData.paymentStatus === "PAID" && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
@@ -378,6 +425,26 @@ const BookChauffeur = () => {
                 </div>
               )}
 
+              {/* Payment Failed */}
+              {bookingData.paymentStatus === "FAILED" && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-red-800">
+                        Payment Failed
+                      </h4>
+                      <p className="text-red-700 text-sm mt-1">
+                        Your payment could not be processed. Please try again or contact support.
+                      </p>
+                      <Button className="mt-3 bg-fleet-red hover:bg-fleet-red/90">
+                        Retry Payment
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-medium text-blue-800 mb-2">
                   What happens next?
@@ -389,6 +456,9 @@ const BookChauffeur = () => {
                     • You'll receive driver details and vehicle information
                   </li>
                   <li>• Driver will arrive at your pickup location on time</li>
+                  {bookingData.paymentMethod === 'cash' && (
+                    <li>• Please have the exact amount ready in cash for payment</li>
+                  )}
                 </ul>
               </div>
             </div>

@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { paymentService, PaymentRequest } from "@/services/paymentService";
+import { initiateCCavenuePayment } from "@/services/ccavenueService";
+import { useAuth } from "@/contexts/AuthContext";
+import { bookingWithCash } from "@/services/bookingService";
 import {
   Card,
   CardContent,
@@ -7,12 +12,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { paymentService, PaymentRequest } from "@/services/paymentService";
-import { initiateCCavenuePayment } from "@/services/ccavenueService";
-import { useAuth } from "@/contexts/AuthContext";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface CCavenueCheckoutProps {
   orderId: string;
@@ -22,6 +24,7 @@ interface CCavenueCheckoutProps {
   customerPhone: string;
   onPaymentSuccess: (transactionId: string, orderId?: string) => void;
   onPaymentFailure: (errorMessage: string, orderId?: string) => void;
+  onCashPayment?: (orderId: string) => void;
 }
 
 const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
@@ -32,9 +35,14 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
   customerPhone,
   onPaymentSuccess,
   onPaymentFailure,
+  onCashPayment,
 }) => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"ccavenue" | "cash">(
+    "ccavenue"
+  );
   const [paymentData, setPaymentData] = useState<PaymentRequest>({
     orderId,
     amount,
@@ -96,7 +104,40 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
       return;
     }
 
-    // Validate payment data
+    // Handle cash payment
+    if (paymentMethod === "cash") {
+      try {
+        setLoading(true);
+        // Update booking with cash payment details
+        const response = await bookingWithCash(
+          paymentData.orderId,
+          paymentData.customerName,
+          paymentData.customerEmail,
+          paymentData.customerPhone
+        );
+
+        if (response.success) {
+          toast.success("Cash payment option selected successfully!");
+          if (onCashPayment) {
+            onCashPayment(paymentData.orderId);
+          }
+          // Redirect to book chauffeur page with orderId
+          navigate(`/user/book-chauffeur?orderId=${paymentData.orderId}`);
+          return;
+        } else {
+          throw new Error("Failed to update booking for cash payment");
+        }
+      } catch (error) {
+        console.error("Cash payment error:", error);
+        toast.error("Failed to process cash payment option");
+        onPaymentFailure("Cash payment processing failed", paymentData.orderId);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Validate payment data for CCAvenue
     const validation = paymentService.validatePaymentData(paymentData);
     if (!validation.isValid) {
       toast.error(
@@ -252,67 +293,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
               </div>
             </div>
 
-            {/* Billing Address */}
-            <div className="space-y-4">
-              <h3 className="font-medium">Billing Address</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <Label htmlFor="billingAddress">Address</Label>
-                  <Input
-                    id="billingAddress"
-                    name="billingAddress"
-                    value={paymentData.billingAddress}
-                    onChange={handleInputChange}
-                    placeholder="Enter your billing address"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="billingCity">City</Label>
-                  <Input
-                    id="billingCity"
-                    name="billingCity"
-                    value={paymentData.billingCity}
-                    onChange={handleInputChange}
-                    placeholder="Dubai"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="billingState">State/Emirate</Label>
-                  <Input
-                    id="billingState"
-                    name="billingState"
-                    value={paymentData.billingState}
-                    onChange={handleInputChange}
-                    placeholder="Dubai"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="billingZip">ZIP Code</Label>
-                  <Input
-                    id="billingZip"
-                    name="billingZip"
-                    value={paymentData.billingZip}
-                    onChange={handleInputChange}
-                    placeholder="00000"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="billingTel">Phone</Label>
-                  <Input
-                    id="billingTel"
-                    name="billingTel"
-                    value={paymentData.billingTel}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Security Notice */}
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex items-start gap-3">
@@ -337,17 +317,93 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
               </div>
             </div>
 
+            {/* Payment Method Selection */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Payment Method</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="ccavenue"
+                    name="paymentMethod"
+                    value="ccavenue"
+                    checked={paymentMethod === "ccavenue"}
+                    onChange={(e) =>
+                      setPaymentMethod(e.target.value as "ccavenue" | "cash")
+                    }
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <Label
+                    htmlFor="ccavenue"
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <svg
+                      className="w-5 h-5 text-blue-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
+                    </svg>
+                    Pay Online
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="cash"
+                    name="paymentMethod"
+                    value="cash"
+                    checked={paymentMethod === "cash"}
+                    onChange={(e) =>
+                      setPaymentMethod(e.target.value as "ccavenue" | "cash")
+                    }
+                    className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                  />
+                  <Label
+                    htmlFor="cash"
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <svg
+                      className="w-5 h-5 text-green-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                    </svg>
+                    Pay with Cash
+                  </Label>
+                </div>
+              </div>
+            </div>
+
             {/* Payment Buttons */}
             <div className="space-y-3">
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                className={`w-full ${
+                  paymentMethod === "cash"
+                    ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                    : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                }`}
                 disabled={loading || !currentUser}
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Processing...
+                  </div>
+                ) : paymentMethod === "cash" ? (
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                    </svg>
+                    Select Cash Payment
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -364,21 +420,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
-
-      {/* Payment Methods Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Accepted Payment Methods</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 text-sm text-gray-600">
-            <span>Credit Cards</span>
-            <span>Debit Cards</span>
-            <span>Net Banking</span>
-            <span>UPI</span>
-          </div>
         </CardContent>
       </Card>
     </div>

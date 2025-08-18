@@ -1,32 +1,34 @@
-import { getAuthToken } from './userService';
-import { config } from '@/constants/config';
+import { getAuthToken } from "./userService";
+import { config } from "@/constants/config";
 
 // Helper function to make authenticated API calls
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const token = await getAuthToken();
-  
+
   const response = await fetch(`${config.apiUrl}/booking${endpoint}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
       ...options.headers,
     },
   });
 
   const data = await response.json();
-  
+
   if (!response.ok) {
-    throw new Error(data.message || 'API request failed');
+    throw new Error(data.message || "API request failed");
   }
-  
+
   return data;
 };
 
 /**
  * Confirm a booking
  */
-export const confirmBooking = async (bookingId: string): Promise<{
+export const confirmBooking = async (
+  bookingId: string
+): Promise<{
   success: boolean;
   message: string;
   emailSent: boolean;
@@ -35,8 +37,8 @@ export const confirmBooking = async (bookingId: string): Promise<{
     status: string;
   };
 }> => {
-  return apiCall('/confirm', {
-    method: 'POST',
+  return apiCall("/confirm", {
+    method: "POST",
     body: JSON.stringify({ bookingId }),
   });
 };
@@ -44,10 +46,13 @@ export const confirmBooking = async (bookingId: string): Promise<{
 /**
  * Assign driver to booking
  */
-export const assignDriver = async (bookingId: string, driverId: string): Promise<{
+export const assignDriver = async (
+  bookingId: string,
+  driverId: string
+): Promise<{
   success: boolean;
   message: string;
-  emailsSent: {
+  notifications: {
     customer: boolean;
     driver: boolean;
   };
@@ -57,16 +62,42 @@ export const assignDriver = async (bookingId: string, driverId: string): Promise
     status: string;
   };
 }> => {
-  return apiCall('/assign-driver', {
-    method: 'POST',
+  return apiCall("/assign-driver", {
+    method: "POST",
     body: JSON.stringify({ bookingId, driverId }),
+  });
+};
+
+export const bookingWithCash = async (
+  orderId: string,
+  customerName: string,
+  customerEmail: string,
+  customerPhone: string
+): Promise<{
+  success: boolean;
+  message: string;
+  data: {
+    bookingId: string;
+  };
+}> => {
+  return apiCall("/update-cash-payment", {
+    method: "POST",
+    body: JSON.stringify({
+      orderId,
+      customerName,
+      customerEmail,
+      customerPhone,
+    }),
   });
 };
 
 /**
  * Cancel a booking
  */
-export const cancelBooking = async (bookingId: string, reason: string): Promise<{
+export const cancelBooking = async (
+  bookingId: string,
+  reason: string
+): Promise<{
   success: boolean;
   message: string;
   emailSent: boolean;
@@ -76,8 +107,8 @@ export const cancelBooking = async (bookingId: string, reason: string): Promise<
     reason: string;
   };
 }> => {
-  return apiCall('/cancel', {
-    method: 'POST',
+  return apiCall("/cancel", {
+    method: "POST",
     body: JSON.stringify({ bookingId, reason }),
   });
 };
@@ -97,13 +128,15 @@ export const getAvailableDrivers = async (): Promise<{
     rating?: number;
   }>;
 }> => {
-  return apiCall('/available-drivers');
+  return apiCall("/available-drivers");
 };
 
 /**
  * Get booking details
  */
-export const getBookingDetails = async (bookingId: string): Promise<{
+export const getBookingDetails = async (
+  bookingId: string
+): Promise<{
   success: boolean;
   data: any;
 }> => {
@@ -116,4 +149,4 @@ export default {
   cancelBooking,
   getAvailableDrivers,
   getBookingDetails,
-}; 
+};
