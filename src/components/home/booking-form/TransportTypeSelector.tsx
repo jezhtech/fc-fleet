@@ -1,6 +1,6 @@
 import React from 'react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Ban, Clock, Calendar, Info } from 'lucide-react';
+import { Loader2, Ban } from 'lucide-react';
 import { TransportType } from './types';
 
 interface TransportTypeSelectorProps {
@@ -30,36 +30,30 @@ const TransportTypeSelector: React.FC<TransportTypeSelectorProps> = ({
   const isTypeAvailable = (typeId: string): boolean => {
     return availableTypes.includes(typeId);
   };
-
-  const handleTypeSelect = (typeId: string) => {
-    if (isTypeAvailable(typeId)) {
-      onSelect(typeId);
-    }
-  };
   
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <label className="text-sm font-medium">Transport Type</label>
       <RadioGroup 
-        value={selectedTaxiType} 
-        onValueChange={onSelect}
-        className="grid grid-cols-1 gap-4"
+        // value={selectedTaxiType} 
+        // onValueChange={onSelect}
+        className="grid grid-cols-2 gap-3"
       >
         {transportTypes.map((type) => {
           const isAvailable = isTypeAvailable(type.id);
           return (
             <div 
               key={type.id} 
-              className={`relative border rounded-lg p-4 transition-all ${
-                selectedTaxiType === type.id 
-                  ? 'border-fleet-red bg-fleet-red/5 shadow-sm' 
-                  : 'border-gray-200 hover:border-gray-300'
+              className={`relative border rounded-md p-3 transition-colors ${
+                selectedTaxiType === type.id ? 'border-fleet-red bg-fleet-red/10' : ''
               } ${
                 isAvailable 
-                  ? 'cursor-pointer bg-white' 
-                  : 'opacity-60 cursor-default bg-gray-50'
+                  ? 'hover:border-fleet-red cursor-pointer' 
+                  : 'opacity-65 cursor-default bg-gray-50'
               }`}
-              onClick={() => handleTypeSelect(type.id)}
+              onClick={() => {
+                onSelect(type.id);
+              }}
             >
               <RadioGroupItem 
                 value={type.id} 
@@ -67,53 +61,22 @@ const TransportTypeSelector: React.FC<TransportTypeSelectorProps> = ({
                 className="sr-only"
                 disabled={!isAvailable} 
               />
-              
-              <div className="flex items-start gap-4">
-                {/* Left section with text content */}
-                <div className="flex-1 space-y-3">
-                  {/* Transport type name as heading */}
-                  <h3 className={`text-lg font-semibold ${
-                    selectedTaxiType === type.id ? 'text-fleet-red' : 'text-gray-900'
-                  }`}>
-                    {type.name}
-                  </h3>
-                  
-                  {/* Car models list */}
-                  <div className="space-y-1">
-                    <p className="text-sm text-gray-600">
-                      {type.carModels || type.description || 'Skoda Octavia, Ford Focus, Volkswagen Golf, Toyota Corolla, etc.'}
-                    </p>
-                  </div>
-                  
-                  {/* Service details with icons */}
-                  <div className="flex flex-wrap gap-4 pt-2">
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Clock className="h-3 w-3" />
-                      <span>15 min waiting</span>
+              <div className="flex items-start gap-2">
+                <span className="text-xl">{type.emoji}</span>
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium">{type.name}</h4>
+                  <p className="text-xs text-gray-500">{type.description}</p>
+                  {!isAvailable && (
+                    <div className="mt-1.5 flex items-center">
+                      <span className="bg-red-100 text-red-600 text-xs px-1.5 py-0.5 rounded-sm font-medium flex items-center">
+                        <Ban size={12} className="mr-1" /> Currently unavailable
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Calendar className="h-3 w-3" />
-                      <span>Cancel for free</span>
-                      <Info className="h-3 w-3 cursor-help" />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Right section with car image/emoji */}
-                <div className="flex-shrink-0">
-                  <div className="w-20 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <span className="text-3xl">{type.emoji}</span>
-                  </div>
+                  )}
                 </div>
               </div>
-              
-              {/* Unavailable indicator */}
               {!isAvailable && (
-                <div className="absolute top-3 right-3">
-                  <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-md font-medium flex items-center">
-                    <Ban size={12} className="mr-1" /> Unavailable
-                  </span>
-                </div>
+                <div className="absolute inset-0 bg-white bg-opacity-10 backdrop-blur-[1px] rounded-md"></div>
               )}
             </div>
           );

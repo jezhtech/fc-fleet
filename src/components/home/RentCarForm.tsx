@@ -1,8 +1,8 @@
 import { toast } from "sonner";
 import { format } from "date-fns";
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { CreditCard, Check, FileText, Book, Clock, Info } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { CreditCard, Check, FileText, Book, Clock, Info, AlertTriangle } from "lucide-react";
 
 import {
   Select,
@@ -16,7 +16,37 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-import { DateTimePicker, LocationSelector, RouteMap } from "./booking-form";
+import { DateTimePicker, LocationSelector, RouteMap, TransportTypeSelector } from "./booking-form";
+import { getAllDocuments } from "@/lib/firestoreUtils";
+import { collection, getDocs, query, where, addDoc, serverTimestamp } from "firebase/firestore";
+import { firestore } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
+import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
+import { generateBookingId, getNextBookingCount } from "@/utils/booking";
+
+// Firebase data interfaces - matching BookTaxiForm structure
+interface FirebaseTransportType {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  isActive?: boolean;
+  order?: number;
+}
+
+interface FirebaseVehicleType {
+  id: string;
+  name: string;
+  description: string;
+  images: string[];
+  taxiTypeId: string; // This links to transportTypes
+  basePrice: number;
+  perKmPrice: number;
+  perMinutePrice: number;
+  capacity: number;
+  isActive?: boolean;
+  order?: number;
+}
 
 // Emirates and their tour options
 const emiratesData = {
@@ -62,96 +92,6 @@ const emiratesData = {
   },
 };
 
-const carCategories = [
-  {
-    id: "economy",
-    name: "Economy",
-    description: "Affordable for daily use",
-    price: "$12/hour",
-    emoji: "🚗",
-  },
-  {
-    id: "comfort",
-    name: "Comfort",
-    description: "More comfort and space",
-    price: "$18/hour",
-    emoji: "🚕",
-  },
-  {
-    id: "suv",
-    name: "SUV",
-    description: "Spacious vehicles for groups",
-    price: "$24/hour",
-    emoji: "🚙",
-  },
-  {
-    id: "premium",
-    name: "Premium",
-    description: "Luxury vehicles",
-    price: "$35/hour",
-    emoji: "🏎️",
-  },
-];
-
-const carModels = {
-  economy: [
-    {
-      id: "hyundai-i20",
-      name: "Hyundai i20",
-      image: "🚗",
-      description: "Fuel efficient compact car",
-    },
-    {
-      id: "suzuki-swift",
-      name: "Suzuki Swift",
-      image: "🚗",
-      description: "Easy to drive and park",
-    },
-  ],
-  comfort: [
-    {
-      id: "volkswagen-jetta",
-      name: "Volkswagen Jetta",
-      image: "🚕",
-      description: "Comfortable sedan with modern features",
-    },
-    {
-      id: "hyundai-elantra",
-      name: "Hyundai Elantra",
-      image: "🚕",
-      description: "Stylish with good fuel economy",
-    },
-  ],
-  suv: [
-    {
-      id: "hyundai-creta",
-      name: "Hyundai Creta",
-      image: "🚙",
-      description: "Compact SUV with good ground clearance",
-    },
-    {
-      id: "mahindra-xuv300",
-      name: "Mahindra XUV300",
-      image: "🚙",
-      description: "Feature-rich compact SUV",
-    },
-  ],
-  premium: [
-    {
-      id: "bmw-3-series",
-      name: "BMW 3 Series",
-      image: "🏎️",
-      description: "Luxury sedan with powerful engine",
-    },
-    {
-      id: "audi-a4",
-      name: "Audi A4",
-      image: "🏎️",
-      description: "Premium comfort with advanced tech",
-    },
-  ],
-};
-
 const rentalStatuses = [
   { id: "initiated", label: "Booking Initiated", completed: true },
   { id: "processing", label: "Processing", completed: false },
@@ -170,12 +110,25 @@ const getInitialTime = () => {
 };
 
 const RentCarForm = () => {
+  const navigate = useNavigate();
+  const { currentUser, userData } = useAuth();
+  
   const [selectedEmirate, setSelectedEmirate] = useState<
     "dubai" | "otherEmirates"
   >("dubai");
-  const [pickupDate, setPickupDate] = useState<Date | undefined>(new Date());
+  const [pickupDate, setPickupDate] = useState<Date | undefined>(() => {
+    const now = new Date();
+    const fourHoursFromNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+    // Use the date of 4 hours from now, not just today
+    const initialDate = new Date(
+      fourHoursFromNow.getFullYear(),
+      fourHoursFromNow.getMonth(),
+      fourHoursFromNow.getDate()
+    );
+    return initialDate;
+  });
   const [pickupTime, setPickupTime] = useState<string>(getInitialTime());
-  const [selectedCategory, setSelectedCategory] = useState("economy");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedCarModel, setSelectedCarModel] = useState("");
   const [selectedHourlyTour, setSelectedHourlyTour] = useState("");
   const [step, setStep] = useState(1);
@@ -187,11 +140,291 @@ const RentCarForm = () => {
     cardCVC: "",
   });
 
+  // Firebase data states - matching BookTaxiForm pattern
+  const [transportTypes, setTransportTypes] = useState<FirebaseTransportType[]>(
+    []
+  );
+  const [vehicles, setVehicles] = useState<FirebaseVehicleType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Available transport types that have vehicles
+  const [availableTransportTypes, setAvailableTransportTypes] = useState<string[]>([]);
+
   // Location states for map integration
   const [selectedPickupLocation, setSelectedPickupLocation] =
     useState<any>(undefined);
   const [selectedDropoffLocation, setSelectedDropoffLocation] =
     useState<any>(undefined);
+
+  // Payment integration states
+  const [orderId, setOrderId] = useState<string>("");
+  const [savingBooking, setSavingBooking] = useState(false);
+
+  // Reset selected car model when category changes
+  useEffect(() => {
+    setSelectedCarModel("");
+  }, [selectedCategory]);
+
+  // Helper function to get customer information
+  const getCustomerInfo = () => {
+    const customerName = userData
+      ? `${userData.firstName} ${userData.lastName}`.trim()
+      : currentUser?.displayName || "Customer";
+
+    const customerEmail =
+      userData?.email || currentUser?.email || "customer@example.com";
+
+    const customerPhone =
+      userData?.phoneNumber || currentUser?.phoneNumber || "123456789";
+
+    return { customerName, customerEmail, customerPhone };
+  };
+
+  // Calculate total amount for rental
+  const calculateTotalAmount = () => {
+    const selectedVehicle = vehicles.find((v) => v.id === selectedCarModel);
+    if (!selectedVehicle) return 0;
+
+    // Get the selected tour duration
+    const selectedTour = emiratesData[selectedEmirate].hourlyTours.find(
+      (t) => t.id === selectedHourlyTour
+    );
+    
+    if (!selectedTour) return 0;
+
+    // Parse duration to get hours (e.g., "5 hours" -> 5)
+    const durationMatch = selectedTour.duration.match(/(\d+)/);
+    const hours = durationMatch ? parseInt(durationMatch[1]) : 5; // Default to 5 hours
+
+    // Calculate total: base price per hour × number of hours
+    return selectedVehicle.basePrice * hours;
+  };
+
+  // Save booking to Firestore
+  const saveBookingToDatabase = async (
+    bookingData: any,
+    paymentInfo: any,
+    status: "initiated" | "awaiting" | "failed",
+    paymentStatus: "PENDING" | "SUCCESS" | "FAILED" = "PENDING"
+  ) => {
+    try {
+      setSavingBooking(true);
+
+      // Get the current date for the booking
+      const bookingDate = new Date();
+
+      // Get the next booking count for this month
+      const bookingCount = await getNextBookingCount(bookingDate);
+
+      // Generate a formatted booking ID
+      const formattedId = generateBookingId(bookingDate, bookingCount);
+
+      // Parse the selected pickup date and time to create a proper Date object
+      let pickupDateTime = new Date();
+      try {
+        // If we have date and time from the form
+        if (pickupDate && pickupTime) {
+          // Parse the time string (expected format: "HH:MM")
+          const [hours, minutes] = pickupTime.split(":").map(Number);
+
+          // Create a new date object with the combined date and time
+          pickupDateTime = new Date(pickupDate);
+          pickupDateTime.setHours(hours, minutes, 0, 0);
+        }
+      } catch (error) {
+        console.error("Error parsing pickup date/time:", error);
+        // Fall back to current date/time if parsing fails
+        pickupDateTime = new Date();
+      }
+
+      // Create booking document
+      const bookingRef = collection(firestore, "bookings");
+      const newBooking = {
+        ...bookingData,
+        paymentInfo,
+        status,
+        paymentStatus,
+        formattedId,
+        createdAt: serverTimestamp(),
+        pickupDateTime: pickupDateTime,
+        date: pickupDateTime,
+        updatedAt: serverTimestamp(),
+      };
+
+      // Add document to Firestore
+      const docRef = await addDoc(bookingRef, newBooking);
+
+      return { id: docRef.id, formattedId };
+    } catch (error) {
+      console.error("Error saving booking:", error);
+      toast.error("Failed to save booking details");
+      return null;
+    } finally {
+      setSavingBooking(false);
+    }
+  };
+
+  // Payment handlers
+  const handlePaymentSuccess = (transactionId: string, orderId?: string) => {
+    // Redirect to booking confirmation page
+    if (orderId) {
+      const bookingParams = new URLSearchParams({
+        orderId: orderId,
+        paymentStatus: "success",
+      });
+      navigate(`/user/my-bookings?${bookingParams.toString()}`);
+    }
+  };
+
+  const handlePaymentFailure = (errorMessage: string, orderId?: string) => {
+    console.error("Payment failed:", { errorMessage, orderId });
+    // Redirect to booking confirmation page with error
+    if (orderId) {
+      const bookingParams = new URLSearchParams({
+        orderId: orderId,
+        paymentStatus: "failed",
+      });
+      navigate(`/user/my-bookings?${bookingParams.toString()}`);
+    }
+  };
+
+  // Reset form to initial state
+  const resetForm = () => {
+    setStep(1);
+    setSelectedEmirate("dubai");
+    setSelectedCategory("");
+    setSelectedCarModel("");
+    setSelectedHourlyTour("");
+    setOrderId("");
+    setFormData({
+      pickupLocation: "",
+      cardNumber: "",
+      cardName: "",
+      cardExpiry: "",
+      cardCVC: "",
+    });
+    setSelectedPickupLocation(undefined);
+    setSelectedDropoffLocation(undefined);
+  };
+
+  // Fetch transport types and vehicle types from Firebase
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch transport types (car categories) from taxiTypes collection
+        const transportTypesData = await getAllDocuments<FirebaseTransportType>(
+          "taxiTypes"
+        );
+        const activeTransportTypes = transportTypesData
+          .filter((type) => type.isActive !== false)
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        // Fetch vehicle types from vehicleTypes collection
+        const vehicleTypesData = await getAllDocuments<FirebaseVehicleType>(
+          "vehicleTypes"
+        );
+        const activeVehicleTypes = vehicleTypesData
+          .filter((vehicle) => vehicle.isActive !== false)
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        setTransportTypes(activeTransportTypes);
+
+        // Set default selected category if available
+        if (activeTransportTypes.length > 0 && !selectedCategory) {
+          setSelectedCategory(activeTransportTypes[0].id);
+        }
+
+        // Check which transport types have available vehicles
+        await checkTransportTypeAvailability(activeTransportTypes);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load vehicle data. Please try again.");
+        toast.error("Failed to load vehicle data. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch vehicles based on selected transport type
+  const fetchVehicles = async (taxiTypeId: string) => {
+    try {
+      const vehiclesRef = collection(firestore, "vehicleTypes");
+      const q = query(vehiclesRef, where("taxiTypeId", "==", taxiTypeId));
+      const snapshot = await getDocs(q);
+
+      const fetchedVehicles = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as FirebaseVehicleType[];
+
+      if (fetchedVehicles.length > 0) {
+        setVehicles(fetchedVehicles);
+      } else {
+        setVehicles([]);
+      }
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      setVehicles([]);
+    }
+  };
+
+  // Get filtered vehicle types for selected transport type
+  const getFilteredVehicleTypes = () => {
+    return vehicles;
+  };
+
+  // Check which transport types have available vehicles
+  const checkTransportTypeAvailability = async (types: FirebaseTransportType[]) => {
+    try {
+      const vehiclesRef = collection(firestore, "vehicleTypes");
+      const availableTypeIds: string[] = [];
+
+      // Check each transport type for available vehicles
+      for (const type of types) {
+        const q = query(vehiclesRef, where("taxiTypeId", "==", type.id));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.docs.length > 0) {
+          availableTypeIds.push(type.id);
+        }
+      }
+
+      setAvailableTransportTypes(
+        availableTypeIds.length > 0 ? availableTypeIds : ["economy"]
+      );
+
+      // If there are no available types, show a message
+      if (availableTypeIds.length === 0) {
+        toast.error("No vehicles available for any transport type");
+      }
+
+      // If selectedCategory is no longer available, reset it
+      if (selectedCategory && !availableTypeIds.includes(selectedCategory)) {
+        setSelectedCategory(availableTypeIds[0] || "");
+      }
+
+      return availableTypeIds;
+    } catch (error) {
+      console.error("Error checking transport type availability:", error);
+      // Default to economy in case of error
+      return ["economy"];
+    }
+  };
+
+  // Handler for transport type selection
+  const handleTransportTypeSelect = (typeId: string) => {
+    // Only allow selection if the type is available
+    if (availableTransportTypes.includes(typeId)) {
+      setSelectedCategory(typeId);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -204,14 +437,22 @@ const RentCarForm = () => {
     setFormData((prev) => ({ ...prev, pickupLocation: location.name }));
   };
 
-  // Handler for dropoff location selection
-  const handleDropoffLocationSelect = (location: any) => {
-    setSelectedDropoffLocation(location);
-    setFormData((prev) => ({ ...prev, dropoffLocation: location.name }));
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Check if user is authenticated
+    if (!currentUser) {
+      toast.error("Please login to book a chauffeur");
+      navigate("/login", {
+        state: {
+          from: {
+            pathname: window.location.pathname,
+            search: window.location.search,
+          },
+        },
+      });
+      return;
+    }
 
     if (step === 1) {
       if (!formData.pickupLocation) {
@@ -239,7 +480,7 @@ const RentCarForm = () => {
 
       const timeDifference = selectedDateTime.getTime() - now.getTime();
       const hoursDifference = timeDifference / (1000 * 60 * 60);
-
+      console.log(hoursDifference);
       if (hoursDifference < 4) {
         toast.error("Bookings must be made at least 4 hours in advance");
         return;
@@ -251,27 +492,74 @@ const RentCarForm = () => {
         toast.error("Please select a car category");
         return;
       }
+
+      await fetchVehicles(selectedCategory);
       setStep(3);
     } else if (step === 3) {
       if (!selectedCarModel) {
         toast.error("Please select a car model");
         return;
       }
-      setStep(4);
-    } else if (step === 4) {
-      if (
-        !formData.cardNumber ||
-        !formData.cardName ||
-        !formData.cardExpiry ||
-        !formData.cardCVC
-      ) {
-        toast.error("Please fill in all payment details");
+
+      // Find the selected vehicle
+      const selectedVehicle = vehicles.find((v) => v.id === selectedCarModel);
+      if (!selectedVehicle) {
+        toast.error("Vehicle information is missing");
         return;
       }
-      setStep(5);
-      toast.success(
-        "Chauffeur booking initiated! Your request is being processed."
+
+      // Calculate total amount
+      const totalAmount = calculateTotalAmount();
+
+      // Get customer information from auth context
+      const { customerName, customerEmail, customerPhone } = getCustomerInfo();
+
+      // Generate an order ID using timestamp and random string
+      const newOrderId = `RENTAL-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 8)}`;
+
+      const bookingData = {
+        orderId: newOrderId,
+        vehicle: selectedVehicle,
+        pickupLocation: selectedPickupLocation,
+        emirate: emiratesData[selectedEmirate].name,
+        hourlyTour: emiratesData[selectedEmirate].hourlyTours.find(
+          (t) => t.id === selectedHourlyTour
+        ),
+        date: pickupDate,
+        time: pickupTime,
+        amount: totalAmount,
+        customerInfo: {
+          name: customerName,
+          email: customerEmail,
+          phone: customerPhone,
+        },
+        userId: currentUser?.uid,
+        type: "Rental",
+        status: "pending_confirmation",
+        paymentStatus: "PENDING",
+      };
+
+      // Save booking to database
+      const result = await saveBookingToDatabase(
+        bookingData,
+        {
+          paymentMethod: "CCAvenue",
+          amount: totalAmount,
+          timestamp: new Date().toISOString(),
+          status: "pending",
+        },
+        "initiated",
+        "PENDING"
       );
+
+      if (result) {
+        setOrderId(newOrderId);
+        setStep(4); // Move to payment step
+      } else {
+        toast.error("Failed to create booking. Please try again.");
+      }
     }
   };
 
@@ -298,46 +586,54 @@ const RentCarForm = () => {
     "08:00 PM",
   ];
 
-  // Calculate minimum booking time (4 hours from now)
-  const getMinimumBookingTime = () => {
-    const now = new Date();
-    const minTime = new Date(now.getTime() + 4 * 60 * 60 * 1000); // 4 hours from now
-    return minTime;
-  };
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-fleet-red mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading vehicle options...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Get available time options based on selected date
-  const getAvailableTimeOptions = (selectedDate: Date | undefined) => {
-    if (!selectedDate) return timeOptions;
-
-    const now = new Date();
-    const selectedDateOnly = new Date(selectedDate);
-    selectedDateOnly.setHours(0, 0, 0, 0);
-    const todayOnly = new Date(now);
-    todayOnly.setHours(0, 0, 0, 0);
-
-    // If selected date is today, filter out times that are less than 4 hours from now
-    if (selectedDateOnly.getTime() === todayOnly.getTime()) {
-      const minTime = getMinimumBookingTime();
-      return timeOptions.filter((time) => {
-        const [hours, minutes] = time.split(":").map(Number);
-        const timeDate = new Date(selectedDate);
-        timeDate.setHours(hours, minutes, 0, 0);
-        return timeDate >= minTime;
-      });
-    }
-
-    return timeOptions;
-  };
-
-  // Check if a date should be disabled in the calendar
-  const isDateDisabled = (date: Date) => {
-    const now = new Date();
-    const minBookingDate = new Date(now.getTime() + 4 * 60 * 60 * 1000); // 4 hours from now
-    return date < minBookingDate;
-  };
+  // Show error state
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-red-600 mb-4">
+          <p className="font-medium">Failed to load vehicle data</p>
+          <p className="text-sm">{error}</p>
+        </div>
+        <Button
+          onClick={() => window.location.reload()}
+          className="bg-fleet-red hover:bg-fleet-red/90"
+        >
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Login notice for unauthenticated users */}
+      {!currentUser && step === 1 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-amber-800">Login Required</p>
+              <p className="text-amber-700 mt-1">
+                Please login to book a chauffeur. You'll be redirected to the
+                login page when you click "Find My Chauffeur".
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {step === 1 && (
         <>
           {/* Emirates Selection Tabs */}
@@ -441,65 +737,57 @@ const RentCarForm = () => {
           <Button
             type="submit"
             className="w-full h-9 text-white text-sm font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all rounded-md"
+            disabled={loading || savingBooking}
           >
-            Find My Chauffeur
+            {loading || savingBooking
+              ? "Loading..."
+              : !currentUser
+              ? "Login to Book Chauffeur"
+              : "Find My Chauffeur"}
           </Button>
         </>
       )}
 
       {step === 2 && (
         <>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Car Category</label>
-            <RadioGroup
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-              className="grid grid-cols-2 gap-3"
-            >
-              {carCategories.map((category) => (
-                <div
-                  key={category.id}
-                  className={`border rounded-md p-3 hover:border-fleet-red cursor-pointer transition-colors ${
-                    selectedCategory === category.id
-                      ? "border-fleet-red bg-fleet-red/10"
-                      : ""
-                  }`}
-                  onClick={() => setSelectedCategory(category.id)}
-                >
-                  <RadioGroupItem
-                    value={category.id}
-                    id={category.id}
-                    className="sr-only"
-                  />
-                  <div className="flex items-start gap-2">
-                    <span className="text-xl">{category.emoji}</span>
-                    <div>
-                      <h4 className="text-sm font-medium">{category.name}</h4>
-                      <p className="text-xs text-gray-500">
-                        {category.description}
-                      </p>
-                      <p className="text-xs font-bold mt-1">{category.price}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </RadioGroup>
+          <div className="mb-3">
+            <h4 className="text-sm font-medium">Select Transport Type</h4>
+            <p className="text-xs text-gray-500 mt-1">
+              Only transport types with available vehicles are enabled for
+              booking.
+              {transportTypes.length === 0 &&
+                " No vehicles are currently available."}
+            </p>
           </div>
-
-          <div className="flex gap-2">
+          <TransportTypeSelector
+            transportTypes={transportTypes}
+            selectedTaxiType={selectedCategory}
+            onSelect={(typeId: string) => {
+              setSelectedCategory(typeId);
+            }}
+            loading={loading}
+            availableTypes={availableTransportTypes}
+          />
+          <div className="flex justify-between mt-3">
             <Button
               type="button"
               variant="outline"
-              className="flex-1 h-8 text-xs border-gray-300 hover:bg-gray-50 transition-all"
+              className="h-8 text-xs border-gray-300 hover:bg-gray-50 transition-all"
               onClick={() => setStep(1)}
             >
               Back
             </Button>
             <Button
-              type="submit"
-              className="flex-1 h-8 text-xs text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
+              type="button"
+              className="h-8 text-xs text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
+              disabled={
+                loading ||
+                !selectedCategory ||
+                !availableTransportTypes.includes(selectedCategory)
+              }
+              onClick={() => handleSubmit(new Event("submit") as any)}
             >
-              Next: Choose Car
+              Next
             </Button>
           </div>
         </>
@@ -507,41 +795,89 @@ const RentCarForm = () => {
 
       {step === 3 && (
         <>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Available Cars</label>
+          <div className="space-y-4">
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Select a vehicle class
+              </h2>
+              <p className="text-sm text-gray-600">
+                All prices include estimated VAT, fees, and tolls
+              </p>
+            </div>
+
             <RadioGroup
               value={selectedCarModel}
               onValueChange={setSelectedCarModel}
-              className="space-y-3"
+              className="space-y-0"
             >
-              {carModels[selectedCategory as keyof typeof carModels].map(
-                (car) => (
-                  <div
-                    key={car.id}
-                    className={`border rounded-md p-3 hover:border-fleet-red cursor-pointer transition-colors ${
-                      selectedCarModel === car.id
-                        ? "border-fleet-red bg-fleet-red/10"
-                        : ""
-                    }`}
-                    onClick={() => setSelectedCarModel(car.id)}
-                  >
-                    <RadioGroupItem
-                      value={car.id}
-                      id={car.id}
-                      className="sr-only"
-                    />
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{car.image}</span>
-                      <div>
-                        <h4 className="font-medium">{car.name}</h4>
-                        <p className="text-sm text-gray-500">
-                          {car.description}
+              {getFilteredVehicleTypes().map((vehicle) => (
+                <div
+                  key={vehicle.id}
+                  className={`border rounded-lg p-4 hover:border-fleet-red cursor-pointer transition-all ${
+                    selectedCarModel === vehicle.id
+                      ? "border-fleet-red bg-fleet-red/5 shadow-sm"
+                      : "border-gray-200 hover:shadow-sm"
+                  }`}
+                  onClick={() => setSelectedCarModel(vehicle.id)}
+                >
+                  <RadioGroupItem
+                    value={vehicle.id}
+                    id={vehicle.id}
+                    className="sr-only"
+                  />
+                  <div className="flex items-center gap-4">
+                    {/* Vehicle Image */}
+                    <div className="flex-shrink-0">
+                      <div className="w-fit h-20 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                        {vehicle.images && vehicle.images.length > 0 ? (
+                          <img
+                            src={vehicle.images[0]}
+                            alt={vehicle.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-4xl">🚗</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Vehicle Details */}
+                    <div className="flex-1 space-y-2">
+                      {/* Vehicle Class Name */}
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {vehicle.name}
+                      </h3>
+
+                      {/* Capacity Icons */}
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <span className="text-lg">👥</span>
+                          <span>{vehicle.capacity}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-lg">💼</span>
+                          <span>{Math.min(vehicle.capacity - 1, 5)}</span>
+                        </div>
+                      </div>
+
+                      {/* Description/Model */}
+                      <p className="text-sm text-gray-500">
+                        {vehicle.description}
+                      </p>
+                    </div>
+
+                    {/* Price and Action */}
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-gray-900">
+                          ${vehicle.basePrice}/hour
                         </p>
+                        <p className="text-xs text-gray-500">per hour</p>
                       </div>
                     </div>
                   </div>
-                )
-              )}
+                </div>
+              ))}
             </RadioGroup>
           </div>
 
@@ -566,82 +902,34 @@ const RentCarForm = () => {
 
       {step === 4 && (
         <>
-          <div className="space-y-4">
-            <h3 className="font-medium">Payment Details</h3>
-            <div>
-              <label htmlFor="cardNumber" className="text-sm font-medium">
-                Card Number
-              </label>
-              <div className="relative">
-                <CreditCard className="absolute left-2 top-3 h-4 w-4 text-gray-500" />
-                <Input
-                  id="cardNumber"
-                  name="cardNumber"
-                  placeholder="1234 5678 9012 3456"
-                  className="pl-8"
-                  value={formData.cardNumber}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label htmlFor="cardName" className="text-sm font-medium">
-                Cardholder Name
-              </label>
-              <Input
-                id="cardName"
-                name="cardName"
-                placeholder="John Smith"
-                value={formData.cardName}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="cardExpiry" className="text-sm font-medium">
-                  Expiry Date
-                </label>
-                <Input
-                  id="cardExpiry"
-                  name="cardExpiry"
-                  placeholder="MM/YY"
-                  value={formData.cardExpiry}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="cardCVC" className="text-sm font-medium">
-                  CVC
-                </label>
-                <Input
-                  id="cardCVC"
-                  name="cardCVC"
-                  placeholder="123"
-                  value={formData.cardCVC}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-            </div>
+          <div className="mb-3">
+            <h4 className="text-sm font-medium">Complete Payment</h4>
+            <p className="text-xs text-gray-500 mt-1">
+              Secure payment via CCAvenue. Your booking will be confirmed after
+              successful payment.
+            </p>
           </div>
 
-          <div className="flex gap-2">
+          {orderId && (
+            <CCavenueCheckout
+              orderId={orderId}
+              amount={calculateTotalAmount()}
+              customerName={getCustomerInfo().customerName}
+              customerEmail={getCustomerInfo().customerEmail}
+              customerPhone={getCustomerInfo().customerPhone}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentFailure={handlePaymentFailure}
+            />
+          )}
+
+          <div className="flex justify-between mt-3">
             <Button
               type="button"
               variant="outline"
-              className="flex-1 h-8 text-xs border-gray-300 hover:bg-gray-50 transition-all"
+              className="h-8 text-xs border-gray-300 hover:bg-gray-50 transition-all"
               onClick={() => setStep(3)}
             >
               Back
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 h-8 text-xs text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
-            >
-              Confirm Payment
             </Button>
           </div>
         </>
@@ -715,17 +1003,23 @@ const RentCarForm = () => {
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Car Category:</span>
                 <span className="font-medium">
-                  {carCategories.find((c) => c.id === selectedCategory)?.name}
+                  {transportTypes.find((c) => c.id === selectedCategory)?.name}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Car Model:</span>
                 <span className="font-medium">
                   {
-                    carModels[selectedCategory as keyof typeof carModels].find(
+                    getFilteredVehicleTypes().find(
                       (c) => c.id === selectedCarModel
                     )?.name
                   }
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">Total Amount:</span>
+                <span className="font-medium text-green-600">
+                  AED {calculateTotalAmount().toFixed(2)}
                 </span>
               </div>
             </div>
@@ -741,7 +1035,7 @@ const RentCarForm = () => {
               Download Payment Receipt
             </Button>
 
-            <Link to="/my-bookings" className="w-full">
+            <Link to="/user/my-bookings" className="w-full">
               <Button className="w-full text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 flex items-center justify-center">
                 <Book className="mr-2 h-4 w-4" />
                 View My Bookings
@@ -751,7 +1045,7 @@ const RentCarForm = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setStep(1)}
+              onClick={resetForm}
               className="w-full"
             >
               Book Another Chauffeur

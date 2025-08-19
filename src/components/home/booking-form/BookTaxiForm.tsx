@@ -103,12 +103,6 @@ const BookTaxiForm = () => {
     fetchTransportTypes();
   }, []);
 
-  // Handler for input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setBookingDetails((prev) => ({ ...prev, [name]: value }));
-  };
-
   // Handler for pickup location selection
   const handlePickupLocationSelect = (location: Location) => {
     setSelectedPickupLocation(location);
