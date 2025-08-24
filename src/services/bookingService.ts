@@ -1,152 +1,197 @@
-import { getAuthToken } from "./userService";
-import { config } from "@/constants/config";
+import { apiClient, API_ENDPOINTS } from "@/lib/api";
+import type {
+  ApiResponse,
+  PaymentInfo,
+  Booking,
+  BookingWithRelations,
+  CreateBookingRequest,
+  UpdateBookingRequest,
+  BookingFilters,
+} from "@/types";
+import { paymentService } from "./paymentService";
 
-// Helper function to make authenticated API calls
-const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-  const token = await getAuthToken();
-
-  const response = await fetch(`${config.apiUrl}/booking${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "API request failed");
+// Booking Service Class
+class BookingService {
+  /**
+   * Get all bookings with optional filtering
+   */
+  async getAllBookings(
+    filters?: BookingFilters
+  ): Promise<ApiResponse<BookingWithRelations[]>> {
+    return apiClient.get<BookingWithRelations[]>(
+      `${API_ENDPOINTS.BOOKINGS.BASE}/all`,
+      filters
+    );
   }
 
-  return data;
+  /**
+   * Get booking by ID
+   */
+  async getBookingById(id: string): Promise<ApiResponse<BookingWithRelations>> {
+    return apiClient.get<BookingWithRelations>(
+      `${API_ENDPOINTS.BOOKINGS.BASE}/${id}`
+    );
+  }
+
+  /**
+   * Create a new booking
+   */
+  async createBooking(
+    data: CreateBookingRequest
+  ): Promise<ApiResponse<Booking>> {
+    return apiClient.post<Booking>(API_ENDPOINTS.BOOKINGS.BASE, data);
+  }
+
+  /**
+   * Update booking
+   */
+  async updateBooking(
+    id: string,
+    data: UpdateBookingRequest
+  ): Promise<ApiResponse<Booking>> {
+    return apiClient.put<Booking>(`${API_ENDPOINTS.BOOKINGS.BASE}/${id}`, data);
+  }
+
+  /**
+   * Delete booking
+   */
+  async deleteBooking(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete<{ message: string }>(
+      `${API_ENDPOINTS.BOOKINGS.BASE}/${id}`
+    );
+  }
+
+  /**
+   * Update booking status
+   */
+  async updateBookingStatus(
+    id: string,
+    status: string
+  ): Promise<ApiResponse<Booking>> {
+    return apiClient.patch<Booking>(
+      `${API_ENDPOINTS.BOOKINGS.BASE}/${id}/status`,
+      { status }
+    );
+  }
+
+  /**
+   * Get bookings by user ID
+   */
+  async getBookingsByUserId(
+    userId: string
+  ): Promise<ApiResponse<BookingWithRelations[]>> {
+    return apiClient.get<BookingWithRelations[]>(
+      `${API_ENDPOINTS.BOOKINGS.BY_USER}/${userId}`
+    );
+  }
+
+  /**
+   * Get bookings by vehicle ID
+   */
+  async getBookingsByVehicleId(
+    vehicleId: string
+  ): Promise<ApiResponse<BookingWithRelations[]>> {
+    return apiClient.get<BookingWithRelations[]>(
+      `${API_ENDPOINTS.BOOKINGS.BY_VEHICLE}/${vehicleId}`
+    );
+  }
+
+  /**
+   * Get booking statistics
+   */
+  async getBookingStats(): Promise<
+    ApiResponse<{
+      total: number;
+      byStatus: Record<string, number>;
+      byType: Record<string, number>;
+      recentBookings: number;
+    }>
+  > {
+    return apiClient.get(API_ENDPOINTS.BOOKINGS.STATS);
+  }
+
+  /**
+   * Confirm a booking
+   */
+  async confirmBooking(bookingId: string): Promise<ApiResponse<Booking>> {
+    return apiClient.post<Booking>(API_ENDPOINTS.BOOKINGS.CONFIRM, {
+      bookingId,
+    });
+  }
+
+  /**
+   * Assign driver to booking
+   */
+  async assignDriver(
+    bookingId: string,
+    driverId: string
+  ): Promise<ApiResponse<Booking>> {
+    return apiClient.post<Booking>(API_ENDPOINTS.BOOKINGS.ASSIGN_DRIVER, {
+      bookingId,
+      driverId,
+    });
+  }
+
+  /**
+   * Cancel booking
+   */
+  async cancelBooking(
+    bookingId: string,
+    reason: string
+  ): Promise<ApiResponse<Booking>> {
+    return apiClient.post<Booking>(API_ENDPOINTS.BOOKINGS.CANCEL, {
+      bookingId,
+      reason,
+    });
+  }
+
+  /**
+   * Update payment information
+   */
+  async updatePaymentInfo(
+    id: string,
+    paymentInfo: Partial<PaymentInfo>
+  ): Promise<ApiResponse<Booking>> {
+    return apiClient.patch<Booking>(`${API_ENDPOINTS.BOOKINGS.BASE}/${id}`, {
+      paymentInfo,
+    });
+  }
+}
+
+// Export singleton instance
+export const bookingService = new BookingService();
+
+// Legacy function exports for backward compatibility
+export const confirmBooking = async (bookingId: string) => {
+  return bookingService.confirmBooking(bookingId);
 };
 
-/**
- * Confirm a booking
- */
-export const confirmBooking = async (
-  bookingId: string
-): Promise<{
-  success: boolean;
-  message: string;
-  emailSent: boolean;
-  data: {
-    bookingId: string;
-    status: string;
+export const assignDriver = async (bookingId: string, driverId: string) => {
+  return bookingService.assignDriver(bookingId, driverId);
+};
+
+export const cancelBooking = async (bookingId: string, reason: string) => {
+  return bookingService.cancelBooking(bookingId, reason);
+};
+
+export const getAvailableDrivers = async () => {
+  // This would need to be implemented in the backend
+  return {
+    success: true,
+    data: [],
+    message: "Available drivers endpoint not yet implemented",
   };
-}> => {
-  return apiCall("/confirm", {
-    method: "POST",
-    body: JSON.stringify({ bookingId }),
-  });
 };
 
-/**
- * Assign driver to booking
- */
-export const assignDriver = async (
-  bookingId: string,
-  driverId: string
-): Promise<{
-  success: boolean;
-  message: string;
-  notifications: {
-    customer: boolean;
-    driver: boolean;
+export const getBookingDetails = async (bookingId: string) => {
+  return bookingService.getBookingById(bookingId);
+};
+
+export const bookingWithCash = async (orderId: string, amount: number) => {
+  await paymentService.paymentWithCash({ orderId, amount });
+  return {
+    success: true,
+    message: "Cash payment processed successfully",
+    data: { bookingId: orderId },
   };
-  data: {
-    bookingId: string;
-    driverId: string;
-    status: string;
-  };
-}> => {
-  return apiCall("/assign-driver", {
-    method: "POST",
-    body: JSON.stringify({ bookingId, driverId }),
-  });
-};
-
-export const bookingWithCash = async (
-  orderId: string,
-  customerName: string,
-  customerEmail: string,
-  customerPhone: string
-): Promise<{
-  success: boolean;
-  message: string;
-  data: {
-    bookingId: string;
-  };
-}> => {
-  return apiCall("/update-cash-payment", {
-    method: "POST",
-    body: JSON.stringify({
-      orderId,
-      customerName,
-      customerEmail,
-      customerPhone,
-    }),
-  });
-};
-
-/**
- * Cancel a booking
- */
-export const cancelBooking = async (
-  bookingId: string,
-  reason: string
-): Promise<{
-  success: boolean;
-  message: string;
-  emailSent: boolean;
-  data: {
-    bookingId: string;
-    status: string;
-    reason: string;
-  };
-}> => {
-  return apiCall("/cancel", {
-    method: "POST",
-    body: JSON.stringify({ bookingId, reason }),
-  });
-};
-
-/**
- * Get available drivers for assignment
- */
-export const getAvailableDrivers = async (): Promise<{
-  success: boolean;
-  data: Array<{
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    status: string;
-    vehicleNumber?: string;
-    rating?: number;
-  }>;
-}> => {
-  return apiCall("/available-drivers");
-};
-
-/**
- * Get booking details
- */
-export const getBookingDetails = async (
-  bookingId: string
-): Promise<{
-  success: boolean;
-  data: any;
-}> => {
-  return apiCall(`/${bookingId}`);
-};
-
-export default {
-  confirmBooking,
-  assignDriver,
-  cancelBooking,
-  getAvailableDrivers,
-  getBookingDetails,
 };

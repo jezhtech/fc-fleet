@@ -20,11 +20,8 @@ import {
   sendOTP,
   verifyOTP,
   isAdminPhoneNumber,
-  saveUserData,
-  checkUserExists,
-  getUserData,
-  checkAndLinkDriverAccount,
   checkPhoneNumberRegistered,
+  checkAndLinkDriverAccount,
 } from "@/lib/authUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { auth, firebaseError } from "@/lib/firebase";
@@ -34,6 +31,9 @@ import {
   signOut,
 } from "firebase/auth";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { userService } from "@/services/userService";
+import { authService } from "@/services/authService";
+import { adminService } from "@/services/adminService";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -214,34 +214,50 @@ const Login = () => {
       // Check if the phone number is an admin number
       const isAdmin = isAdminPhoneNumber(fullPhoneNumber);
 
-      // Check if this phone number belongs to a driver
-      const driverCheck = await checkAndLinkDriverAccount(
-        fullPhoneNumber,
-        userCredential.uid
-      );
+      // Get Firebase ID token for API authentication
+      const idToken = await userCredential.getIdToken();
+      
+      // Store token in localStorage for API calls
+      localStorage.setItem('firebaseToken', idToken);
+      localStorage.setItem('authToken', idToken);
 
-      // Check if user exists in database
-      const userExists = await checkUserExists(userCredential.uid);
+      // Check if user exists in backend API using authService
+      let userExists = false;
+      let userData = null;
 
-      // If user doesn't exist or is admin, create/update user data
+      try {
+        const response = await authService.getCurrentUser();
+        if (response.success) {
+          userExists = true;
+          userData = response.data;
+        }
+      } catch (apiError) {
+        console.log('User not found in backend, will create new user');
+      }
+
+      // If user doesn't exist or is admin, create/update user data via services
       if (!userExists) {
         if (isAdmin) {
-          // Create admin user
-          await saveUserData(userCredential.uid, {
-            firstName: "Admin",
-            lastName: "JezX",
-            email: "admin@jezx.in",
-            phoneNumber: fullPhoneNumber,
-            isVerified: true,
-            isAdmin: true,
-            status: "active",
-            role: "admin",
-          });
+          // Create admin user via adminService
+          try {
+            const createResponse = await adminService.createUser({
+              firstName: "Admin",
+              lastName: "JezX",
+              email: "admin@jezx.in",
+              phoneNumber: fullPhoneNumber,
+              isAdmin: true,
+            });
+
+            if (!createResponse.success) {
+              throw new Error('Failed to create admin user in backend');
+            }
+          } catch (apiError) {
+            console.error('Error creating admin user in backend:', apiError);
+            // Continue with login even if backend creation fails
+          }
         }
       } else {
-        // User exists in Auth but check if their data is available
-        const userData = await getUserData(userCredential.uid);
-
+        // User exists in backend, check if their data is available
         if (!userData) {
           setError(
             "Your account data is not available. Please contact customer care for assistance."
@@ -254,16 +270,22 @@ const Login = () => {
 
         // Update existing user as admin if admin phone is used
         if (isAdmin) {
-          await saveUserData(userCredential.uid, {
-            firstName: "Admin",
-            lastName: "JezX",
-            email: "admin@jezx.in",
-            phoneNumber: fullPhoneNumber,
-            isVerified: true,
-            isAdmin: true,
-            status: "active",
-            role: "admin",
-          });
+          try {
+            const updateResponse = await authService.updateProfile({
+              firstName: "Admin",
+              lastName: "JezX",
+              email: "admin@jezx.in",
+              phoneNumber: fullPhoneNumber,
+              isAdmin: true,
+            });
+
+            if (!updateResponse.success) {
+              console.error('Failed to update admin user in backend');
+            }
+          } catch (apiError) {
+            console.error('Error updating admin user in backend:', apiError);
+            // Continue with login even if backend update fails
+          }
         }
 
         // Check if the existing user is blocked or inactive

@@ -23,16 +23,6 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-  limit,
-  Timestamp,
-} from "firebase/firestore";
-import { firestore } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import InvoiceGenerator from "@/components/invoice/InvoiceGenerator";
@@ -44,38 +34,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
-import { formatExistingBookingId } from "@/utils/booking";
-
-// Booking type definition
-interface Booking {
-  id: string;
-  orderId: string;
-  type: string;
-  status: string;
-  date: Date;
-  pickup: string;
-  dropoff: string;
-  vehicle: string;
-  amount: string;
-  paymentMethod?: string;
-  paymentInfo?: {
-    trackingId?: string;
-    paymentMode?: string;
-    timestamp?: string;
-    method?: string;
-  };
-  customerInfo?: {
-    name: string;
-    email: string;
-    phone: string;
-  };
-  driverInfo?: {
-    name?: string;
-    phone?: string;
-    vehicleNumber?: string;
-  };
-  createdAt?: string;
-}
+import { Booking, BookingWithRelations } from "@/types";
+import { bookingService } from "@/services";
 
 // Tracking step interface
 interface TrackingStep {
@@ -88,7 +48,7 @@ interface TrackingStep {
 }
 
 // TrackingDialog component
-const TrackingDialog = ({ booking }: { booking: Booking }) => {
+const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
   // Determine the current step based on booking status
   const getCurrentStep = (status: string): number => {
     switch (status.toLowerCase()) {
@@ -118,13 +78,13 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
       status: currentStepIndex >= 1 ? "completed" : "upcoming",
       icon: <CreditCard className="h-5 w-5" />,
       description:
-        booking.paymentMethod === "cash"
+        booking.paymentInfo.method === "cash"
           ? "Cash payment selected - Amount due at pickup"
           : "Your payment has been successfully processed",
       estimatedTime: "Immediate",
       details: currentStepIndex >= 1 && (
         <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-md">
-          {booking.paymentMethod === "cash" ? (
+          {booking.paymentInfo.method === "cash" ? (
             <div className="space-y-2">
               <div>
                 <p className="font-medium text-green-800">Payment Method</p>
@@ -154,14 +114,6 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
                   {booking.paymentInfo?.paymentMode || "N/A"}
                 </p>
               </div>
-              {booking.paymentInfo?.timestamp && (
-                <div className="mt-2 pt-2 border-t border-green-200">
-                  <p className="font-medium text-green-800">Payment Time</p>
-                  <p className="text-green-700">
-                    {new Date(booking.paymentInfo.timestamp).toLocaleString()}
-                  </p>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -183,17 +135,19 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
           <div className="space-y-2">
             <div>
               <p className="font-medium text-blue-800">Order ID</p>
-              <p className="text-blue-700 font-mono">{booking.orderId}</p>
+              <p className="text-blue-700 font-mono">{booking.id}</p>
             </div>
             <div>
               <p className="font-medium text-blue-800">Service Type</p>
-              <p className="text-blue-700">{booking.type}</p>
+              <p className="text-blue-700">
+                {booking.bookingType === "rent" ? "Hourly" : "Chauffeur"}
+              </p>
             </div>
             <div>
               <p className="font-medium text-blue-800">Status</p>
               <p className="text-blue-700">Processing</p>
             </div>
-            {booking.paymentMethod === "cash" && (
+            {booking.paymentInfo.method === "cash" && (
               <div>
                 <p className="font-medium text-blue-800">Payment Method</p>
                 <p className="text-blue-700">
@@ -227,7 +181,7 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
               <p className="font-medium text-green-800">Next Step</p>
               <p className="text-green-700">Driver assignment in progress</p>
             </div>
-            {booking.paymentMethod === "cash" && (
+            {booking.paymentInfo.method === "cash" && (
               <div>
                 <p className="font-medium text-green-800">Payment Reminder</p>
                 <p className="text-green-700">
@@ -250,7 +204,7 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
       icon: <User className="h-5 w-5" />,
       description: "A professional driver has been assigned to your ride",
       estimatedTime: "10-15 minutes",
-      details: currentStepIndex >= 4 && booking.driverInfo && (
+      details: currentStepIndex >= 4 && booking.user?.role === "driver" && (
         <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -258,7 +212,7 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
               <div>
                 <p className="font-medium text-blue-800">Driver Name</p>
                 <p className="text-blue-700">
-                  {booking.driverInfo.name || "Not assigned yet"}
+                  {booking.user.firstName || "Not assigned yet"}
                 </p>
               </div>
             </div>
@@ -267,7 +221,7 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
               <div>
                 <p className="font-medium text-blue-800">Driver Phone</p>
                 <p className="text-blue-700">
-                  {booking.driverInfo.phone || "Not available"}
+                  {booking.user.phone || "Not available"}
                 </p>
               </div>
             </div>
@@ -275,9 +229,7 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
               <CarIcon className="h-4 w-4 text-blue-600" />
               <div>
                 <p className="font-medium text-blue-800">Vehicle Number</p>
-                <p className="text-blue-700">
-                  {booking.driverInfo.vehicleNumber || "Not available"}
-                </p>
+                <p className="text-blue-700">{"Not available"}</p>
               </div>
             </div>
             <div className="pt-2 border-t border-blue-200">
@@ -316,7 +268,7 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
                 Please be ready at the pickup location 5 minutes before the
                 scheduled time.
               </p>
-              {booking.paymentMethod === "cash" && (
+              {booking.paymentInfo.method === "cash" && (
                 <p className="text-yellow-700 text-xs mt-1">
                   💵 Remember to have the exact amount ready: {booking.amount}
                 </p>
@@ -347,7 +299,7 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
             <div>
               <p className="font-medium text-green-800">Route</p>
               <p className="text-green-700">
-                {booking.pickup} → {booking.dropoff}
+                {booking.pickupLocation.name} → {booking.dropoffLocation.name}
               </p>
             </div>
             <div className="pt-2 border-t border-green-200">
@@ -436,7 +388,7 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
         )}
 
         {/* Cash Payment Notice */}
-        {booking.paymentMethod === "cash" && (
+        {booking.paymentInfo.method === "cash" && (
           <div className="mt-3 p-2 bg-white/20 rounded border border-white/30">
             <p className="text-xs text-white/90">
               💵 Cash Payment: Please have exact amount ready when driver
@@ -541,52 +493,40 @@ const TrackingDialog = ({ booking }: { booking: Booking }) => {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-gray-600">Order ID</p>
-            <p className="font-medium text-gray-800">{booking.orderId}</p>
+            <p className="font-medium text-gray-800">{booking.id}</p>
           </div>
           <div>
             <p className="text-gray-600">Service Type</p>
-            <p className="font-medium text-gray-800">{booking.type}</p>
+            <p className="font-medium text-gray-800">
+              {booking.bookingType === "rent" ? "Hourly" : "Chauffeur"}
+            </p>
           </div>
           <div>
             <p className="text-gray-600">Pickup</p>
-            <p className="font-medium text-gray-800">{booking.pickup}</p>
+            <p className="font-medium text-gray-800">
+              {booking.pickupLocation.name}
+            </p>
           </div>
-          <div>
-            <p className="text-gray-600">Dropoff</p>
-            <p className="font-medium text-gray-800">{booking.dropoff}</p>
-          </div>
+          {booking.dropoffLocation && (
+            <div>
+              <p className="text-gray-600">Dropoff</p>
+              <p className="font-medium text-gray-800">
+                {booking.dropoffLocation.name}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-// Format booking ID as FC/YYYY/MM/0001
-const formatBookingId = (id: string, date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-
-  // Extract numeric part or use a random number
-  let numericPart = "0001";
-  if (id.includes("/")) {
-    // Already formatted, return as is
-    return id;
-  } else if (/\d+/.test(id)) {
-    const matches = id.match(/\d+/);
-    if (matches && matches[0]) {
-      numericPart = matches[0].padStart(4, "0");
-    }
-  }
-
-  return `FC/${year}/${month}/${numericPart}`;
-};
-
-const BookingCard = ({ booking }: { booking: Booking }) => {
+const BookingCard = ({ booking }: { booking: BookingWithRelations }) => {
   const [showInvoice, setShowInvoice] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
 
   // Use the formattedId if available, otherwise generate one
-  const bookingId = booking.orderId;
+  const bookingId = booking.id;
 
   const handleInvoiceSuccess = () => {
     toast.success("Invoice downloaded successfully");
@@ -601,7 +541,9 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
     <Card className="mb-4">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-lg">{booking.type} Service</CardTitle>
+          <CardTitle className="text-lg">
+            {booking.bookingType === "rent" ? "Hourly" : "Chauffeur"} Service
+          </CardTitle>
           <p className="text-sm text-gray-500">Booking ID: {bookingId}</p>
         </div>
         <Badge
@@ -623,20 +565,22 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
       <CardContent>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-start gap-2">
-              <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium">Date</p>
-                <p className="text-sm text-gray-500">
-                  {format(booking.date, "MMMM d, yyyy")}
-                </p>
+            {booking.pickupDate && (
+              <div className="flex items-start gap-2">
+                <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Date</p>
+                  <p className="text-sm text-gray-500">
+                    {format(booking.pickupDate, "MMMM d, yyyy")}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
             <div className="flex items-start gap-2">
               <Car className="h-5 w-5 text-gray-500 mt-0.5" />
               <div>
                 <p className="text-sm font-medium">Vehicle</p>
-                <p className="text-sm text-gray-500">{booking.vehicle}</p>
+                <p className="text-sm text-gray-500">{booking.vehicle.name}</p>
               </div>
             </div>
           </div>
@@ -645,17 +589,23 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
             <Map className="h-5 w-5 text-gray-500 mt-0.5" />
             <div>
               <p className="text-sm font-medium">Pickup Location</p>
-              <p className="text-sm text-gray-500">{booking.pickup}</p>
+              <p className="text-sm text-gray-500">
+                {booking.pickupLocation.name}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-start gap-2">
-            <Map className="h-5 w-5 text-gray-500 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium">Dropoff Location</p>
-              <p className="text-sm text-gray-500">{booking.dropoff}</p>
+          {booking.dropoffLocation && (
+            <div className="flex items-start gap-2">
+              <Map className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Dropoff Location</p>
+                <p className="text-sm text-gray-500">
+                  {booking.dropoffLocation.name}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex justify-between items-center pt-2 border-t border-gray-100">
             <div>
@@ -670,10 +620,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                     variant="outline"
                     size="sm"
                     className="flex items-center gap-1"
-                    disabled={
-                      booking.status === "cancelled" ||
-                      booking.status === "failed"
-                    }
+                    disabled={booking.status === "cancelled"}
                   >
                     <FileText className="h-4 w-4" />
                     <span className="hidden sm:inline">Invoice</span>
@@ -708,7 +655,8 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                       Track Booking: {bookingId}
                     </DialogTitle>
                     <p className="text-sm text-gray-600 mt-1">
-                      Real-time updates on your {booking.type.toLowerCase()}{" "}
+                      Real-time updates on your{" "}
+                      {booking.bookingType === "rent" ? "Hourly" : "Chauffeur"}{" "}
                       service
                     </p>
                   </DialogHeader>
@@ -741,266 +689,22 @@ const MyBookings = () => {
       }
 
       try {
-        setLoading(true);
-        setError(null);
-
-        // Reference to the bookings collection
-        const bookingsRef = collection(firestore, "bookings");
-
-        // Try multiple query approaches to find bookings
-        let querySnapshot;
-        let userBookingsQuery;
-
-        // Approach 1: Try with customer email in customerInfo
-        if (currentUser.email) {
-          userBookingsQuery = query(
-            bookingsRef,
-            where("customerInfo.email", "==", currentUser.email)
+        const response = await bookingService.getAllBookings();
+        const bookings = response.data;
+        if (bookings.length > 0) {
+          const pastBookingsData = bookings.filter(
+            (b) => b.status === "completed"
           );
-
-          try {
-            querySnapshot = await getDocs(userBookingsQuery);
-          } catch (err) {
-            console.error("Error querying by customerInfo.email:", err);
-          }
-        }
-
-        // Approach 2: Try with user ID if first approach returned no results
-        if (!querySnapshot || querySnapshot.empty) {
-          userBookingsQuery = query(
-            bookingsRef,
-            where("userId", "==", currentUser.uid)
+          const upcomingBookingsData = bookings.filter(
+            (b) => b.status !== "completed"
           );
-
-          try {
-            querySnapshot = await getDocs(userBookingsQuery);
-          } catch (err) {
-            console.error("Error querying by userId:", err);
-          }
+          setPastBookings(pastBookingsData);
+          setUpcomingBookings(upcomingBookingsData);
         }
-
-        // Approach 3: Try with user email field directly
-        if (!querySnapshot || querySnapshot.empty) {
-          userBookingsQuery = query(
-            bookingsRef,
-            where("email", "==", currentUser.email)
-          );
-
-          try {
-            querySnapshot = await getDocs(userBookingsQuery);
-          } catch (err) {
-            console.error("Error querying by email field:", err);
-          }
-        }
-
-        // Approach 4: Try with user phone number if available
-        if ((!querySnapshot || querySnapshot.empty) && userData?.phoneNumber) {
-          userBookingsQuery = query(
-            bookingsRef,
-            where("phoneNumber", "==", userData.phoneNumber)
-          );
-
-          try {
-            querySnapshot = await getDocs(userBookingsQuery);
-          } catch (err) {
-            console.error("Error querying by phone number:", err);
-          }
-        }
-
-        // NEW APPROACH 5: Try with customerInfo.email field (exact match from screenshot)
-        if (!querySnapshot || querySnapshot.empty) {
-          userBookingsQuery = query(
-            bookingsRef,
-            where("customerInfo.email", "==", "customer@example.com")
-          );
-
-          try {
-            querySnapshot = await getDocs(userBookingsQuery);
-          } catch (err) {
-            console.error("Error querying by exact customerInfo email:", err);
-          }
-        }
-
-        // NEW APPROACH 6: Get all bookings and filter client-side (last resort)
-        if (!querySnapshot || querySnapshot.empty) {
-          try {
-            querySnapshot = await getDocs(collection(firestore, "bookings"));
-          } catch (err) {
-            console.error("Error fetching all bookings:", err);
-          }
-        }
-
-        // If we still have no results, show demo data
-        if (!querySnapshot || querySnapshot.empty) {
-          navigate("/");
-          return;
-        }
-
-        const now = new Date();
-        const upcoming: Booking[] = [];
-        const past: Booking[] = [];
-
-        querySnapshot.forEach((doc) => {
-          try {
-            const data = doc.data();
-
-            // Process booking creation date
-            let createdAt: Date | null = null;
-            try {
-              if (
-                data.createdAt?.toDate &&
-                typeof data.createdAt.toDate === "function"
-              ) {
-                createdAt = data.createdAt.toDate();
-              } else if (data.createdAt) {
-                // Handle other date formats
-                createdAt = new Date(data.createdAt);
-              } else {
-                console.warn("No createdAt value found");
-              }
-            } catch (error) {
-              console.error("Error parsing createdAt:", error);
-            }
-
-            // Process service date (pickup date/time)
-            let bookingDate: Date;
-            try {
-              // First try to use pickupDateTime (new format)
-              if (data.pickupDateTime) {
-                if (typeof data.pickupDateTime.toDate === "function") {
-                  bookingDate = data.pickupDateTime.toDate();
-                } else if (typeof data.pickupDateTime === "string") {
-                  bookingDate = new Date(data.pickupDateTime);
-                } else {
-                  bookingDate = new Date();
-                  console.warn("Invalid pickupDateTime format");
-                }
-              }
-              // Fall back to date field (old format)
-              else if (data.date) {
-                if (typeof data.date.toDate === "function") {
-                  bookingDate = data.date.toDate();
-                } else if (typeof data.date === "string") {
-                  bookingDate = new Date(data.date);
-                } else {
-                  bookingDate = new Date();
-                  console.warn("Invalid date format");
-                }
-              } else {
-                bookingDate = new Date();
-                console.warn("No date value found");
-              }
-
-              // Validate the date
-              if (isNaN(bookingDate.getTime())) {
-                console.warn(`Invalid date, using current date`);
-                bookingDate = new Date();
-              }
-            } catch (error) {
-              console.error("Error parsing date:", error);
-              bookingDate = new Date();
-            }
-
-            // Extract amount with fallbacks
-            let amount = "AED 0.00";
-            if (typeof data.amount === "number") {
-              amount = `AED ${data.amount.toFixed(2)}`;
-            } else if (typeof data.totalAmount === "number") {
-              amount = `AED ${data.totalAmount.toFixed(2)}`;
-            } else if (typeof data.price === "number") {
-              amount = `AED ${data.price.toFixed(2)}`;
-            }
-
-            const booking: Booking = {
-              id: doc.id,
-              orderId: data.orderId,
-              type: data.type || data.bookingType || "Chauffeur",
-              status: data.status || "initiated",
-              date: bookingDate,
-              pickup:
-                data.pickupLocation?.name ||
-                data.pickup ||
-                data.origin ||
-                "N/A",
-              dropoff:
-                data.dropoffLocation?.name ||
-                data.dropoff ||
-                data.destination ||
-                "N/A",
-              vehicle:
-                data.vehicle?.name ||
-                data.vehicleType ||
-                data.car ||
-                "Standard Vehicle",
-              amount: amount,
-              paymentMethod: data.paymentMethod || data.paymentInfo?.method,
-              paymentInfo: data.paymentInfo || {},
-              customerInfo: data.customerInfo || {
-                name: userData?.firstName
-                  ? `${userData.firstName} ${userData.lastName || ""}`
-                  : currentUser.displayName || "User",
-                email: currentUser.email || "N/A",
-                phone: userData?.phoneNumber || data.phoneNumber || "N/A",
-              },
-              driverInfo: data.driverInfo || {
-                name: data.driverName || data.driver?.name,
-                phone: data.driverPhone || data.driver?.phone,
-                vehicleNumber: data.vehicleNumber || data.driver?.vehicleNumber,
-              },
-              createdAt: createdAt
-                ? createdAt.toISOString()
-                : new Date().toISOString(),
-            };
-
-            // Categorize bookings based on status rather than just date
-            if (
-              booking.status === "completed" ||
-              booking.status === "cancelled"
-            ) {
-              past.push(booking);
-            } else {
-              upcoming.push(booking);
-            }
-          } catch (err) {
-            console.error(`Error processing booking ${doc.id}:`, err);
-            // Continue with other bookings even if one fails
-          }
-        });
-
-        // Sort both arrays by date (newest first)
-        const sortByDateDesc = (a: Booking, b: Booking) => {
-          try {
-            // Make sure both dates are valid before comparing
-            const aTime = isNaN(a.date.getTime()) ? 0 : a.date.getTime();
-            const bTime = isNaN(b.date.getTime()) ? 0 : b.date.getTime();
-            return bTime - aTime;
-          } catch (err) {
-            console.error("Error comparing dates:", err);
-            return 0; // Return 0 to keep original order if there's an error
-          }
-        };
-
-        // Safely sort the arrays
-        try {
-          upcoming.sort(sortByDateDesc);
-          past.sort(sortByDateDesc);
-        } catch (err) {
-          console.error("Error sorting bookings:", err);
-          // Continue without sorting if there's an error
-        }
-
-        setUpcomingBookings(upcoming);
-        setPastBookings(past);
-        setUseDemoData(false);
-        setLoading(false);
       } catch (err) {
         console.error("Error fetching bookings:", err);
         setError("Failed to load bookings. Please try again.");
-
-        // Use demo data after multiple failures
-        if (retryCount >= 2) {
-          navigate("/");
-        }
+      } finally {
         setLoading(false);
       }
     };

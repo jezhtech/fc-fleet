@@ -4,67 +4,68 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, 
-         DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { PlusCircle, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { firestore } from '@/lib/firebase';
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import EmojiPicker from '@/components/EmojiPicker';
-
-interface TaxiType {
-  id: string;
-  name: string;
-  description: string;
-  emoji: string;
-}
+import { transportService } from '@/services/transportService';
+import type { Transport, CreateTransportRequest, UpdateTransportRequest } from '@/types';
 
 const AdminTaxiTypes = () => {
-  const [taxiTypes, setTaxiTypes] = useState<TaxiType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [taxiTypes, setTaxiTypes] = useState<Transport[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [taxiTypeToDelete, setTaxiTypeToDelete] = useState<TaxiType | null>(null);
+  const [taxiTypeToDelete, setTaxiTypeToDelete] = useState<Transport | null>(null);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentTaxiType, setCurrentTaxiType] = useState<TaxiType | null>(null);
+  const [currentTaxiType, setCurrentTaxiType] = useState<Transport | null>(null);
   
-  // Fetch taxi types from Firestore
+  // Fetch taxi types using the transport service
   useEffect(() => {
-    const fetchTaxiTypes = async () => {
+    const fetchData = async () => {
       try {
-        setIsLoading(true);
-        const taxiTypesRef = collection(firestore, 'taxiTypes');
-        const snapshot = await getDocs(taxiTypesRef);
+        setLoading(true);
         
-        const fetchedTypes = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as TaxiType[];
-        
-        setTaxiTypes(fetchedTypes);
-      } catch (error) {
-        console.error('Error fetching taxi types:', error);
-        toast.error('Failed to load taxi types');
+        const response = await transportService.getAllTransports();
+        if (response.success) {
+          setTaxiTypes(response.data || []);
+        } else {
+          throw new Error(response.error || 'Failed to fetch taxi types');
+        }
+      } catch (error: any) {
+        console.error('Error fetching data:', error);
+        toast.error(error.message || 'Failed to load data');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
-    fetchTaxiTypes();
+    fetchData();
   }, []);
   
-  const handleAddEdit = (taxiType: TaxiType | null) => {
+  const handleAddEdit = (taxiType: Transport | null) => {
     setCurrentTaxiType(taxiType || {
       id: '',
       name: '',
       description: '',
-      emoji: '🚗'
+      imageUrl: '',
+      createdAt: '',
+      updatedAt: ''
     });
+    
     setIsDialogOpen(true);
   };
   
-  const confirmDelete = (taxiType: TaxiType) => {
+  const confirmDelete = (taxiType: Transport) => {
     setTaxiTypeToDelete(taxiType);
     setIsDeleteDialogOpen(true);
   };
@@ -74,16 +75,20 @@ const AdminTaxiTypes = () => {
     
     setIsSubmitting(true);
     try {
-      // Delete from Firestore
-      await deleteDoc(doc(firestore, 'taxiTypes', taxiTypeToDelete.id));
+      // Delete using transport service
+      const response = await transportService.deleteTransport(taxiTypeToDelete.id);
       
-      // Update local state
-      setTaxiTypes(taxiTypes.filter(type => type.id !== taxiTypeToDelete.id));
-    toast.success('Taxi type deleted successfully');
-      setIsDeleteDialogOpen(false);
-    } catch (error) {
+      if (response.success) {
+        // Update local state
+        setTaxiTypes(taxiTypes.filter(t => t.id !== taxiTypeToDelete.id));
+        toast.success('Taxi type deleted successfully');
+        setIsDeleteDialogOpen(false);
+      } else {
+        throw new Error(response.error || 'Failed to delete taxi type');
+      }
+    } catch (error: any) {
       console.error('Error deleting taxi type:', error);
-      toast.error('Failed to delete taxi type');
+      toast.error(error.message || 'Failed to delete taxi type');
     } finally {
       setIsSubmitting(false);
     }
@@ -93,39 +98,62 @@ const AdminTaxiTypes = () => {
     e.preventDefault();
     if (!currentTaxiType) return;
     
+    if (!currentTaxiType.name || !currentTaxiType.imageUrl) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
+      let savedTaxiType: Transport;
+      
       if (currentTaxiType.id) {
-        // Update existing taxi type
-        const taxiTypeRef = doc(firestore, 'taxiTypes', currentTaxiType.id);
-        const { id, ...taxiTypeData } = currentTaxiType;
+        // Update existing taxi type using transport service
+        const updateData: UpdateTransportRequest = {
+          name: currentTaxiType.name,
+          description: currentTaxiType.description,
+          imageUrl: currentTaxiType.imageUrl,
+        };
         
-        await updateDoc(taxiTypeRef, taxiTypeData);
+        const response = await transportService.updateTransport(currentTaxiType.id, updateData);
         
-        // Update local state
-      setTaxiTypes(taxiTypes.map(type => 
-        type.id === currentTaxiType.id ? currentTaxiType : type
-      ));
+        if (response.success) {
+          // Update local state
+          savedTaxiType = response.data!;
+          setTaxiTypes(taxiTypes.map(taxi => 
+            taxi.id === currentTaxiType.id ? savedTaxiType : taxi
+          ));
+          
+          toast.success('Taxi type updated successfully');
+        } else {
+          throw new Error(response.error || 'Failed to update taxi type');
+        }
+      } else {
+        // Add new taxi type using transport service
+        const createData: CreateTransportRequest = {
+          name: currentTaxiType.name,
+          description: currentTaxiType.description,
+          imageUrl: currentTaxiType.imageUrl,
+        };
         
-      toast.success('Taxi type updated successfully');
-    } else {
-        // Add new taxi type
-        const { id, ...taxiTypeData } = currentTaxiType;
+        const response = await transportService.createTransport(createData);
         
-        const docRef = await addDoc(collection(firestore, 'taxiTypes'), taxiTypeData);
-        
-        // Update local state with the new ID from Firestore
-        const newTaxiType = { ...currentTaxiType, id: docRef.id };
-        setTaxiTypes([...taxiTypes, newTaxiType]);
-        
-      toast.success('Taxi type added successfully');
-    }
-    
-    setIsDialogOpen(false);
-    } catch (error) {
+        if (response.success) {
+          // Update local state with the new ID from backend
+          savedTaxiType = response.data!;
+          setTaxiTypes([...taxiTypes, savedTaxiType]);
+          
+          toast.success('Taxi type added successfully');
+        } else {
+          throw new Error(response.error || 'Failed to create taxi type');
+        }
+      }
+      
+      setIsDialogOpen(false);
+    } catch (error: any) {
       console.error('Error saving taxi type:', error);
-      toast.error('Failed to save taxi type');
+      toast.error(error.message || 'Failed to save taxi type');
     } finally {
       setIsSubmitting(false);
     }
@@ -148,7 +176,7 @@ const AdminTaxiTypes = () => {
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="name" className="text-sm font-medium mb-1 block">Name</label>
+                  <Label htmlFor="name" className="text-sm font-medium mb-1 block">Name</Label>
                   <Input
                     id="name"
                     value={currentTaxiType?.name || ''}
@@ -157,16 +185,19 @@ const AdminTaxiTypes = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="emoji" className="text-sm font-medium mb-1 block">Emoji</label>
-                  <EmojiPicker
-                    selectedEmoji={currentTaxiType?.emoji || '🚗'}
-                    onEmojiSelect={(emoji) => setCurrentTaxiType(curr => curr ? {...curr, emoji} : null)}
+                  <Label htmlFor="imageUrl" className="text-sm font-medium mb-1 block">Image URL</Label>
+                  <Input
+                    id="imageUrl"
+                    value={currentTaxiType?.imageUrl || ''}
+                    onChange={(e) => setCurrentTaxiType(curr => curr ? {...curr, imageUrl: e.target.value} : null)}
+                    placeholder="Enter image URL (e.g., https://example.com/image.png)"
+                    required
                   />
                 </div>
               </div>
               
               <div>
-                <label htmlFor="description" className="text-sm font-medium mb-1 block">Description</label>
+                <Label htmlFor="description" className="text-sm font-medium mb-1 block">Description</Label>
                 <Textarea
                   id="description"
                   value={currentTaxiType?.description || ''}
@@ -241,7 +272,7 @@ const AdminTaxiTypes = () => {
         </DialogContent>
       </Dialog>
       
-      {isLoading ? (
+      {loading ? (
         <div className="flex justify-center items-center min-h-[300px]">
           <Loader2 className="h-8 w-8 text-fleet-red animate-spin mr-2" />
           <p>Loading taxi types...</p>
@@ -258,7 +289,17 @@ const AdminTaxiTypes = () => {
                 <CardHeader className="bg-gray-50 pb-2">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">{taxiType.emoji}</span>
+                  {taxiType.imageUrl ? (
+                    <img 
+                      src={taxiType.imageUrl} 
+                      alt={taxiType.name} 
+                      className="w-8 h-8 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-gray-500 text-sm">
+                      🚗
+                    </div>
+                  )}
                   <CardTitle>{taxiType.name}</CardTitle>
                 </div>
                 <div className="space-x-1">

@@ -23,52 +23,31 @@ import {
 } from '@/components/ui/select';
 import { PlusCircle, Edit2, Trash2, Loader2, Upload, X, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { firestore, storage } from '@/lib/firebase';
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  getDoc,
-  query,
-  where 
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/contexts/AuthContext';
+import { vehicleService } from '@/services/vehicleService';
+import { transportService } from '@/services/transportService';
 import { formatCurrency } from '@/utils/currency';
+import type { Vehicle, VehicleWithTransport, CreateVehicleRequest, UpdateVehicleRequest, Transport } from '@/types';
 
-interface TaxiType {
-  id: string;
-  name: string;
-  description: string;
-  emoji: string;
-}
-
-interface VehicleType {
-  id: string;
-  taxiTypeId: string;
+// Local interface for display purposes
+interface VehicleTypeDisplay extends Vehicle {
+  taxiTypeId: string; // Add taxiTypeId for display purposes
   taxiTypeName?: string; // For display purposes
-  name: string;
-  description: string;
-  basePrice: number;
-  perKmPrice: number;
-  perMinutePrice: number;
-  capacity: number;
-  images: string[];
+  images: string[]; // Convert imageUrl to images array for display
+  perMinutePrice: number; // Add perMinutePrice for display purposes
 }
 
 const AdminVehicleTypes = () => {
-  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [taxiTypes, setTaxiTypes] = useState<TaxiType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { currentUser } = useAuth();
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleTypeDisplay[]>([]);
+  const [taxiTypes, setTaxiTypes] = useState<Transport[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [vehicleToDelete, setVehicleToDelete] = useState<VehicleType | null>(null);
+  const [vehicleToDelete, setVehicleToDelete] = useState<VehicleTypeDisplay | null>(null);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentVehicle, setCurrentVehicle] = useState<VehicleType | null>(null);
+  const [currentVehicle, setCurrentVehicle] = useState<VehicleTypeDisplay | null>(null);
   
   // For image upload
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -78,56 +57,53 @@ const AdminVehicleTypes = () => {
   // Add state for image carousel
   const [activeImageIndex, setActiveImageIndex] = useState<{[key: string]: number}>({});
   
-  // Fetch taxi types and vehicle types from Firestore
+  // Fetch taxi types and vehicle types using the services
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setIsLoading(true);
+        setLoading(true);
         
-        // Fetch taxi types
-        const taxiTypesRef = collection(firestore, 'taxiTypes');
-        const taxiSnapshot = await getDocs(taxiTypesRef);
+        // Fetch taxi types using transport service
+        const taxiResponse = await transportService.getAllTransports();
+        if (taxiResponse.success) {
+          setTaxiTypes(taxiResponse.data || []);
+        } else {
+          throw new Error(taxiResponse.error || 'Failed to fetch taxi types');
+        }
         
-        const fetchedTaxiTypes = taxiSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as TaxiType[];
-        
-        setTaxiTypes(fetchedTaxiTypes);
-        
-        // Fetch vehicle types
-        const vehicleTypesRef = collection(firestore, 'vehicleTypes');
-        const vehicleSnapshot = await getDocs(vehicleTypesRef);
-        
-        const fetchedVehicleTypes = vehicleSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as VehicleType[];
-        
-        // Add taxi type name for display
-        const vehiclesWithTaxiNames = await Promise.all(
-          fetchedVehicleTypes.map(async vehicle => {
-            const taxiType = fetchedTaxiTypes.find(taxi => taxi.id === vehicle.taxiTypeId);
+        // Fetch vehicle types using vehicle service
+        const vehicleResponse = await vehicleService.getAllVehicles();
+        if (vehicleResponse.success) {
+          const fetchedVehicleTypes = vehicleResponse.data || [];
+          
+          // Convert VehicleWithTransport to VehicleTypeDisplay
+          const vehiclesWithTaxiNames: VehicleTypeDisplay[] = fetchedVehicleTypes.map((vehicle: VehicleWithTransport) => {
+            const taxiType = taxiTypes.find((taxi: Transport) => taxi.id === vehicle.transportId);
             return {
               ...vehicle,
-              taxiTypeName: taxiType?.name || 'Unknown'
+              taxiTypeId: vehicle.transportId || '',
+              taxiTypeName: taxiType?.name || 'Unknown',
+              images: vehicle.imageUrl ? [vehicle.imageUrl] : [], // Convert single imageUrl to images array
+              perMinutePrice: vehicle.perMinPrice, // Map perMinPrice to perMinutePrice for display
             };
-          })
-        );
-        
-        setVehicleTypes(vehiclesWithTaxiNames);
-      } catch (error) {
+          });
+          
+          setVehicleTypes(vehiclesWithTaxiNames);
+        } else {
+          throw new Error(vehicleResponse.error || 'Failed to fetch vehicle types');
+        }
+      } catch (error: any) {
         console.error('Error fetching data:', error);
-        toast.error('Failed to load data');
+        toast.error(error.message || 'Failed to load data');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     fetchData();
   }, []);
   
-  const handleAddEdit = (vehicle: VehicleType | null) => {
+  const handleAddEdit = (vehicle: VehicleTypeDisplay | null) => {
     if (vehicle) {
       // When editing, set the current images as preview URLs
       setImagePreviewUrls(vehicle.images);
@@ -147,13 +123,17 @@ const AdminVehicleTypes = () => {
       perKmPrice: 0,
       perMinutePrice: 0,
       capacity: 4,
-      images: []
+      images: [],
+      imageUrl: '',
+      perMinPrice: 0,
+      createdAt: '',
+      updatedAt: ''
     });
     
     setIsDialogOpen(true);
   };
   
-  const confirmDelete = (vehicle: VehicleType) => {
+  const confirmDelete = (vehicle: VehicleTypeDisplay) => {
     setVehicleToDelete(vehicle);
     setIsDeleteDialogOpen(true);
   };
@@ -163,32 +143,20 @@ const AdminVehicleTypes = () => {
     
     setIsSubmitting(true);
     try {
-      // Delete images from storage
-      for (const imageUrl of vehicleToDelete.images) {
-        try {
-          // Extract the file path from the URL
-          const urlParts = imageUrl.split('?')[0].split('/o/')[1];
-          if (urlParts) {
-            const filePath = decodeURIComponent(urlParts);
-            const imageRef = ref(storage, filePath);
-            await deleteObject(imageRef);
-          }
-        } catch (error) {
-          console.error('Error deleting image:', error);
-          // Continue even if one image fails to delete
-        }
+      // Delete using vehicle service
+      const response = await vehicleService.deleteVehicle(vehicleToDelete.id);
+      
+      if (response.success) {
+        // Update local state
+        setVehicleTypes(vehicleTypes.filter(v => v.id !== vehicleToDelete.id));
+        toast.success('Vehicle type deleted successfully');
+        setIsDeleteDialogOpen(false);
+      } else {
+        throw new Error(response.error || 'Failed to delete vehicle type');
       }
-      
-      // Delete from Firestore
-      await deleteDoc(doc(firestore, 'vehicleTypes', vehicleToDelete.id));
-      
-      // Update local state
-      setVehicleTypes(vehicleTypes.filter(v => v.id !== vehicleToDelete.id));
-      toast.success('Vehicle type deleted successfully');
-      setIsDeleteDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting vehicle type:', error);
-      toast.error('Failed to delete vehicle type');
+      toast.error(error.message || 'Failed to delete vehicle type');
     } finally {
       setIsSubmitting(false);
     }
@@ -237,23 +205,26 @@ const AdminVehicleTypes = () => {
     }
   };
   
-  const uploadImages = async (): Promise<string[]> => {
+  // For now, we'll use base64 images. In production, you'd want to implement proper image upload
+  const processImages = async (): Promise<string[]> => {
     if (imageFiles.length === 0) {
       // If no new images were added, return the existing ones
       return currentVehicle?.images || [];
     }
     
-    const uploadPromises = imageFiles.map(async (file) => {
-      const fileId = uuidv4();
-      const fileExtension = file.name.split('.').pop();
-      const filePath = `vehicle-images/${fileId}.${fileExtension}`;
-      const storageRef = ref(storage, filePath);
-      
-      await uploadBytes(storageRef, file);
-      return getDownloadURL(storageRef);
+    // Convert files to base64 for demo purposes
+    // In production, you'd upload to a CDN or storage service
+    const imagePromises = imageFiles.map((file) => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      });
     });
     
-    const newImageUrls = await Promise.all(uploadPromises);
+    const newImageUrls = await Promise.all(imagePromises);
     
     // Combine with existing images that weren't removed
     const existingImages = currentVehicle?.images || [];
@@ -272,63 +243,77 @@ const AdminVehicleTypes = () => {
     setIsSubmitting(true);
     
     try {
-      // Upload images first
-      const imageUrls = await uploadImages();
+      // Process images first
+      const imageUrls = await processImages();
       
-      // Prepare vehicle data with image URLs
-      const vehicleData = {
-        ...currentVehicle,
-        images: imageUrls
+      // Prepare vehicle data for backend API
+      const vehicleData: CreateVehicleRequest | UpdateVehicleRequest = {
+        name: currentVehicle.name,
+        description: currentVehicle.description,
+        basePrice: currentVehicle.basePrice,
+        perKmPrice: currentVehicle.perKmPrice,
+        perMinPrice: currentVehicle.perMinutePrice, // Map back to perMinPrice
+        capacity: currentVehicle.capacity,
+        imageUrl: imageUrls[0] || '', // Use first image as imageUrl for backend
+        transportId: currentVehicle.taxiTypeId,
       };
       
-      let savedVehicle: VehicleType;
+      let savedVehicle: VehicleTypeDisplay;
       
       if (currentVehicle.id) {
-        // Update existing vehicle type
-        const vehicleRef = doc(firestore, 'vehicleTypes', currentVehicle.id);
-        const { id, taxiTypeName, ...vehicleDataWithoutId } = vehicleData;
+        // Update existing vehicle type using vehicle service
+        const response = await vehicleService.updateVehicle(currentVehicle.id, vehicleData);
         
-        await updateDoc(vehicleRef, vehicleDataWithoutId);
-        
-        // Get the taxi type name
-        const taxiType = taxiTypes.find(taxi => taxi.id === vehicleData.taxiTypeId);
-        
-        // Update local state
-        savedVehicle = {
-          ...vehicleData,
-          taxiTypeName: taxiType?.name || 'Unknown'
-        };
-        
-        setVehicleTypes(vehicleTypes.map(vehicle => 
-          vehicle.id === currentVehicle.id ? savedVehicle : vehicle
-        ));
-        
-        toast.success('Vehicle type updated successfully');
+        if (response.success) {
+          // Get the taxi type name
+          const taxiType = taxiTypes.find(taxi => taxi.id === currentVehicle.taxiTypeId);
+          
+          // Update local state
+          savedVehicle = {
+            ...response.data!,
+            taxiTypeId: currentVehicle.taxiTypeId,
+            taxiTypeName: taxiType?.name || 'Unknown',
+            images: imageUrls,
+            perMinutePrice: response.data!.perMinPrice, // Map perMinPrice to perMinutePrice for display
+          };
+          
+          setVehicleTypes(vehicleTypes.map(vehicle => 
+            vehicle.id === currentVehicle.id ? savedVehicle : vehicle
+          ));
+          
+          toast.success('Vehicle type updated successfully');
+        } else {
+          throw new Error(response.error || 'Failed to update vehicle type');
+        }
       } else {
-        // Add new vehicle type
-        const { id, taxiTypeName, ...vehicleDataWithoutId } = vehicleData;
+        // Add new vehicle type using vehicle service
+        const response = await vehicleService.createVehicle(vehicleData as CreateVehicleRequest);
         
-        const docRef = await addDoc(collection(firestore, 'vehicleTypes'), vehicleDataWithoutId);
-        
-        // Get the taxi type name
-        const taxiType = taxiTypes.find(taxi => taxi.id === vehicleData.taxiTypeId);
-        
-        // Update local state with the new ID from Firestore
-        savedVehicle = {
-          ...vehicleData,
-          id: docRef.id,
-          taxiTypeName: taxiType?.name || 'Unknown'
-        };
-        
-        setVehicleTypes([...vehicleTypes, savedVehicle]);
-        
-        toast.success('Vehicle type added successfully');
+        if (response.success) {
+          // Get the taxi type name
+          const taxiType = taxiTypes.find(taxi => taxi.id === currentVehicle.taxiTypeId);
+          
+          // Update local state with the new ID from backend
+          savedVehicle = {
+            ...response.data!,
+            taxiTypeId: currentVehicle.taxiTypeId,
+            taxiTypeName: taxiType?.name || 'Unknown',
+            images: imageUrls,
+            perMinutePrice: response.data!.perMinPrice, // Map perMinPrice to perMinutePrice for display
+          };
+          
+          setVehicleTypes([...vehicleTypes, savedVehicle]);
+          
+          toast.success('Vehicle type added successfully');
+        } else {
+          throw new Error(response.error || 'Failed to create vehicle type');
+        }
       }
       
       setIsDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving vehicle type:', error);
-      toast.error('Failed to save vehicle type');
+      toast.error(error.message || 'Failed to save vehicle type');
     } finally {
       setIsSubmitting(false);
     }
@@ -414,9 +399,9 @@ const AdminVehicleTypes = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {taxiTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
+                      <SelectItem key={type.id} value={type.id} className='px-2'>
                         <div className="flex items-center">
-                          <span className="mr-2">{type.emoji}</span>
+                          <img src={type.imageUrl} alt={type.name} className='h-8 w-12 mr-2 object-contain'/>
                           {type.name}
                         </div>
                       </SelectItem>
@@ -590,7 +575,7 @@ const AdminVehicleTypes = () => {
         </DialogContent>
       </Dialog>
       
-      {isLoading ? (
+      {loading ? (
         <div className="flex justify-center items-center min-h-[300px]">
           <Loader2 className="h-8 w-8 text-fleet-red animate-spin mr-2" />
           <p>Loading vehicle types...</p>

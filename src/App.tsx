@@ -2,11 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
+import Index from "./pages/public/Index";
+import Login from "./pages/public/Login";
+import Register from "./pages/public/Register";
+import About from "./pages/public/About";
+import Contact from "./pages/public/Contact";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminTaxiTypes from "./pages/admin/AdminTaxiTypes";
 import AdminFareSettings from "./pages/admin/AdminFareSettings";
@@ -26,15 +26,16 @@ import DriverSettings from "./pages/driver/DriverSettings";
 import DriverWelcome from "./pages/driver/DriverWelcome";
 import MyAccount from "./pages/user/MyAccount";
 import MyBookings from "./pages/user/MyBookings";
-import NotFound from "./pages/NotFound";
-import FAQ from "./pages/FAQ";
-import TermsAndConditions from "./pages/TermsAndConditions";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
+import NotFound from "./pages/public/NotFound";
+import FAQ from "./pages/public/FAQ";
+import TermsAndConditions from "./pages/public/TermsAndConditions";
+import PrivacyPolicy from "./pages/public/PrivacyPolicy";
 import BookChauffeur from "./pages/user/BookChauffeur";
-import BookingStatus from "./pages/BookingStatus";
+import BookingStatus from "./pages/public/BookingStatus";
+import EmergencyFallback from "./pages/public/EmergencyFallback";
+import HourlyRental from "./pages/public/HourlyRental";
 
 import FirebaseExample from "./components/FirebaseExample";
-import EmergencyFallback from "./pages/EmergencyFallback";
 import { AuthProvider } from "./contexts/AuthContext";
 import TranslationProvider from "./contexts/TranslationContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -117,6 +118,7 @@ const App = () => {
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/book-chauffeur" element={<BookChauffeur />} />
                   <Route path="/booking-status" element={<BookingStatus />} />
+                  <Route path="/hourly-rental" element={<HourlyRental />} />
 
                   {/* User Routes */}
                   <Route path="/user" element={<ProtectedRoute />}>

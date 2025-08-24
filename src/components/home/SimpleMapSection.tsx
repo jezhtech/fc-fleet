@@ -14,11 +14,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { LocationSelector } from "@/components/home/booking-form";
-import type { Location, Vehicle } from "@/components/home/booking-form/types";
+import type { Location, Vehicle } from "@/types";
 import { firestore } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
 import { googleMapsService } from "@/services/googleMapsService";
+import { vehicleService } from "@/services";
 
 interface FareEstimate {
   distance: number;
@@ -28,9 +29,6 @@ interface FareEstimate {
   breakdown?: {
     baseFare: number;
     distanceFare: number;
-    timeFare: number;
-    surgeMultiplier: number;
-    zoneSurcharge: number;
   };
 }
 
@@ -70,9 +68,6 @@ const SimpleMapSection = () => {
     duration: string;
   } | null>(null);
 
-  // Add state for geofencing zones
-  const [zones, setZones] = useState<any[]>([]);
-
   // Token initialization
   const { token, isInitialized, error: tokenError } = useGoogleMapsToken();
 
@@ -80,7 +75,6 @@ const SimpleMapSection = () => {
   useEffect(() => {
     fetchTaxiTypes();
     fetchVehicles();
-    fetchZones();
   }, []);
 
   // Handle token errors
@@ -190,155 +184,16 @@ const SimpleMapSection = () => {
   // Fetch vehicles from Firebase
   const fetchVehicles = async () => {
     try {
-      const vehiclesRef = collection(firestore, "vehicles");
-      const vehiclesSnapshot = await getDocs(vehiclesRef);
-
-      const vehicleData: Vehicle[] = [];
-      vehiclesSnapshot.forEach((doc) => {
-        vehicleData.push({
-          id: doc.id,
-          ...doc.data(),
-        } as Vehicle);
-      });
-
-      // If no vehicles were found in Firebase, use fallback data for testing
+      const response = await vehicleService.getAllVehicles();
+      const vehicleData = response.data;
       if (vehicleData.length === 0) {
-        const fallbackVehicles: Vehicle[] = [
-          {
-            id: "economy-car",
-            taxiTypeId: "economy",
-            name: "Economy",
-            description: "Affordable ride for everyday use",
-            basePrice: 10,
-            perKmPrice: 1.5,
-            perMinutePrice: 0.2,
-            capacity: 4,
-            images: [],
-          },
-          {
-            id: "comfort-car",
-            taxiTypeId: "comfort",
-            name: "Comfort",
-            description: "More spacious with amenities",
-            basePrice: 15,
-            perKmPrice: 2.0,
-            perMinutePrice: 0.25,
-            capacity: 4,
-            images: [],
-          },
-          {
-            id: "suv-car",
-            taxiTypeId: "suv",
-            name: "SUV",
-            description: "Larger vehicle for groups",
-            basePrice: 20,
-            perKmPrice: 2.5,
-            perMinutePrice: 0.3,
-            capacity: 6,
-            images: [],
-          },
-          {
-            id: "premium-car",
-            taxiTypeId: "premium",
-            name: "Premium",
-            description: "Luxury vehicles with premium service",
-            basePrice: 30,
-            perKmPrice: 3.5,
-            perMinutePrice: 0.4,
-            capacity: 4,
-            images: [],
-          },
-        ];
-        setVehicles(fallbackVehicles);
+        setVehicles([]);
       } else {
         setVehicles(vehicleData);
       }
     } catch (error) {
       console.error("Error fetching vehicles:", error);
-
-      // Use fallback data if Firebase fetch fails
-      const fallbackVehicles: Vehicle[] = [
-        {
-          id: "economy-car",
-          taxiTypeId: "economy",
-          name: "Economy",
-          description: "Affordable ride for everyday use",
-          basePrice: 10,
-          perKmPrice: 1.5,
-          perMinutePrice: 0.2,
-          capacity: 4,
-          images: [],
-        },
-        {
-          id: "comfort-car",
-          taxiTypeId: "comfort",
-          name: "Comfort",
-          description: "More spacious with amenities",
-          basePrice: 15,
-          perKmPrice: 2.0,
-          perMinutePrice: 0.25,
-          capacity: 4,
-          images: [],
-        },
-        {
-          id: "suv-car",
-          taxiTypeId: "suv",
-          name: "SUV",
-          description: "Larger vehicle for groups",
-          basePrice: 20,
-          perKmPrice: 2.5,
-          perMinutePrice: 0.3,
-          capacity: 6,
-          images: [],
-        },
-        {
-          id: "premium-car",
-          taxiTypeId: "premium",
-          name: "Premium",
-          description: "Luxury vehicles with premium service",
-          basePrice: 30,
-          perKmPrice: 3.5,
-          perMinutePrice: 0.4,
-          capacity: 4,
-          images: [],
-        },
-      ];
-      setVehicles(fallbackVehicles);
-    }
-  };
-
-  // Add a function to fetch geofencing zones
-  const fetchZones = async () => {
-    try {
-      const zonesRef = collection(firestore, "zones");
-      const zonesSnapshot = await getDocs(zonesRef);
-
-      const zonesData: any[] = [];
-      zonesSnapshot.forEach((doc) => {
-        zonesData.push({
-          id: doc.id,
-          ...doc.data(),
-        });
-      });
-
-      setZones(zonesData);
-    } catch (error) {
-      console.error("Error fetching zones:", error);
-      // Use fallback zones if Firebase fetch fails
-      const fallbackZones = [
-        {
-          id: "default-zone",
-          name: "Default Zone",
-          coordinates: [
-            { lat: 25.2048, lng: 55.2708 }, // Dubai coordinates
-            { lat: 25.2048, lng: 55.3708 },
-            { lat: 25.1048, lng: 55.3708 },
-            { lat: 25.1048, lng: 55.2708 },
-          ],
-          surcharge: 0,
-        },
-      ];
-      setZones(fallbackZones);
+      setVehicles([]);
     }
   };
 
@@ -363,8 +218,8 @@ const SimpleMapSection = () => {
     if (selectedPickupLocation && selectedPickupLocation.coordinates) {
       const pickupMarker = googleMapsService.createMarker(
         {
-          lat: selectedPickupLocation.coordinates.lat,
-          lng: selectedPickupLocation.coordinates.lng,
+          lat: selectedPickupLocation.coordinates.latitude,
+          lng: selectedPickupLocation.coordinates.longitude,
         },
         {
           map: mapRef.current,
@@ -373,8 +228,8 @@ const SimpleMapSection = () => {
               "data:image/svg+xml;charset=UTF-8," +
               encodeURIComponent(`
               <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="20" cy="20" r="18" fill="#2ecc71" stroke="white" stroke-width="2"/>
-                <text x="20" y="25" text-anchor="middle" fill="white" font-size="16" font-weight="bold">🚗</text>
+                <circle cx="20" cy="20" r="18" fill="transparent"/>
+                <text x="20" y="25" text-anchor="middle" fill="white" font-size="20" font-weight="bold">🚗</text>
               </svg>
             `),
             scaledSize: new google.maps.Size(40, 40),
@@ -386,8 +241,8 @@ const SimpleMapSection = () => {
 
       pickupMarkerRef.current = pickupMarker;
       bounds.extend({
-        lat: selectedPickupLocation.coordinates.lat,
-        lng: selectedPickupLocation.coordinates.lng,
+        lat: selectedPickupLocation.coordinates.latitude,
+        lng: selectedPickupLocation.coordinates.longitude,
       });
     }
 
@@ -395,8 +250,8 @@ const SimpleMapSection = () => {
     if (selectedDropoffLocation && selectedDropoffLocation.coordinates) {
       const dropoffMarker = googleMapsService.createMarker(
         {
-          lat: selectedDropoffLocation.coordinates.lat,
-          lng: selectedDropoffLocation.coordinates.lng,
+          lat: selectedDropoffLocation.coordinates.latitude,
+          lng: selectedDropoffLocation.coordinates.longitude,
         },
         {
           map: mapRef.current,
@@ -405,8 +260,8 @@ const SimpleMapSection = () => {
               "data:image/svg+xml;charset=UTF-8," +
               encodeURIComponent(`
               <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="20" cy="20" r="18" fill="#e74c3c" stroke="white" stroke-width="2"/>
-                <text x="20" y="25" text-anchor="middle" fill="white" font-size="16" font-weight="bold">📍</text>
+                <circle cx="20" cy="20" r="18" fill="transparent"/>
+                <text x="20" y="25" text-anchor="middle" fill="white" font-size="20" font-weight="bold">📍</text>
               </svg>
             `),
             scaledSize: new google.maps.Size(40, 40),
@@ -418,8 +273,8 @@ const SimpleMapSection = () => {
 
       dropoffMarkerRef.current = dropoffMarker;
       bounds.extend({
-        lat: selectedDropoffLocation.coordinates.lat,
-        lng: selectedDropoffLocation.coordinates.lng,
+        lat: selectedDropoffLocation.coordinates.latitude,
+        lng: selectedDropoffLocation.coordinates.longitude,
       });
     }
 
@@ -450,12 +305,12 @@ const SimpleMapSection = () => {
     try {
       const directionsResult = await googleMapsService.getDirections(
         {
-          lat: selectedPickupLocation.coordinates.lat,
-          lng: selectedPickupLocation.coordinates.lng,
+          lat: selectedPickupLocation.coordinates.latitude,
+          lng: selectedPickupLocation.coordinates.longitude,
         },
         {
-          lat: selectedDropoffLocation.coordinates.lat,
-          lng: selectedDropoffLocation.coordinates.lng,
+          lat: selectedDropoffLocation.coordinates.latitude,
+          lng: selectedDropoffLocation.coordinates.longitude,
         }
       );
 
@@ -498,7 +353,7 @@ const SimpleMapSection = () => {
   const getAveragePricingForTaxiType = (taxiTypeId: string) => {
     // Filter vehicles by the selected taxi type
     const vehiclesForTaxiType = vehicles.filter(
-      (v) => v.taxiTypeId === taxiTypeId
+      (v) => v.transportId === taxiTypeId
     );
 
     if (vehiclesForTaxiType.length === 0) {
@@ -512,15 +367,15 @@ const SimpleMapSection = () => {
 
     // Calculate average pricing
     const totalBasePrice = vehiclesForTaxiType.reduce(
-      (sum, v) => sum + v.basePrice,
+      (sum, v) => sum + (v.basePrice || 0),
       0
     );
     const totalPerKmPrice = vehiclesForTaxiType.reduce(
-      (sum, v) => sum + v.perKmPrice,
+      (sum, v) => sum + (v.perKmPrice || 0),
       0
     );
     const totalPerMinutePrice = vehiclesForTaxiType.reduce(
-      (sum, v) => sum + v.perMinutePrice,
+      (sum, v) => sum + (v.perMinPrice || 0),
       0
     );
 
@@ -529,53 +384,6 @@ const SimpleMapSection = () => {
       perKmPrice: totalPerKmPrice / vehiclesForTaxiType.length,
       perMinutePrice: totalPerMinutePrice / vehiclesForTaxiType.length,
     };
-  };
-
-  // Add a function to check if a point is in a zone (for geofencing)
-  const isPointInZone = (lat: number, lng: number, zone: any) => {
-    // This is a simplified check - in a real app, you would use a proper geofencing algorithm
-    // Assuming zone has boundaries defined as simple box with min/max lat/lng
-    if (zone.boundaries) {
-      const { minLat, maxLat, minLng, maxLng } = zone.boundaries;
-      return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
-    }
-    return false;
-  };
-
-  // Add a function to get zone surcharge based on pickup and dropoff locations
-  const getZoneSurcharge = (
-    pickupLat: number,
-    pickupLng: number,
-    dropoffLat: number,
-    dropoffLng: number
-  ) => {
-    let surcharge = 1.0; // Default, no surcharge
-
-    // Find pickup zone
-    const pickupZone = zones.find((zone) =>
-      isPointInZone(pickupLat, pickupLng, zone)
-    );
-
-    // Find dropoff zone
-    const dropoffZone = zones.find((zone) =>
-      isPointInZone(dropoffLat, dropoffLng, zone)
-    );
-
-    // Apply zone specific surcharges
-    if (pickupZone && pickupZone.surcharge) {
-      surcharge *= pickupZone.surcharge;
-    }
-
-    if (dropoffZone && dropoffZone.surcharge) {
-      surcharge *= dropoffZone.surcharge;
-    }
-
-    // Cross-zone surcharge (for trips that cross between zones)
-    if (pickupZone && dropoffZone && pickupZone.id !== dropoffZone.id) {
-      surcharge *= 1.1; // 10% surcharge for cross-zone trips
-    }
-
-    return surcharge;
   };
 
   // Calculate route and fare
@@ -610,12 +418,12 @@ const SimpleMapSection = () => {
       // Get directions from Google Maps
       const directionsResult = await googleMapsService.getDirections(
         {
-          lat: selectedPickupLocation.coordinates.lat,
-          lng: selectedPickupLocation.coordinates.lng,
+          lat: selectedPickupLocation.coordinates.latitude,
+          lng: selectedPickupLocation.coordinates.longitude,
         },
         {
-          lat: selectedDropoffLocation.coordinates.lat,
-          lng: selectedDropoffLocation.coordinates.lng,
+          lat: selectedDropoffLocation.coordinates.latitude,
+          lng: selectedDropoffLocation.coordinates.longitude,
         }
       );
 
@@ -657,39 +465,14 @@ const SimpleMapSection = () => {
         const averagePricing =
           getAveragePricingForTaxiType(selectedVehicleType);
 
-        // Check if we're in peak hours (7-9 AM or 5-7 PM on weekdays)
-        const now = new Date();
-        const hour = now.getHours();
-        const isWeekday = now.getDay() >= 1 && now.getDay() <= 5; // Monday to Friday
-        const isPeakHour =
-          isWeekday && ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19));
-
-        // Apply surge pricing during peak hours
-        const surgeMultiplier = isPeakHour ? 1.2 : 1.0;
-
-        // Get geofencing zone surcharge
-        const zoneSurcharge = getZoneSurcharge(
-          selectedPickupLocation.coordinates.lat,
-          selectedPickupLocation.coordinates.lng,
-          selectedDropoffLocation.coordinates.lat,
-          selectedDropoffLocation.coordinates.lng
-        );
-
         // Calculate base fare
         let baseFare = averagePricing.basePrice;
 
         // Calculate distance fare
         let distanceFare = distanceKm * averagePricing.perKmPrice;
 
-        // Calculate time fare
-        let timeFare = durationMinutes * averagePricing.perMinutePrice;
-
-        // Calculate total fare before multipliers
-        let totalFare = baseFare + distanceFare + timeFare;
-
-        // Apply multipliers
-        totalFare *= surgeMultiplier; // Peak hour surge
-        totalFare *= zoneSurcharge; // Zone-based surcharge
+        // Calculate total fare (base + distance only)
+        let totalFare = baseFare + distanceFare;
 
         // Apply minimum fare if needed (assuming 20 AED minimum fare)
         const minFare = 20;
@@ -708,9 +491,6 @@ const SimpleMapSection = () => {
           breakdown: {
             baseFare: baseFare,
             distanceFare: distanceFare,
-            timeFare: timeFare,
-            surgeMultiplier: surgeMultiplier,
-            zoneSurcharge: zoneSurcharge,
           },
         });
       } else {
@@ -738,7 +518,8 @@ const SimpleMapSection = () => {
             <span className="text-fleet-red">Fare</span> Estimator
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Get an instant estimate for your premium chauffeur ride
+            Get an instant estimate for your premium chauffeur ride with
+            transparent base fare and distance-based pricing
           </p>
         </motion.div>
 
@@ -843,12 +624,19 @@ const SimpleMapSection = () => {
                                 id={`vehicle-${taxiType.id}`}
                                 className="sr-only"
                               />
-                              <div
-                                className="text-2xl mb-1"
-                                dangerouslySetInnerHTML={{
-                                  __html: taxiType.emoji,
-                                }}
-                              ></div>
+                              <div className="text-2xl mb-1">
+                                {taxiType.imageUrl ? (
+                                  <img
+                                    src={taxiType.imageUrl}
+                                    alt={taxiType.name}
+                                    className="w-8 h-8 object-cover rounded mx-auto"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-gray-500 text-sm mx-auto">
+                                    🚗
+                                  </div>
+                                )}
+                              </div>
                               <div className="font-medium text-sm">
                                 {taxiType.name}
                               </div>
@@ -907,16 +695,6 @@ const SimpleMapSection = () => {
                         </div>
                       </div>
                     </div>
-
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 text-fleet-red mr-2" />
-                      <div>
-                        <div className="text-xs text-gray-500">Duration</div>
-                        <div className="font-medium text-gray-800">
-                          {routeDetails?.duration}
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
                   {fareEstimate.breakdown && (
@@ -941,52 +719,6 @@ const SimpleMapSection = () => {
                             {fareEstimate.breakdown.distanceFare.toFixed(2)}
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">
-                            Time ({routeDetails?.duration})
-                          </span>
-                          <span className="text-gray-800">
-                            {fareEstimate.currency}{" "}
-                            {fareEstimate.breakdown.timeFare.toFixed(2)}
-                          </span>
-                        </div>
-
-                        {fareEstimate.breakdown.surgeMultiplier > 1 && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Peak Hour Surge (x
-                              {fareEstimate.breakdown.surgeMultiplier})
-                            </span>
-                            <span className="text-gray-800">
-                              +{fareEstimate.currency}{" "}
-                              {(
-                                (fareEstimate.breakdown.baseFare +
-                                  fareEstimate.breakdown.distanceFare +
-                                  fareEstimate.breakdown.timeFare) *
-                                (fareEstimate.breakdown.surgeMultiplier - 1)
-                              ).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-
-                        {fareEstimate.breakdown.zoneSurcharge > 1 && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Zone Surcharge (x
-                              {fareEstimate.breakdown.zoneSurcharge.toFixed(2)})
-                            </span>
-                            <span className="text-gray-800">
-                              +{fareEstimate.currency}{" "}
-                              {(
-                                (fareEstimate.breakdown.baseFare +
-                                  fareEstimate.breakdown.distanceFare +
-                                  fareEstimate.breakdown.timeFare) *
-                                fareEstimate.breakdown.surgeMultiplier *
-                                (fareEstimate.breakdown.zoneSurcharge - 1)
-                              ).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
 
                         <div className="flex justify-between pt-2 border-t border-gray-200 font-medium">
                           <span className="text-gray-800">Total Fare</span>
@@ -1000,8 +732,8 @@ const SimpleMapSection = () => {
                   )}
 
                   <div className="mt-4 text-center text-xs text-gray-500 italic">
-                    This is an estimated price. Actual fare may vary based on
-                    traffic, waiting time, and other factors.
+                    This is an estimated price based on base fare and distance.
+                    Actual fare may vary based on traffic conditions.
                   </div>
 
                   <div className="flex justify-center mt-4">

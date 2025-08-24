@@ -12,46 +12,15 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
-import { firestore } from "@/lib/firebase";
 import { toast } from "sonner";
-
-interface BookingData {
-  id: string;
-  orderId: string;
-  status: string;
-  paymentStatus: string;
-  paymentMethod: string;
-  vehicle: any;
-  pickupLocation: any;
-  dropoffLocation: any;
-  date: any;
-  time: string;
-  amount: number;
-  customerInfo: any;
-  createdAt: any;
-  paymentInfo?: {
-    trackingId: string;
-    bankRefNo: string;
-    orderStatus: string;
-    paymentMode: string;
-    cardName: string;
-    transactionDate: string;
-    status?: string;
-  };
-}
+import { bookingService, BookingWithRelations } from "@/services";
 
 const BookChauffeur = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [bookingData, setBookingData] = useState<BookingData | null>(null);
+  const [bookingData, setBookingData] = useState<BookingWithRelations | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
 
   // Check if we have booking parameters in URL
@@ -70,24 +39,9 @@ const BookChauffeur = () => {
   const fetchBookingByOrderId = async (orderId: string) => {
     try {
       setLoading(true);
-      const bookingsRef = collection(firestore, "bookings");
-      const q = query(bookingsRef);
-
-      const snapshots = await getDocs(q);
-
-      if (snapshots) {
-        const bookingDoc = snapshots.docs.find((doc) => {
-          if (doc.data()["orderId"] === orderId) {
-            return doc;
-          }
-        });
-        if (!bookingDoc) {
-          toast.error("Booking not found with this order ID");
-          // navigate("/");
-        }
-        const data = bookingDoc.data() as BookingData;
-        console.log("data", data);
-
+      const repsonse = await bookingService.getBookingById(orderId);
+      const data = repsonse.data;
+      if (data) {
         // Update payment status if paymentStatus is provided in URL
         if (data.status) {
           // Update the local state to reflect the payment status
@@ -151,21 +105,27 @@ const BookChauffeur = () => {
     }
   };
 
-  const getPaymentMethodText = (paymentMethod?: string, paymentStatus?: string) => {
-    if (paymentMethod === 'cash') {
-      return 'Cash Payment';
+  const getPaymentMethodText = (
+    paymentMethod?: string,
+    paymentStatus?: string
+  ) => {
+    if (paymentMethod === "cash") {
+      return "Cash Payment";
     }
-    if (paymentStatus === 'paid') {
-      return 'Online Payment';
+    if (paymentStatus === "paid") {
+      return "Online Payment";
     }
-    return 'Payment Method';
+    return "Payment Method";
   };
 
-  const getPaymentStatusText = (paymentStatus: string, paymentMethod?: string) => {
-    if (paymentMethod === 'cash') {
-      return 'Cash Payment Pending';
+  const getPaymentStatusText = (
+    paymentStatus: string,
+    paymentMethod?: string
+  ) => {
+    if (paymentMethod === "cash") {
+      return "Cash Payment Pending";
     }
-    
+
     switch (paymentStatus.toUpperCase()) {
       case "PAID":
         return "Payment Successful";
@@ -186,8 +146,9 @@ const BookChauffeur = () => {
 
   const formatTime = (time: string) => {
     if (!time) return "N/A";
-    const [hours, minutes] = time.split(":");
-    const hour = parseInt(hours);
+    const dateTime = new Date(time);
+    const hour = dateTime.getHours();
+    const minutes = dateTime.getMinutes();
     const ampm = hour >= 12 ? "PM" : "AM";
     const displayHour = hour % 12 || 12;
     return `${displayHour}:${minutes} ${ampm}`;
@@ -228,13 +189,14 @@ const BookChauffeur = () => {
       <div className="bg-gradient-to-r from-fleet-red to-fleet-accent py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            {bookingData.paymentMethod === 'cash' ? 'Cash Payment Confirmed' : 'Booking Confirmation'}
+            {bookingData.paymentInfo.method === "cash"
+              ? "Cash Payment Confirmed"
+              : "Booking Confirmation"}
           </h1>
           <p className="text-white/90 text-lg max-w-2xl mx-auto">
-            {bookingData.paymentMethod === 'cash' 
-              ? 'Your booking is confirmed with cash payment. Here are the details.'
-              : 'Your booking has been successfully created. Here are the details.'
-            }
+            {bookingData.paymentInfo.method === "cash"
+              ? "Your booking is confirmed with cash payment. Here are the details."
+              : "Your booking has been successfully created. Here are the details."}
           </p>
         </div>
       </div>
@@ -259,14 +221,22 @@ const BookChauffeur = () => {
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
                 <CreditCard className="h-5 w-5 text-gray-600" />
-                <span className="font-medium">{getPaymentMethodText(bookingData.paymentMethod, bookingData.paymentStatus)}</span>
+                <span className="font-medium">
+                  {getPaymentMethodText(
+                    bookingData.paymentInfo.method,
+                    bookingData.paymentInfo.status
+                  )}
+                </span>
               </div>
               <div
                 className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPaymentStatusColor(
-                  bookingData.paymentStatus
+                  bookingData.paymentInfo.status
                 )}`}
               >
-                {getPaymentStatusText(bookingData.paymentStatus, bookingData.paymentMethod)}
+                {getPaymentStatusText(
+                  bookingData.paymentInfo.status,
+                  bookingData.paymentInfo.method
+                )}
               </div>
             </div>
 
@@ -300,8 +270,8 @@ const BookChauffeur = () => {
                   <div>
                     <p className="text-sm text-gray-600">Date & Time</p>
                     <p className="font-medium">
-                      {formatDate(bookingData.date)} at{" "}
-                      {formatTime(bookingData.time)}
+                      {formatDate(bookingData.pickupDate)} at{" "}
+                      {formatTime(bookingData.pickupDate)}
                     </p>
                   </div>
                 </div>
@@ -319,16 +289,22 @@ const BookChauffeur = () => {
             </div>
 
             {/* Cash Payment Notice */}
-            {bookingData.paymentMethod === 'cash' && (
+            {bookingData.paymentInfo.method === "cash" && (
               <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                     <span className="text-green-600 font-bold text-lg">$</span>
                   </div>
                   <div>
-                    <h4 className="font-medium text-green-800">Cash Payment Details</h4>
+                    <h4 className="font-medium text-green-800">
+                      Cash Payment Details
+                    </h4>
                     <p className="text-green-700 text-sm">
-                      Amount due: <strong>AED {bookingData.amount?.toFixed(2) || "0.00"}</strong> - Please have exact change ready when your driver arrives.
+                      Amount due:{" "}
+                      <strong>
+                        AED {parseFloat(bookingData.amount.toString()).toFixed(2) || "0.00"}
+                      </strong>{" "}
+                      - Please have exact change ready when your driver arrives.
                     </p>
                   </div>
                 </div>
@@ -340,23 +316,24 @@ const BookChauffeur = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Order ID</p>
-                  <p className="font-mono font-medium">{bookingData.orderId}</p>
+                  <p className="font-mono font-medium">{bookingData.id}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">
-                    {bookingData.paymentMethod === 'cash' ? 'Payment Method' : 'Tracking ID'}
+                    {bookingData.paymentInfo.method === "cash"
+                      ? "Payment Method"
+                      : "Tracking ID"}
                   </p>
                   <p className="font-mono font-medium">
-                    {bookingData.paymentMethod === 'cash' 
-                      ? 'Cash Payment' 
-                      : bookingData.paymentInfo?.trackingId || 'N/A'
-                    }
+                    {bookingData.paymentInfo.method === "cash"
+                      ? "Cash Payment"
+                      : bookingData.paymentInfo?.trackingId || "N/A"}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Total Amount</p>
                   <p className="text-2xl font-bold text-fleet-red">
-                    AED {bookingData.amount?.toFixed(2) || "0.00"}
+                    AED {parseFloat(bookingData.amount.toString())?.toFixed(2) || "0.00"}
                   </p>
                 </div>
               </div>
@@ -370,7 +347,7 @@ const BookChauffeur = () => {
             </h3>
             <div className="space-y-4">
               {/* Cash Payment Notice */}
-              {bookingData.paymentMethod === 'cash' && (
+              {bookingData.paymentInfo.method === "cash" && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
@@ -379,7 +356,8 @@ const BookChauffeur = () => {
                         Cash Payment Selected
                       </h4>
                       <p className="text-green-700 text-sm mt-1">
-                        Your booking is confirmed with cash payment. Please have the exact amount ready when your driver arrives.
+                        Your booking is confirmed with cash payment. Please have
+                        the exact amount ready when your driver arrives.
                       </p>
                     </div>
                   </div>
@@ -387,46 +365,48 @@ const BookChauffeur = () => {
               )}
 
               {/* Online Payment Pending */}
-              {!bookingData.paymentMethod && bookingData.paymentStatus === "PENDING" && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-yellow-800">
-                        Payment Required
-                      </h4>
-                      <p className="text-yellow-700 text-sm mt-1">
-                        Your booking is pending payment. Please complete the
-                        payment to confirm your booking.
-                      </p>
-                      <Button className="mt-3 bg-fleet-red hover:bg-fleet-red/90">
-                        Proceed to Payment
-                      </Button>
+              {!bookingData.paymentInfo.method &&
+                bookingData.paymentInfo.status === "PENDING" && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-yellow-800">
+                          Payment Required
+                        </h4>
+                        <p className="text-yellow-700 text-sm mt-1">
+                          Your booking is pending payment. Please complete the
+                          payment to confirm your booking.
+                        </p>
+                        <Button className="mt-3 bg-fleet-red hover:bg-fleet-red/90">
+                          Proceed to Payment
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Online Payment Success */}
-              {!bookingData.paymentMethod && bookingData.paymentStatus === "PAID" && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-green-800">
-                        Payment Successful
-                      </h4>
-                      <p className="text-green-700 text-sm mt-1">
-                        Your payment has been processed successfully. We'll send
-                        you updates about your booking.
-                      </p>
+              {!bookingData.paymentInfo.method &&
+                bookingData.paymentInfo.status === "PAID" && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-green-800">
+                          Payment Successful
+                        </h4>
+                        <p className="text-green-700 text-sm mt-1">
+                          Your payment has been processed successfully. We'll
+                          send you updates about your booking.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Payment Failed */}
-              {bookingData.paymentStatus === "FAILED" && (
+              {bookingData.paymentInfo.status === "FAILED" && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
@@ -435,7 +415,8 @@ const BookChauffeur = () => {
                         Payment Failed
                       </h4>
                       <p className="text-red-700 text-sm mt-1">
-                        Your payment could not be processed. Please try again or contact support.
+                        Your payment could not be processed. Please try again or
+                        contact support.
                       </p>
                       <Button className="mt-3 bg-fleet-red hover:bg-fleet-red/90">
                         Retry Payment
@@ -456,8 +437,10 @@ const BookChauffeur = () => {
                     • You'll receive driver details and vehicle information
                   </li>
                   <li>• Driver will arrive at your pickup location on time</li>
-                  {bookingData.paymentMethod === 'cash' && (
-                    <li>• Please have the exact amount ready in cash for payment</li>
+                  {bookingData.paymentInfo.method === "cash" && (
+                    <li>
+                      • Please have the exact amount ready in cash for payment
+                    </li>
                   )}
                 </ul>
               </div>

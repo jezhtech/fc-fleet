@@ -1,10 +1,10 @@
-import React from 'react';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Ban } from 'lucide-react';
-import { TransportType } from './types';
+import React from "react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Loader2, Ban } from "lucide-react";
+import { Transport } from "@/types";
 
 interface TransportTypeSelectorProps {
-  transportTypes: TransportType[];
+  transportTypes: Transport[];
   selectedTaxiType: string;
   onSelect: (typeId: string) => void;
   loading: boolean;
@@ -16,7 +16,7 @@ const TransportTypeSelector: React.FC<TransportTypeSelectorProps> = ({
   selectedTaxiType,
   onSelect,
   loading,
-  availableTypes = []
+  availableTypes = [],
 }) => {
   if (loading) {
     return (
@@ -26,43 +26,45 @@ const TransportTypeSelector: React.FC<TransportTypeSelectorProps> = ({
       </div>
     );
   }
-  
+
   const isTypeAvailable = (typeId: string): boolean => {
     return availableTypes.includes(typeId);
   };
-  
+
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">Transport Type</label>
-      <RadioGroup 
-        // value={selectedTaxiType} 
+      <RadioGroup
+        // value={selectedTaxiType}
         // onValueChange={onSelect}
         className="grid grid-cols-2 gap-3"
       >
         {transportTypes.map((type) => {
           const isAvailable = isTypeAvailable(type.id);
           return (
-            <div 
-              key={type.id} 
+            <div
+              key={type.id}
               className={`relative border rounded-md p-3 transition-colors ${
-                selectedTaxiType === type.id ? 'border-fleet-red bg-fleet-red/10' : ''
+                selectedTaxiType === type.id
+                  ? "border-fleet-red bg-fleet-red/10"
+                  : "bg-white"
               } ${
-                isAvailable 
-                  ? 'hover:border-fleet-red cursor-pointer' 
-                  : 'opacity-65 cursor-default bg-gray-50'
+                isAvailable
+                  ? "hover:border-fleet-red cursor-pointer"
+                  : "opacity-65 cursor-default bg-gray-50"
               }`}
               onClick={() => {
                 onSelect(type.id);
               }}
             >
-              <RadioGroupItem 
-                value={type.id} 
-                id={type.id} 
+              <RadioGroupItem
+                value={type.id}
+                id={type.id}
                 className="sr-only"
-                disabled={!isAvailable} 
+                disabled={!isAvailable}
               />
               <div className="flex items-start gap-2">
-                <span className="text-xl">{type.emoji}</span>
+                <img src={type.imageUrl} alt={type.name} className="w-20 mr-2"/>
                 <div className="flex-1">
                   <h4 className="text-sm font-medium">{type.name}</h4>
                   <p className="text-xs text-gray-500">{type.description}</p>
@@ -86,5 +88,4 @@ const TransportTypeSelector: React.FC<TransportTypeSelectorProps> = ({
   );
 };
 
-export default TransportTypeSelector; 
- 
+export default TransportTypeSelector;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { Location } from "./types";
+import { Location } from "@/types";
 import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
 import { googleMapsService } from "@/services/googleMapsService";
 
@@ -45,8 +45,8 @@ const RouteMap: React.FC<RouteMapProps> = ({
       }
 
       const directionsResult = await googleMapsService.getDirections(
-        { lat: pickup.latitude, lng: pickup.longitude },
-        { lat: dropoff.latitude, lng: dropoff.longitude }
+        { lat: pickup.coordinates.latitude, lng: pickup.coordinates.longitude },
+        { lat: dropoff.coordinates.latitude, lng: dropoff.coordinates.longitude }
       );
 
       if (directionsResult && directionsRenderer.current) {
@@ -77,10 +77,10 @@ const RouteMap: React.FC<RouteMapProps> = ({
       directionsRenderer.current.setDirections({ routes: [] } as any);
 
       // Create a simple polyline between the two points
-      const polyline = new google.maps.Polyline({
+      new google.maps.Polyline({
         path: [
-          { lat: pickup.latitude, lng: pickup.longitude },
-          { lat: dropoff.latitude, lng: dropoff.longitude },
+          { lat: pickup.coordinates.latitude, lng: pickup.coordinates.longitude },
+          { lat: dropoff.coordinates.latitude, lng: dropoff.coordinates.longitude },
         ],
         geodesic: true,
         strokeColor: "#FF0000",
@@ -194,7 +194,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
     // Add pickup marker
     if (pickupLocation) {
       const pickupMarker = googleMapsService.createMarker(
-        { lat: pickupLocation.latitude, lng: pickupLocation.longitude },
+        { lat: pickupLocation.coordinates.latitude, lng: pickupLocation.coordinates.longitude },
         {
           map: map.current,
           icon: {
@@ -215,15 +215,15 @@ const RouteMap: React.FC<RouteMapProps> = ({
 
       markers.current["pickup"] = pickupMarker;
       bounds.extend({
-        lat: pickupLocation.latitude,
-        lng: pickupLocation.longitude,
+        lat: pickupLocation.coordinates.latitude,
+        lng: pickupLocation.coordinates.longitude,
       });
     }
 
     // Add dropoff marker
     if (dropoffLocation) {
       const dropoffMarker = googleMapsService.createMarker(
-        { lat: dropoffLocation.latitude, lng: dropoffLocation.longitude },
+        { lat: dropoffLocation.coordinates.latitude, lng: dropoffLocation.coordinates.longitude },
         {
           map: map.current,
           icon: {
@@ -244,8 +244,8 @@ const RouteMap: React.FC<RouteMapProps> = ({
 
       markers.current["dropoff"] = dropoffMarker;
       bounds.extend({
-        lat: dropoffLocation.latitude,
-        lng: dropoffLocation.longitude,
+        lat: dropoffLocation.coordinates.latitude,
+        lng: dropoffLocation.coordinates.longitude,
       });
     }
 

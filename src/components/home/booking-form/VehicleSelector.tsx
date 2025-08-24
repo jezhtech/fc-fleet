@@ -5,10 +5,8 @@ import {
   Image as ImageIcon,
   Users,
   Briefcase,
-  ChevronDown,
 } from "lucide-react";
-import { Vehicle, Location } from "./types";
-import { formatCurrency } from "@/utils/currency";
+import { Vehicle, Location } from "@/types";
 
 interface VehicleSelectorProps {
   vehicles: Vehicle[];
@@ -57,10 +55,10 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
     ) {
       // Calculate actual distance using the Haversine formula
       distanceKm = calculateDistance(
-        pickupLocation.coordinates.lat,
-        pickupLocation.coordinates.lng,
-        dropoffLocation.coordinates.lat,
-        dropoffLocation.coordinates.lng
+        pickupLocation.coordinates.latitude,
+        pickupLocation.coordinates.longitude,
+        dropoffLocation.coordinates.latitude,
+        dropoffLocation.coordinates.longitude
       );
 
       // Estimate travel time based on distance (assuming average speed of 30 km/h in city traffic)
@@ -68,7 +66,6 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
       const estimatedTravelTimeHours = distanceKm / averageSpeedKmh;
       estimatedMinutes = Math.ceil(estimatedTravelTimeHours * 60);
     }
-
     // Calculate base fare
     let totalPrice =
       vehicle.basePrice +
@@ -150,12 +147,12 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
             <div className="flex items-center gap-4">
               {/* Vehicle Image */}
               <div className="flex-shrink-0">
-                <div className="w-fit h-20 rounded-lg overflow-hidden bg-gray-100">
-                  {car.images && car.images.length > 0 ? (
+                <div className="w-28 h-20 rounded-lg overflow-hidden bg-gray-100">
+                  {car.imageUrl ? (
                     <img
-                      src={car.images[activeImageIndex[car.id] || 0]}
+                      src={car.imageUrl}
                       alt={car.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">

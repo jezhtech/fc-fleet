@@ -1,7 +1,6 @@
 import React from 'react';
 import Layout from '@/components/Layout';
 import { Car } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import RentCarForm from '@/components/home/RentCarForm';
 import { formatCurrency } from '@/utils/currency';

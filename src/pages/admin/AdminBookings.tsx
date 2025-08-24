@@ -1,745 +1,368 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Search, FileText, Calendar, Clock, User, Car, MapPin, CheckCircle, 
-  X, UserCheck, Download, Filter, FileSpreadsheet, AlertCircle, ArrowUpDown, Loader2 
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { 
   Popover, 
   PopoverContent, 
-  PopoverTrigger 
+  PopoverTrigger,
 } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { collection, getDocs, doc, updateDoc, getDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase';
-import { formatExistingBookingId, updateAllBookingIds } from '@/utils/booking';
-import InvoiceGenerator from '@/components/invoice/InvoiceGenerator';
-import * as XLSX from 'xlsx';
-import { confirmBooking, assignDriver, cancelBooking, getAvailableDrivers } from '@/services/bookingService';
-
-// Booking interface
-interface Booking {
-  id: string;
-  formattedId?: string;
-  type: string;
-  user: string;
-  driver: string;
-  vehicle: string;
-  pickup: string;
-  dropoff: string;
-  date: Date;
-  status: string;
-  amount: string;
-  userId?: string;
-  driverId?: string;
-  customerInfo?: {
-    name: string;
-    email: string;
-    phone: string;
-  };
-  driverInfo?: {
-    name?: string;
-    phone?: string;
-    vehicleNumber?: string;
-  };
-  createdAt?: Date;
-  cancellationReason?: string;
-}
-
-// Driver interface
-interface Driver {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  status: string;
-  vehicle: string;
-  rating: number;
-}
+import { Calendar } from '@/components/ui/calendar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Loader2, 
+  Search, 
+  Filter, 
+  Eye, 
+  Edit, 
+  Trash2,
+  Calendar as CalendarIcon,
+  Clock,
+  User,
+  Car,
+  MapPin,
+  CheckCircle,
+  X,
+  UserCheck,
+  Download,
+  FileText,
+  ArrowUpDown
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { bookingService } from '@/services/bookingService';
+import type { AdminBooking, BookingFilters } from '@/types';
 
 const AdminBookings = () => {
-  // State management
-  const [searchTerm, setSearchTerm] = useState('');
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [selectedDriver, setSelectedDriver] = useState<string>('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<'confirm' | 'assign' | 'cancel' | 'invoice'>('confirm');
-  const [isUpdatingIds, setIsUpdatingIds] = useState(false);
-  const [cancellationReason, setCancellationReason] = useState('');
-  const [isExporting, setIsExporting] = useState(false);
-  const [isProcessingAction, setIsProcessingAction] = useState(false);
+  const [bookings, setBookings] = useState<AdminBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [filters, setFilters] = useState<BookingFilters>({});
+  const [searchQuery, setSearchQuery] = useState('');
   
-  // Filtering and sorting
-  const [selectedTab, setSelectedTab] = useState('all');
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [dateFilter, setDateFilter] = useState<Date | null>(null);
-  const [bookingIdFilter, setBookingIdFilter] = useState('');
-  const [sortBy, setSortBy] = useState<'createdAt' | 'date'>('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [showInvoice, setShowInvoice] = useState(false);
   
-  // Convert amount from string with currency to number
-  const parseAmount = (amountStr: string): number => {
-    // Remove currency symbol and any non-numeric characters except decimal point
-    return parseFloat(amountStr.replace(/[^0-9.]/g, '')) || 0;
-  };
+  // Dialog states
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState<'confirm' | 'assign' | 'cancel'>('confirm');
+  const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null);
+  const [cancellationReason, setCancellationReason] = useState('');
   
-  // Filter bookings based on search term and other filters
-  const filteredBookings = bookings
-    .filter(booking => 
-      // Text search filter
-      (booking.formattedId?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    booking.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       (booking.customerInfo?.name || booking.user).toLowerCase().includes(searchTerm.toLowerCase()) ||
-       booking.customerInfo?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       booking.customerInfo?.phone?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      
-      // Tab filter for booking type
-      (selectedTab === 'all' || 
-       (selectedTab === 'chauffeur' && booking.type.toLowerCase().includes('chauffeur')) ||
-       (selectedTab === 'rental' && booking.type.toLowerCase().includes('rental'))) &&
-      
-      // Status filter
-      (!statusFilter || statusFilter === 'all' || booking.status === statusFilter) &&
-      
-      // Date filter
-      (!dateFilter || 
-        (booking.date && 
-          booking.date.getFullYear() === dateFilter.getFullYear() && 
-          booking.date.getMonth() === dateFilter.getMonth() && 
-          booking.date.getDate() === dateFilter.getDate())) &&
-      
-      // Booking ID filter
-      (!bookingIdFilter || 
-        (booking.formattedId && booking.formattedId.toLowerCase().includes(bookingIdFilter.toLowerCase())))
-    )
-    .sort((a, b) => {
-      // Sort based on selected sort field and order
-      const fieldA = sortBy === 'createdAt' ? (a.createdAt || new Date(0)) : a.date;
-      const fieldB = sortBy === 'createdAt' ? (b.createdAt || new Date(0)) : b.date;
-      
-      if (sortOrder === 'asc') {
-        return fieldA.getTime() - fieldB.getTime();
-      } else {
-        return fieldB.getTime() - fieldA.getTime();
-      }
-    });
+  // Tab state
+  const [selectedTab, setSelectedTab] = useState('all');
   
-  // Function to safely format dates
-  const safeFormatDate = (date: any, formatString: string): string => {
-    try {
-      // Check if date is valid
-      const d = date instanceof Date ? date : new Date(date);
-      if (isNaN(d.getTime())) {
-        return 'Invalid date';
-      }
-      return format(d, formatString);
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid date';
-    }
-  };
-  
-  // Load bookings and drivers from Firebase
+  // Fetch bookings using the booking service
   useEffect(() => {
     const fetchBookings = async () => {
-      setIsLoading(true);
       try {
-        const bookingsRef = collection(firestore, 'bookings');
-        const q = query(bookingsRef, orderBy('createdAt', 'desc'));
-        const snapshot = await getDocs(q);
+        setLoading(true);
         
-        const bookingsData: Booking[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          let bookingDate: Date;
-          let createdDate: Date = new Date();
-          
-          // Process creation date (when booking was made)
-          try {
-            if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-              createdDate = data.createdAt.toDate();
-            } else if (data.createdAt) {
-              createdDate = new Date(data.createdAt);
-            }
-            
-            // Validate the created date
-            if (isNaN(createdDate.getTime())) {
-              createdDate = new Date();
-            }
-          } catch (error) {
-            console.error(`Error parsing creation date for booking ${doc.id}:`, error);
-            createdDate = new Date();
-          }
-          
-          // Process service date (when the ride is scheduled)
-          try {
-            // First try to use pickupDateTime (new format)
-            if (data.pickupDateTime) {
-              if (typeof data.pickupDateTime.toDate === 'function') {
-                bookingDate = data.pickupDateTime.toDate();
-              } else if (typeof data.pickupDateTime === 'string') {
-                bookingDate = new Date(data.pickupDateTime);
+        const response = await bookingService.getAllBookings(filters);
+        if (response.success) {
+          // Convert BookingWithRelations to AdminBooking format
+          const adminBookings: AdminBooking[] = (response.data || []).map(booking => ({
+            id: booking.id,
+            bookingType: booking.bookingType,
+            userId: booking.userId,
+            vehicleId: booking.vehicleId,
+            status: booking.status,
+            pickupLocation: booking.pickupLocation,
+            dropoffLocation: booking.dropoffLocation,
+            paymentInfo: booking.paymentInfo,
+            createdAt: booking.createdAt,
+            updatedAt: booking.updatedAt,
+            user: booking.user ? {
+              id: booking.user.id,
+              firstName: booking.user.firstName,
+              lastName: booking.user.lastName,
+              email: booking.user.email,
+              phoneNumber: booking.user.phone || '',
+              isVerified: true,
+              isAdmin: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              status: 'active'
+            } : undefined,
+            vehicle: booking.vehicle
+          }));
+          setBookings(adminBookings);
               } else {
-                bookingDate = new Date();
-              }
-            }
-            // Fall back to date field (old format)
-            else if (data.date) {
-              if (typeof data.date.toDate === 'function') {
-                bookingDate = data.date.toDate();
-              } else if (typeof data.date === 'string') {
-                bookingDate = new Date(data.date);
-              } else {
-                bookingDate = new Date();
-              }
-            } else {
-              bookingDate = new Date();
-            }
-            
-            // Validate the date
-            if (isNaN(bookingDate.getTime())) {
-              console.warn(`Invalid date for booking ${doc.id}, using current date`);
-              bookingDate = new Date();
-            }
-          } catch (error) {
-            console.error(`Error parsing date for booking ${doc.id}:`, error);
-            bookingDate = new Date();
-          }
-          
-          // Format amount to AED currency
-          let amount = data.amount ? `AED ${parseFloat(data.amount).toFixed(2)}` : 'AED 0.00';
-          if (typeof data.amount === 'string' && data.amount.includes('$')) {
-            amount = data.amount.replace('$', 'AED ');
-          }
-          
-          bookingsData.push({
-            id: doc.id,
-            formattedId: data.formattedId,
-            type: data.type || data.bookingType || 'Chauffeur',
-            user: data.customerInfo?.name || 'Unknown User',
-            driver: data.driverInfo?.name || 'Not Assigned',
-            vehicle: data.vehicle?.name || data.vehicleType || 'Standard Vehicle',
-            pickup: data.pickupLocation?.name || data.pickup || 'N/A',
-            dropoff: data.dropoffLocation?.name || data.dropoff || 'N/A',
-            date: bookingDate,
-            status: data.status || 'initiated',
-            amount: amount,
-            userId: data.userId,
-            driverId: data.driverId,
-            customerInfo: data.customerInfo,
-            driverInfo: data.driverInfo,
-            createdAt: createdDate,
-            cancellationReason: data.cancellationReason
-          });
-        });
-        
-        setBookings(bookingsData);
-      } catch (error) {
+          throw new Error(response.error || 'Failed to fetch bookings');
+        }
+      } catch (error: any) {
         console.error('Error fetching bookings:', error);
-        toast.error('Failed to load bookings');
+        toast.error(error.message || 'Failed to load bookings');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-    
-    const fetchDrivers = async () => {
-      try {
-        const driversRef = collection(firestore, 'drivers');
-        const q = query(driversRef, where('status', '==', 'active'));
-        const snapshot = await getDocs(q);
-        
-        const driversData: Driver[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          driversData.push({
-            id: doc.id,
-            name: data.name || `${data.firstName || ''} ${data.lastName || ''}`,
-            email: data.email || '',
-            phone: data.phone || data.phoneNumber || '',
-            status: data.status || 'active',
-            vehicle: data.vehicle?.name || data.vehicleType || 'Standard Vehicle',
-            rating: data.rating || 4.5
-          });
-        });
-        
-        setDrivers(driversData);
-      } catch (error) {
-        console.error('Error fetching drivers:', error);
-        setDrivers([]);
-      }
-    };
-    
-    fetchBookings();
-    fetchDrivers();
-  }, []);
 
-  // Helper function to get status badge color
-  const getStatusBadgeColor = (status: string) => {
+    fetchBookings();
+  }, [filters]);
+  
+  const handleSearch = () => {
+    setFilters(prev => ({
+      ...prev,
+      search: searchQuery
+    }));
+  };
+  
+  const handleFilterChange = (key: keyof BookingFilters, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+  
+  const clearFilters = () => {
+    setFilters({});
+    setSearchQuery('');
+    setStatusFilter('all');
+    setDateFilter(undefined);
+  };
+  
+  const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'confirmed': return 'bg-blue-100 text-blue-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-purple-100 text-purple-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      case 'initiated': return 'bg-gray-100 text-gray-800';
-      case 'driver_assigned': return 'bg-indigo-100 text-indigo-800';
-      case 'awaiting': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'initiated':
+        return 'secondary';
+      case 'awaiting':
+        return 'default';
+      case 'assigned':
+        return 'outline';
+      case 'pickup':
+        return 'default';
+      case 'completed':
+        return 'default';
+      case 'cancelled':
+        return 'destructive';
+      default:
+        return 'secondary';
     }
   };
   
-  // Format status text for display
-  const formatStatus = (status: string) => {
-    return status.replace('_', ' ').split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
   
-  // Open dialog for booking action
-  const openDialog = (booking: Booking, type: 'confirm' | 'assign' | 'cancel' | 'invoice') => {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-AE', {
+      style: 'currency',
+      currency: 'AED'
+    }).format(amount);
+  };
+  
+  const openDialog = (booking: AdminBooking, type: 'confirm' | 'assign' | 'cancel') => {
     setSelectedBooking(booking);
     setDialogType(type);
-    setSelectedDriver('');
     setDialogOpen(true);
-    
-    // If we're assigning a driver, fetch fresh driver data
-    if (type === 'assign') {
-      fetchDriversForAssignment();
-    }
   };
   
-  // Fetch active drivers for assignment
-  const fetchDriversForAssignment = async () => {
-    try {
-      setIsLoadingDrivers(true);
-      const response = await getAvailableDrivers();
-      
-      if (response.success && response.data.length > 0) {
-        const driversData: Driver[] = response.data.map(driver => ({
-          id: driver.id,
-          name: driver.name,
-          email: driver.email,
-          phone: driver.phone,
-          status: driver.status,
-          vehicle: driver.vehicleNumber || 'Unknown Vehicle',
-          rating: driver.rating || 4.5
-        }));
-        
-        
-        setDrivers(driversData);
-      } else {
-        
-        toast.error('No active drivers available for assignment');
-        setDrivers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching drivers for assignment:', error);
-      toast.error('Failed to load available drivers');
-      setDrivers([]);
-    } finally {
-      setIsLoadingDrivers(false);
-    }
-  };
-  
-  // Update booking status using API
-  const updateBookingStatus = async () => {
+  const handleConfirmBooking = async () => {
     if (!selectedBooking) return;
     
+    setIsSubmitting(true);
     try {
-      setIsProcessingAction(true);
+      // Update booking status to confirmed
+      const response = await bookingService.updateBookingStatus(selectedBooking.id, 'awaiting');
       
-      if (dialogType === 'confirm') {
-        const response = await confirmBooking(selectedBooking.id);
         if (response.success) {
-          toast.success(`Booking confirmed successfully${response.emailSent ? ' and email sent to customer' : ''}`);
-        } else {
-          toast.error('Failed to confirm booking');
-          return;
-        }
-      } 
-      else if (dialogType === 'assign' && selectedDriver) {
-        const response = await assignDriver(selectedBooking.id, selectedDriver);
-        if (response.success) {
-          const emailStatus = response.notifications;
-          let message = 'Driver assigned successfully';
-          if (emailStatus.customer && emailStatus.driver) {
-            message += ' and emails sent to both customer and driver';
-          } else if (emailStatus.customer) {
-            message += ' and email sent to customer';
-          } else if (emailStatus.driver) {
-            message += ' and email sent to driver';
-          }
-          toast.success(message);
-        } else {
-          toast.error('Failed to assign driver');
-          return;
-        }
-      } 
-      else if (dialogType === 'cancel') {
-        const response = await cancelBooking(selectedBooking.id, cancellationReason.trim());
-        if (response.success) {
-          toast.success(`Booking cancelled successfully${response.emailSent ? ' and email sent to customer' : ''}`);
-          setCancellationReason(''); // Reset the cancellation reason
-        } else {
-          toast.error('Failed to cancel booking');
-          return;
-        }
-      }
-      
+        toast.success('Booking confirmed successfully');
       // Refresh bookings
-      const bookingsRef = collection(firestore, 'bookings');
-      const q = query(bookingsRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      
-      const bookingsData: Booking[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        let bookingDate: Date;
-        let createdDate: Date = new Date();
-        
-        // Process creation date (when booking was made)
-        try {
-          if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-            createdDate = data.createdAt.toDate();
-          } else if (data.createdAt) {
-            createdDate = new Date(data.createdAt);
-          }
-          
-          // Validate the created date
-          if (isNaN(createdDate.getTime())) {
-            createdDate = new Date();
-          }
-        } catch (error) {
-          console.error(`Error parsing creation date for booking ${doc.id}:`, error);
-          createdDate = new Date();
+        const refreshResponse = await bookingService.getAllBookings(filters);
+        if (refreshResponse.success) {
+          const adminBookings: AdminBooking[] = (refreshResponse.data || []).map(booking => ({
+            id: booking.id,
+            bookingType: booking.bookingType,
+            userId: booking.userId,
+            vehicleId: booking.vehicleId,
+            status: booking.status,
+            pickupLocation: booking.pickupLocation,
+            dropoffLocation: booking.dropoffLocation,
+            paymentInfo: booking.paymentInfo,
+            createdAt: booking.createdAt,
+            updatedAt: booking.updatedAt,
+            user: booking.user ? {
+              id: booking.user.id,
+              firstName: booking.user.firstName,
+              lastName: booking.user.lastName,
+              email: booking.user.email,
+              phoneNumber: booking.user.phone || '',
+              isVerified: true,
+              isAdmin: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              status: 'active'
+            } : undefined,
+            vehicle: booking.vehicle
+          }));
+          setBookings(adminBookings);
         }
-        
-        // Process service date (when the ride is scheduled)
-        try {
-          // First try to use pickupDateTime (new format)
-          if (data.pickupDateTime) {
-            if (typeof data.pickupDateTime.toDate === 'function') {
-              bookingDate = data.pickupDateTime.toDate();
-            } else if (typeof data.pickupDateTime === 'string') {
-              bookingDate = new Date(data.pickupDateTime);
+        setDialogOpen(false);
             } else {
-              bookingDate = new Date();
-            }
-          }
-          // Fall back to date field (old format)
-          else if (data.date) {
-            if (typeof data.date.toDate === 'function') {
-              bookingDate = data.date.toDate();
-            } else if (typeof data.date === 'string') {
-              bookingDate = new Date(data.date);
-            } else {
-              bookingDate = new Date();
-            }
-          } else {
-            bookingDate = new Date();
-          }
-          
-          // Validate the date
-          if (isNaN(bookingDate.getTime())) {
-            console.warn(`Invalid date for booking ${doc.id}, using current date`);
-            bookingDate = new Date();
-          }
-        } catch (error) {
-          console.error(`Error parsing date for booking ${doc.id}:`, error);
-          bookingDate = new Date();
-        }
-        
-        bookingsData.push({
-          id: doc.id,
-          formattedId: data.formattedId,
-          type: data.type || data.bookingType || 'Chauffeur',
-          user: data.customerInfo?.name || 'Unknown User',
-          driver: data.driverInfo?.name || 'Not Assigned',
-          vehicle: data.vehicle?.name || data.vehicleType || 'Standard Vehicle',
-          pickup: data.pickupLocation?.name || data.pickup || 'N/A',
-          dropoff: data.dropoffLocation?.name || data.dropoff || 'N/A',
-          date: bookingDate,
-          status: data.status || 'initiated',
-          amount: data.amount ? `AED ${parseFloat(data.amount).toFixed(2)}` : 'AED 0.00',
-          userId: data.userId,
-          driverId: data.driverId,
-          customerInfo: data.customerInfo,
-          driverInfo: data.driverInfo,
-          createdAt: createdDate,
-          cancellationReason: data.cancellationReason
-        });
-      });
-      
-      setBookings(bookingsData);
-      setDialogOpen(false);
-    } catch (error) {
-      console.error('Error updating booking:', error);
-      toast.error('Failed to update booking');
+        throw new Error(response.error || 'Failed to confirm booking');
+      }
+    } catch (error: any) {
+      console.error('Error confirming booking:', error);
+      toast.error(error.message || 'Failed to confirm booking');
     } finally {
-      setIsProcessingAction(false);
+      setIsSubmitting(false);
     }
   };
   
-  // Add a function to run the booking ID update
-  const handleUpdateAllBookingIds = async () => {
+  const handleCancelBooking = async () => {
+    if (!selectedBooking || !cancellationReason.trim()) return;
+    
+    setIsSubmitting(true);
     try {
-      setIsUpdatingIds(true);
-      const count = await updateAllBookingIds();
-      toast.success(`Updated ${count} booking IDs successfully`);
+      // Update booking status to cancelled
+      const response = await bookingService.updateBookingStatus(selectedBooking.id, 'cancelled');
       
-      // Refresh bookings by re-fetching them
-      const bookingsRef = collection(firestore, 'bookings');
-      const q = query(bookingsRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      
-      const bookingsData: Booking[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        let bookingDate: Date;
-        let createdDate: Date = new Date();
-        
-        // Process creation date (when booking was made)
-        try {
-          if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-            createdDate = data.createdAt.toDate();
-          } else if (data.createdAt) {
-            createdDate = new Date(data.createdAt);
-          }
-          
-          // Validate the created date
-          if (isNaN(createdDate.getTime())) {
-            createdDate = new Date();
-          }
-        } catch (error) {
-          console.error(`Error parsing creation date for booking ${doc.id}:`, error);
-          createdDate = new Date();
+      if (response.success) {
+        toast.success('Booking cancelled successfully');
+        // Refresh bookings
+        const refreshResponse = await bookingService.getAllBookings(filters);
+        if (refreshResponse.success) {
+          const adminBookings: AdminBooking[] = (refreshResponse.data || []).map(booking => ({
+            id: booking.id,
+            bookingType: booking.bookingType,
+            userId: booking.userId,
+            vehicleId: booking.vehicleId,
+            status: booking.status,
+            pickupLocation: booking.pickupLocation,
+            dropoffLocation: booking.dropoffLocation,
+            paymentInfo: booking.paymentInfo,
+            createdAt: booking.createdAt,
+            updatedAt: booking.updatedAt,
+            user: booking.user ? {
+              id: booking.user.id,
+              firstName: booking.user.firstName,
+              lastName: booking.user.lastName,
+              email: booking.user.email,
+              phoneNumber: booking.user.phone || '',
+              isVerified: true,
+              isAdmin: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              status: 'active'
+            } : undefined,
+            vehicle: booking.vehicle
+          }));
+          setBookings(adminBookings);
         }
-        
-        // Process service date (when the ride is scheduled)
-        try {
-          // First try to use pickupDateTime (new format)
-          if (data.pickupDateTime) {
-            if (typeof data.pickupDateTime.toDate === 'function') {
-              bookingDate = data.pickupDateTime.toDate();
-            } else if (typeof data.pickupDateTime === 'string') {
-              bookingDate = new Date(data.pickupDateTime);
+        setDialogOpen(false);
+        setCancellationReason('');
             } else {
-              bookingDate = new Date();
-            }
-          }
-          // Fall back to date field (old format)
-          else if (data.date) {
-            if (typeof data.date.toDate === 'function') {
-              bookingDate = data.date.toDate();
-            } else if (typeof data.date === 'string') {
-              bookingDate = new Date(data.date);
-            } else {
-              bookingDate = new Date();
-            }
-          } else {
-            bookingDate = new Date();
-          }
-          
-          // Validate the date
-          if (isNaN(bookingDate.getTime())) {
-            console.warn(`Invalid date for booking ${doc.id}, using current date`);
-            bookingDate = new Date();
-          }
-        } catch (error) {
-          console.error(`Error parsing date for booking ${doc.id}:`, error);
-          bookingDate = new Date();
-        }
-        
-        bookingsData.push({
-          id: doc.id,
-          formattedId: data.formattedId,
-          type: data.type || data.bookingType || 'Chauffeur',
-          user: data.customerInfo?.name || 'Unknown User',
-          driver: data.driverInfo?.name || 'Not Assigned',
-          vehicle: data.vehicle?.name || data.vehicleType || 'Standard Vehicle',
-          pickup: data.pickupLocation?.name || data.pickup || 'N/A',
-          dropoff: data.dropoffLocation?.name || data.dropoff || 'N/A',
-          date: bookingDate,
-          status: data.status || 'initiated',
-          amount: data.amount ? `AED ${parseFloat(data.amount).toFixed(2)}` : 'AED 0.00',
-          userId: data.userId,
-          driverId: data.driverId,
-          customerInfo: data.customerInfo,
-          driverInfo: data.driverInfo,
-          createdAt: createdDate,
-          cancellationReason: data.cancellationReason
-        });
-      });
-      
-      setBookings(bookingsData);
-    } catch (error) {
-      console.error('Error updating booking IDs:', error);
-      toast.error('Failed to update booking IDs');
+        throw new Error(response.error || 'Failed to cancel booking');
+      }
+    } catch (error: any) {
+      console.error('Error cancelling booking:', error);
+      toast.error(error.message || 'Failed to cancel booking');
     } finally {
-      setIsUpdatingIds(false);
+      setIsSubmitting(false);
     }
   };
   
-  // Add the export functions
-  const exportToExcel = () => {
-    try {
-      setIsExporting(true);
-      
-      // Create a worksheet from the filtered bookings
-      const data = [
-        // Header row
-        ['Booking ID', 'Type', 'Customer', 'Booking Date', 'Pickup Date', 'Amount', 'Status', 'Driver'],
-        // Data rows
-        ...filteredBookings.map(booking => [
-          booking.formattedId || formatExistingBookingId(booking.id, booking.date),
-          booking.type,
-          booking.customerInfo?.name || booking.user,
-          booking.createdAt ? safeFormatDate(booking.createdAt, 'MMM d, yyyy HH:mm') : 'N/A',
-          safeFormatDate(booking.date, 'MMM d, yyyy HH:mm'),
-          booking.amount,
-          formatStatus(booking.status),
-          booking.driver === 'Not Assigned' ? 'Not Assigned' : booking.driver
-        ])
-      ];
-      
-      // Create a worksheet with the data
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      
-      // Auto-size columns
-      const colWidths = data[0].map((_, i) => ({
-        wch: Math.max(...data.map(row => row[i] ? String(row[i]).length : 0))
-      }));
-      ws['!cols'] = colWidths;
-      
-      // Create a workbook
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Bookings');
-      
-      // Generate filename
-      const fileName = `bookings-export-${new Date().toISOString().split('T')[0]}.xlsx`;
-      
-      // Write and download the file
-      XLSX.writeFile(wb, fileName);
-      
-      toast.success('Bookings exported successfully');
-    } catch (error) {
-      console.error('Error exporting bookings:', error);
-      toast.error('Failed to export bookings');
-    } finally {
-      setIsExporting(false);
+  // Filter bookings based on selected tab and filters
+  const filteredBookings = bookings.filter(booking => {
+    // Tab filter
+    if (selectedTab === 'chauffeur' && booking.bookingType !== 'ride') return false;
+    if (selectedTab === 'rental' && booking.bookingType !== 'rent') return false;
+    
+    // Status filter
+    if (statusFilter !== 'all' && booking.status !== statusFilter) return false;
+    
+    // Date filter
+    if (dateFilter && booking.createdAt) {
+      const bookingDate = new Date(booking.createdAt);
+      const filterDate = new Date(dateFilter);
+      if (bookingDate.toDateString() !== filterDate.toDateString()) return false;
     }
-  };
-
-  // Filter reset function
-  const resetFilters = () => {
-    setStatusFilter(null);
-    setDateFilter(null);
-    setBookingIdFilter('');
-    setFilterOpen(false);
-  };
-
-  // Handle tab change
-  const handleTabChange = (value: string) => {
-    setSelectedTab(value);
-  };
+    
+    // Search filter
+    if (searchQuery && !booking.id.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    
+    return true;
+  });
+  
+  // Calculate statistics
+  const totalBookings = bookings.length;
+  const activeBookings = bookings.filter(b => ['initiated', 'awaiting', 'assigned'].includes(b.status)).length;
+  const completedBookings = bookings.filter(b => b.status === 'completed').length;
+  const totalRevenue = bookings.reduce((total, booking) => {
+    const amount = booking.paymentInfo?.amount || 0;
+    return total + amount;
+  }, 0);
   
   return (
     <DashboardLayout userType="admin">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Booking Management</h1>
-        
-        <div className="flex gap-2">
-          <Button 
-            onClick={exportToExcel} 
-            disabled={isExporting || filteredBookings.length === 0}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            {isExporting ? (
-              <>
-                <span className="animate-spin">⟳</span>
-                Exporting...
-              </>
-            ) : (
-              <>
-                <FileSpreadsheet className="h-4 w-4" />
-                Export CSV
-              </>
-            )}
-          </Button>
-          
-          <Button 
-            onClick={handleUpdateAllBookingIds} 
-            disabled={isUpdatingIds}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            {isUpdatingIds ? (
-              <>
-                <span className="animate-spin">⟳</span>
-                Updating IDs...
-              </>
-            ) : (
-              <>Update Booking IDs</>
-            )}
-          </Button>
-        </div>
       </div>
       
+      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{bookings.length}</div>
+            <div className="text-2xl font-bold">{totalBookings}</div>
             <p className="text-sm text-gray-500">Total Bookings</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{bookings.filter(b => b.status === 'confirmed' || b.status === 'pending' || b.status === 'initiated' || b.status === 'driver_assigned').length}</div>
+            <div className="text-2xl font-bold">{activeBookings}</div>
             <p className="text-sm text-gray-500">Active Bookings</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{bookings.filter(b => b.status === 'completed').length}</div>
+            <div className="text-2xl font-bold">{completedBookings}</div>
             <p className="text-sm text-gray-500">Completed</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">
-              {bookings.reduce((total, booking) => {
-                const amount = parseAmount(booking.amount);
-                return total + amount;
-              }, 0).toFixed(2)} AED
+              {formatCurrency(totalRevenue)}
             </div>
             <p className="text-sm text-gray-500">Total Revenue</p>
           </CardContent>
         </Card>
       </div>
       
+      {/* Main Content */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <div className="flex justify-between items-center">
             <CardTitle>Booking Overview</CardTitle>
             <div className="flex items-center gap-3">
+              {/* Filter Button */}
               <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                 <PopoverTrigger asChild>
                   <Button 
@@ -748,7 +371,7 @@ const AdminBookings = () => {
                     aria-label="Filter bookings"
                   >
                     <Filter className="h-4 w-4" />
-                    {(statusFilter || dateFilter || bookingIdFilter) ? (
+                    {(statusFilter !== 'all' || dateFilter) ? (
                       <span className="text-fleet-red font-medium">Filters Active</span>
                     ) : (
                       <span>Filter</span>
@@ -762,8 +385,8 @@ const AdminBookings = () => {
                     <div className="space-y-2">
                       <Label htmlFor="status-filter">Status</Label>
                       <Select 
-                        value={statusFilter || 'all'} 
-                        onValueChange={(value) => setStatusFilter(value === 'all' ? null : value)}
+                        value={statusFilter} 
+                        onValueChange={setStatusFilter}
                       >
                         <SelectTrigger id="status-filter">
                           <SelectValue placeholder="All Statuses" />
@@ -771,9 +394,9 @@ const AdminBookings = () => {
                         <SelectContent>
                           <SelectItem value="all">All Statuses</SelectItem>
                           <SelectItem value="initiated">Initiated</SelectItem>
-                          <SelectItem value="confirmed">Confirmed</SelectItem>
-                          <SelectItem value="driver_assigned">Driver Assigned</SelectItem>
                           <SelectItem value="awaiting">Awaiting</SelectItem>
+                          <SelectItem value="assigned">Assigned</SelectItem>
+                          <SelectItem value="pickup">Pickup</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
                           <SelectItem value="cancelled">Cancelled</SelectItem>
                         </SelectContent>
@@ -781,29 +404,17 @@ const AdminBookings = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label>Pickup Date</Label>
-                      <div className="flex items-center gap-2">
-                        <CalendarComponent
+                      <Label>Created Date</Label>
+                      <Calendar
                           mode="single"
-                          selected={dateFilter || undefined}
-                          onSelect={(date) => setDateFilter(date)}
+                        selected={dateFilter}
+                        onSelect={setDateFilter}
                           className="border rounded-md p-3"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="booking-id-filter">Booking ID</Label>
-                      <Input
-                        id="booking-id-filter"
-                        placeholder="Enter booking ID"
-                        value={bookingIdFilter}
-                        onChange={(e) => setBookingIdFilter(e.target.value)}
                       />
                     </div>
                     
                     <div className="flex justify-between">
-                      <Button variant="outline" onClick={resetFilters}>
+                      <Button variant="outline" onClick={clearFilters}>
                         Reset
                       </Button>
                       <Button onClick={() => setFilterOpen(false)}>
@@ -814,21 +425,24 @@ const AdminBookings = () => {
                 </PopoverContent>
               </Popover>
               
+              {/* Search */}
               <div className="relative w-60 md:w-96">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
               <Input
                   type="search"
-                  placeholder="Search by ID or customer name..."
+                  placeholder="Search by booking ID..."
                 className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               />
               </div>
             </div>
           </div>
         </CardHeader>
+        
         <CardContent>
-          <Tabs defaultValue="all" onValueChange={handleTabChange}>
+          <Tabs value={selectedTab} onValueChange={setSelectedTab}>
             <TabsList className="mb-6">
               <TabsTrigger value="all">All Bookings</TabsTrigger>
               <TabsTrigger value="chauffeur">Chauffeur Services</TabsTrigger>
@@ -844,133 +458,54 @@ const AdminBookings = () => {
                         <th className="h-12 px-3 text-left font-medium text-gray-500">Booking ID</th>
                         <th className="h-12 px-3 text-left font-medium text-gray-500">Type</th>
                         <th className="h-12 px-3 text-left font-medium text-gray-500">Customer</th>
-                        <th className="h-12 px-3 text-left font-medium text-gray-500">
-                          <div className="flex items-center gap-1 cursor-pointer" onClick={() => {
-                            setSortBy('createdAt');
-                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                          }}>
-                            Booking Date
-                            <ArrowUpDown className="h-3 w-3" />
-                          </div>
-                        </th>
-                        <th className="h-12 px-3 text-left font-medium text-gray-500">
-                          <div className="flex items-center gap-1 cursor-pointer" onClick={() => {
-                            setSortBy('date');
-                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                          }}>
-                            Pickup Date
-                            <ArrowUpDown className="h-3 w-3" />
-                          </div>
-                        </th>
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Created Date</th>
                         <th className="h-12 px-3 text-left font-medium text-gray-500">Amount</th>
                         <th className="h-12 px-3 text-left font-medium text-gray-500">Status</th>
                         <th className="h-12 px-3 text-right font-medium text-gray-500 w-32">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {isLoading ? (
+                      {loading ? (
                         <tr>
-                          <td colSpan={8} className="h-24 text-center text-gray-500">
+                          <td colSpan={7} className="h-24 text-center text-gray-500">
+                            <div className="flex items-center justify-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
                             Loading bookings...
+                            </div>
                           </td>
                         </tr>
                       ) : filteredBookings.length > 0 ? (
                         filteredBookings.map((booking) => (
                           <tr key={booking.id} className="border-b">
-                            <td className="p-3 font-medium">
-                              {booking.formattedId || formatExistingBookingId(booking.id, booking.date)}
-                            </td>
-                            <td className="p-3">{booking.type}</td>
+                            <td className="p-3 font-medium">{booking.id}</td>
+                            <td className="p-3 capitalize">{booking.bookingType}</td>
                             <td className="p-3">
                               <div className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-gray-500" />
-                                <span>{booking.customerInfo?.name || booking.user}</span>
+                                <span>{booking.user?.firstName} {booking.user?.lastName}</span>
                               </div>
                             </td>
                             <td className="p-3">
                               {booking.createdAt && (
                                 <div className="flex flex-col">
                                   <div className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3 text-gray-500" />
-                                    <span className="text-sm">{safeFormatDate(booking.createdAt, 'MMM d, yyyy')}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <Clock className="h-3 w-3 text-gray-500" />
-                                    <span className="text-sm">{safeFormatDate(booking.createdAt, 'h:mm a')}</span>
+                                    <CalendarIcon className="h-3 w-3 text-gray-500" />
+                                    <span className="text-sm">{formatDate(booking.createdAt)}</span>
                                   </div>
                                 </div>
                               )}
                             </td>
-                            <td className="p-3">
-                              <div className="flex flex-col">
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3 text-gray-500" />
-                                  <span className="text-sm">{safeFormatDate(booking.date, 'MMM d, yyyy')}</span>
-                                </div>
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Clock className="h-3 w-3 text-gray-500" />
-                                  <span className="text-sm">{safeFormatDate(booking.date, 'h:mm a')}</span>
-                                </div>
-                              </div>
+                            <td className="p-3 font-medium">
+                              {formatCurrency(booking.paymentInfo?.amount || 0)}
                             </td>
-                            <td className="p-3 font-medium">{booking.amount}</td>
                             <td className="p-3">
-                              <Badge className={getStatusBadgeColor(booking.status)}>
-                                {formatStatus(booking.status)}
+                              <Badge variant={getStatusBadgeVariant(booking.status)}>
+                                {booking.status}
                               </Badge>
                             </td>
                             <td className="p-3 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  onClick={() => openDialog(booking, 'invoice')}
-                                  title="Download Invoice"
-                                  className="h-7 w-7"
-                                  disabled={isProcessingAction}
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                                
-                                {(booking.status === 'initiated' || booking.status === 'awaiting') && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => openDialog(booking, 'confirm')}
-                                    title="Confirm Booking"
-                                    className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    disabled={isProcessingAction}
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                
-                                {booking.status === 'confirmed' && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => openDialog(booking, 'assign')}
-                                    title="Assign Driver"
-                                    className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                                    disabled={isProcessingAction}
-                                  >
-                                    <UserCheck className="h-4 w-4" />
-                                  </Button>
-                                )}
-
-                                {(booking.status === 'initiated' || booking.status === 'awaiting' || booking.status === 'confirmed' || booking.status === 'driver_assigned') && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => openDialog(booking, 'cancel')}
-                                    title="Cancel Booking"
-                                    className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    disabled={isProcessingAction}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                
+                                {/* View Details */}
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button 
@@ -979,7 +514,7 @@ const AdminBookings = () => {
                                       title="View Details"
                                       className="h-7 w-7"
                                     >
-                                      <FileText className="h-4 w-4" />
+                                      <Eye className="h-4 w-4" />
                                   </Button>
                                 </DialogTrigger>
                                   <DialogContent className="sm:max-w-[600px]">
@@ -990,14 +525,12 @@ const AdminBookings = () => {
                                     <div className="grid grid-cols-2 gap-4">
                                       <div>
                                           <p className="text-sm text-gray-500">Booking ID</p>
-                                          <p className="font-medium">
-                                            {booking.formattedId || formatExistingBookingId(booking.id, booking.date)}
-                                          </p>
+                                          <p className="font-medium">{booking.id}</p>
                                       </div>
                                       <div>
                                         <p className="text-sm text-gray-500">Status</p>
-                                        <Badge className={getStatusBadgeColor(booking.status)}>
-                                          {formatStatus(booking.status)}
+                                          <Badge variant={getStatusBadgeVariant(booking.status)}>
+                                            {booking.status}
                                         </Badge>
                                       </div>
                                     </div>
@@ -1006,48 +539,30 @@ const AdminBookings = () => {
                                         <p className="text-sm text-gray-500">Customer</p>
                                         <div className="flex items-center gap-2">
                                           <User className="h-4 w-4 text-gray-500" />
-                                          <p className="font-medium">{booking.customerInfo?.name || booking.user}</p>
+                                          <p className="font-medium">
+                                            {booking.user?.firstName} {booking.user?.lastName}
+                                          </p>
                                         </div>
-                                        {booking.customerInfo?.phone && (
-                                          <p className="text-sm text-gray-500 mt-1">{booking.customerInfo.phone}</p>
+                                        {booking.user?.phoneNumber && (
+                                          <p className="text-sm text-gray-500 mt-1">{booking.user.phoneNumber}</p>
                                         )}
-                                        {booking.customerInfo?.email && (
-                                          <p className="text-sm text-gray-500 mt-1">{booking.customerInfo.email}</p>
+                                        {booking.user?.email && (
+                                          <p className="text-sm text-gray-500 mt-1">{booking.user.email}</p>
                                         )}
                                     </div>
-                                    
-                                      {(booking.driverInfo?.name || booking.driver !== 'Not Assigned') && (
-                                      <div>
-                                        <p className="text-sm text-gray-500">Driver</p>
-                                          <p className="font-medium">{booking.driverInfo?.name || booking.driver}</p>
-                                          {booking.driverInfo?.phone && (
-                                            <p className="text-sm text-gray-500 mt-1">{booking.driverInfo.phone}</p>
-                                          )}
-                                          {booking.driverInfo?.vehicleNumber && (
-                                            <p className="text-sm text-gray-500 mt-1">Vehicle #: {booking.driverInfo.vehicleNumber}</p>
-                                          )}
-                                      </div>
-                                    )}
                                     
                                     <div>
                                       <p className="text-sm text-gray-500">Vehicle</p>
                                       <div className="flex items-center gap-2">
                                         <Car className="h-4 w-4 text-gray-500" />
-                                        <p className="font-medium">{booking.vehicle}</p>
+                                          <p className="font-medium">{booking.vehicle?.name || 'N/A'}</p>
                                       </div>
                                     </div>
                                     
                                     <div>
-                                        <p className="text-sm text-gray-500">Booking Date</p>
+                                        <p className="text-sm text-gray-500">Created Date</p>
                                         <p className="font-medium">
-                                          {booking.createdAt ? safeFormatDate(booking.createdAt, 'MMMM d, yyyy') : 'N/A'} at {booking.createdAt ? safeFormatDate(booking.createdAt, 'h:mm a') : 'N/A'}
-                                        </p>
-                                      </div>
-                                      
-                                      <div>
-                                        <p className="text-sm text-gray-500">Pickup Date</p>
-                                      <p className="font-medium">
-                                          {safeFormatDate(booking.date, 'MMMM d, yyyy')} at {safeFormatDate(booking.date, 'h:mm a')}
+                                          {booking.createdAt ? formatDate(booking.createdAt) : 'N/A'}
                                       </p>
                                     </div>
                                     
@@ -1055,92 +570,67 @@ const AdminBookings = () => {
                                       <p className="text-sm text-gray-500">Pickup Location</p>
                                       <div className="flex items-start gap-2">
                                         <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                                        <p className="font-medium">{booking.pickup}</p>
+                                          <p className="font-medium">{booking.pickupLocation?.name || 'N/A'}</p>
                                       </div>
                                     </div>
                                     
+                                      {booking.dropoffLocation && (
                                       <div>
                                         <p className="text-sm text-gray-500">Dropoff Location</p>
                                         <div className="flex items-start gap-2">
                                           <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                                          <p className="font-medium">{booking.dropoff}</p>
+                                            <p className="font-medium">{booking.dropoffLocation.name}</p>
                                         </div>
                                       </div>
+                                      )}
                                     
                                       <div className="grid grid-cols-2 gap-4">
                                     <div>
                                       <p className="text-sm text-gray-500">Amount</p>
-                                          <p className="font-medium">{booking.amount}</p>
+                                          <p className="font-medium">
+                                            {formatCurrency(booking.paymentInfo?.amount || 0)}
+                                          </p>
                                         </div>
                                         <div>
-                                          <p className="text-sm text-gray-500">Payment Method</p>
-                                          <p className="font-medium">Credit Card</p>
+                                          <p className="text-sm text-gray-500">Payment Status</p>
+                                          <p className="font-medium">{booking.paymentInfo?.status || 'N/A'}</p>
                                         </div>
                                       </div>
-                                      
-                                      {booking.cancellationReason && (
-                                        <div>
-                                          <p className="text-sm text-gray-500">Cancellation Reason</p>
-                                          <p className="font-medium text-red-600">{booking.cancellationReason}</p>
                                         </div>
-                                      )}
-                                    </div>
+                                  </DialogContent>
+                                </Dialog>
                                     
-                                    <div className="flex flex-wrap justify-between gap-2 mt-4">
-                                      {(booking.status === 'initiated' || booking.status === 'awaiting') && (
+                                {/* Action Buttons */}
+                                {(booking.status === 'initiated') && (
                                         <Button 
-                                          variant="default" 
-                                          className="bg-blue-500 hover:bg-blue-600 text-white"
+                                    variant="ghost"
+                                    size="icon"
                                           onClick={() => openDialog(booking, 'confirm')}
-                                          disabled={isProcessingAction}
+                                    title="Confirm Booking"
+                                    className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                         >
-                                          <CheckCircle className="h-4 w-4 mr-2" />
-                                          Confirm Booking
+                                    <CheckCircle className="h-4 w-4" />
                                         </Button>
                                       )}
                                       
-                                      {booking.status === 'confirmed' && (
+                                {(booking.status === 'initiated' || booking.status === 'awaiting') && (
                                         <Button 
-                                          variant="default" 
-                                          className="bg-indigo-500 hover:bg-indigo-600 text-white"
-                                          onClick={() => openDialog(booking, 'assign')}
-                                          disabled={isProcessingAction}
-                                        >
-                                          <UserCheck className="h-4 w-4 mr-2" />
-                                          Assign Driver
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => openDialog(booking, 'cancel')}
+                                    title="Cancel Booking"
+                                    className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <X className="h-4 w-4" />
                                         </Button>
                                       )}
-                                      
-                                      {(booking.status === 'initiated' || booking.status === 'awaiting' || booking.status === 'confirmed' || booking.status === 'driver_assigned') && (
-                                        <Button 
-                                          variant="destructive"
-                                          onClick={() => openDialog(booking, 'cancel')}
-                                          disabled={isProcessingAction}
-                                        >
-                                          <X className="h-4 w-4 mr-2" />
-                                          Cancel Ride
-                                        </Button>
-                                      )}
-                                      
-                                      <Button 
-                                        variant="outline" 
-                                        className="flex items-center gap-2"
-                                        onClick={() => openDialog(booking, 'invoice')}
-                                        disabled={isProcessingAction}
-                                      >
-                                        <Download className="h-4 w-4" />
-                                        Invoice
-                                      </Button>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
                               </div>
                             </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={8} className="h-24 text-center text-gray-500">
+                          <td colSpan={7} className="h-24 text-center text-gray-500">
                             No bookings found
                           </td>
                         </tr>
@@ -1151,27 +641,146 @@ const AdminBookings = () => {
               </div>
             </TabsContent>
             
-            {/* Similar content for chauffeur and rental tabs */}
             <TabsContent value="chauffeur">
-              {/* Same table structure with filtered bookings */}
+              {/* Same table structure with filtered bookings for chauffeur services */}
+              <div className="rounded-md border">
+                <div className="relative w-full overflow-auto">
+                  <table className="w-full caption-bottom text-sm">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Booking ID</th>
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Customer</th>
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Created Date</th>
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Amount</th>
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Status</th>
+                        <th className="h-12 px-3 text-right font-medium text-gray-500 w-32">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredBookings.length > 0 ? (
+                        filteredBookings.map((booking) => (
+                          <tr key={booking.id} className="border-b">
+                            <td className="p-3 font-medium">{booking.id}</td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-gray-500" />
+                                <span>{booking.user?.firstName} {booking.user?.lastName}</span>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              {booking.createdAt && formatDate(booking.createdAt)}
+                            </td>
+                            <td className="p-3 font-medium">
+                              {formatCurrency(booking.paymentInfo?.amount || 0)}
+                            </td>
+                            <td className="p-3">
+                              <Badge variant={getStatusBadgeVariant(booking.status)}>
+                                {booking.status}
+                              </Badge>
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                        <Button 
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openDialog(booking, 'confirm')}
+                                  title="Confirm Booking"
+                                  className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                        </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="h-24 text-center text-gray-500">
+                            No chauffeur bookings found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </TabsContent>
             
             <TabsContent value="rental">
-              {/* Same table structure with filtered bookings */}
+              {/* Same table structure with filtered bookings for rentals */}
+              <div className="rounded-md border">
+                <div className="relative w-full overflow-auto">
+                  <table className="w-full caption-bottom text-sm">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Booking ID</th>
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Customer</th>
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Created Date</th>
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Amount</th>
+                        <th className="h-12 px-3 text-left font-medium text-gray-500">Status</th>
+                        <th className="h-12 px-3 text-right font-medium text-gray-500 w-32">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredBookings.length > 0 ? (
+                        filteredBookings.map((booking) => (
+                          <tr key={booking.id} className="border-b">
+                            <td className="p-3 font-medium">{booking.id}</td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-gray-500" />
+                                <span>{booking.user?.firstName} {booking.user?.lastName}</span>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              {booking.createdAt && formatDate(booking.createdAt)}
+                            </td>
+                            <td className="p-3 font-medium">
+                              {formatCurrency(booking.paymentInfo?.amount || 0)}
+                            </td>
+                            <td className="p-3">
+                              <Badge variant={getStatusBadgeVariant(booking.status)}>
+                                {booking.status}
+                              </Badge>
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                      <Button 
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openDialog(booking, 'confirm')}
+                                  title="Confirm Booking"
+                                  className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                      </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="h-24 text-center text-gray-500">
+                            No rental bookings found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
       
-      {/* Dialogs for booking actions */}
+      {/* Action Dialogs */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {dialogType === 'confirm' ? 'Confirm Booking' : 
-               dialogType === 'assign' ? 'Assign Driver' : 
-               dialogType === 'cancel' ? 'Cancel Booking' :
-               'Generate Invoice'}
+               dialogType === 'cancel' ? 'Cancel Booking' : 'Assign Driver'}
             </DialogTitle>
           </DialogHeader>
           
@@ -1179,42 +788,7 @@ const AdminBookings = () => {
             <div className="py-4">
               <p>Are you sure you want to confirm this booking?</p>
               <p className="text-sm text-gray-500 mt-2">
-                This will update the booking status to "Confirmed".
-              </p>
-            </div>
-          )}
-          
-          {dialogType === 'assign' && (
-            <div className="py-4">
-              <Label htmlFor="driver-select" className="mb-2 block">Select Driver</Label>
-              {isLoadingDrivers ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-indigo-600 mr-2" />
-                  <span>Loading available drivers...</span>
-                </div>
-              ) : drivers.length === 0 ? (
-                <div className="text-center py-4 text-red-500">
-                  <p>No active drivers available for assignment</p>
-                  <p className="text-sm mt-2">Please add drivers or change their status to active.</p>
-                </div>
-              ) : (
-                <select
-                  id="driver-select"
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={selectedDriver}
-                  onChange={(e) => setSelectedDriver(e.target.value)}
-                  required
-                >
-                  <option value="" disabled>Select a driver</option>
-                  {drivers.map(driver => (
-                    <option key={driver.id} value={driver.id}>
-                      {driver.name} - {driver.vehicle} {driver.rating > 0 && `(${driver.rating.toFixed(1)}★)`}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <p className="text-sm text-gray-500 mt-2">
-                This will assign the selected driver to the booking and update its status.
+                This will update the booking status to "Awaiting".
               </p>
             </div>
           )}
@@ -1240,62 +814,39 @@ const AdminBookings = () => {
             </div>
           )}
           
-          {dialogType === 'invoice' && selectedBooking && (
-            <div className="py-4 max-h-[80vh] overflow-y-auto">
-              <InvoiceGenerator 
-                booking={selectedBooking}
-                onSuccess={() => {
-                  toast.success('Invoice generated successfully');
-                  setDialogOpen(false);
-                }}
-                onError={(error) => {
-                  toast.error(error || 'Failed to generate invoice');
-                }}
-              />
-            </div>
-          )}
-          
           <DialogFooter>
-            {dialogType !== 'invoice' && (
-              <>
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setDialogOpen(false);
                     setCancellationReason('');
                   }}
-                  disabled={isProcessingAction}
+              disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
                 <Button 
-                  onClick={updateBookingStatus}
+              onClick={dialogType === 'confirm' ? handleConfirmBooking : handleCancelBooking}
                   disabled={
-                    isProcessingAction ||
-                    (dialogType === 'assign' && !selectedDriver) ||
+                isSubmitting ||
                     (dialogType === 'cancel' && !cancellationReason.trim())
                   }
                   className={
                     dialogType === 'confirm' ? 'bg-blue-500 hover:bg-blue-600' :
-                    dialogType === 'assign' ? 'bg-indigo-500 hover:bg-indigo-600' :
                     'bg-red-500 hover:bg-red-600'
                   }
                 >
-                  {isProcessingAction ? (
+              {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      {dialogType === 'confirm' ? 'Confirming...' : 
-                       dialogType === 'assign' ? 'Assigning...' : 'Cancelling...'}
+                  {dialogType === 'confirm' ? 'Confirming...' : 'Cancelling...'}
                     </>
                   ) : (
                     <>
-                      {dialogType === 'confirm' ? 'Confirm Booking' : 
-                       dialogType === 'assign' ? 'Assign Driver' : 'Cancel Booking'}
+                  {dialogType === 'confirm' ? 'Confirm Booking' : 'Cancel Booking'}
                     </>
                   )}
                 </Button>
-              </>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -9,7 +9,6 @@ const Logo = ({ className = '' }: { className?: string }) => {
           src="/assets/logo.png" 
           alt="First Class Fleet Logo" 
           className="h-full object-contain"
-          style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.2))' }}
         />
       </div>
     </Link>

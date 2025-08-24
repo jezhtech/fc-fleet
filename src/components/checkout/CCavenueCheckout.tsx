@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { paymentService, PaymentRequest } from "@/services/paymentService";
+import { paymentService } from "@/services/paymentService";
 import { initiateCCavenuePayment } from "@/services/ccavenueService";
 import { useAuth } from "@/contexts/AuthContext";
 import { bookingWithCash } from "@/services/bookingService";
@@ -15,6 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PaymentRequest } from "@/types";
 
 interface CCavenueCheckoutProps {
   orderId: string;
@@ -22,9 +23,6 @@ interface CCavenueCheckoutProps {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  onPaymentSuccess: (transactionId: string, orderId?: string) => void;
-  onPaymentFailure: (errorMessage: string, orderId?: string) => void;
-  onCashPayment?: (orderId: string) => void;
 }
 
 const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
@@ -33,9 +31,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
   customerName,
   customerEmail,
   customerPhone,
-  onPaymentSuccess,
-  onPaymentFailure,
-  onCashPayment,
 }) => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -69,7 +64,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
     const checkAuth = async () => {
       if (!currentUser) {
         toast.error("Please log in to proceed with payment");
-        onPaymentFailure("Authentication required", paymentData.orderId);
         return;
       }
 
@@ -85,22 +79,13 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
     };
 
     checkAuth();
-  }, [currentUser, onPaymentFailure]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPaymentData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  }, [currentUser]);
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!currentUser) {
       toast.error("Please log in to proceed with payment");
-      onPaymentFailure("Authentication required", paymentData.orderId);
       return;
     }
 
@@ -109,18 +94,10 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
       try {
         setLoading(true);
         // Update booking with cash payment details
-        const response = await bookingWithCash(
-          paymentData.orderId,
-          paymentData.customerName,
-          paymentData.customerEmail,
-          paymentData.customerPhone
-        );
+        const response = await bookingWithCash(paymentData.orderId, amount);
 
         if (response.success) {
           toast.success("Cash payment option selected successfully!");
-          if (onCashPayment) {
-            onCashPayment(paymentData.orderId);
-          }
           // Redirect to book chauffeur page with orderId
           navigate(`/user/book-chauffeur?orderId=${paymentData.orderId}`);
           return;
@@ -130,7 +107,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
       } catch (error) {
         console.error("Cash payment error:", error);
         toast.error("Failed to process cash payment option");
-        onPaymentFailure("Cash payment processing failed", paymentData.orderId);
       } finally {
         setLoading(false);
       }
@@ -178,7 +154,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
       const errorMessage =
         error instanceof Error ? error.message : "Payment failed";
       toast.error(errorMessage);
-      onPaymentFailure(errorMessage, paymentData.orderId);
     } finally {
       setLoading(false);
     }
@@ -248,47 +223,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
                   <span className="font-bold text-green-600">
                     AED {amount.toFixed(2)}
                   </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Customer Information */}
-            <div className="space-y-4">
-              <h3 className="font-medium">Customer Information</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="customerName">Full Name</Label>
-                  <Input
-                    id="customerName"
-                    name="customerName"
-                    value={paymentData.customerName}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="customerEmail">Email</Label>
-                  <Input
-                    id="customerEmail"
-                    name="customerEmail"
-                    type="email"
-                    value={paymentData.customerEmail}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="customerPhone">Phone</Label>
-                  <Input
-                    id="customerPhone"
-                    name="customerPhone"
-                    value={paymentData.customerPhone}
-                    onChange={handleInputChange}
-                    required
-                  />
                 </div>
               </div>
             </div>

@@ -15,6 +15,8 @@ export const CURRENCY = {
  * @returns Formatted currency string
  */
 export const formatCurrency = (amount: number, includeSymbol: boolean = true): string => {
+  if(typeof amount === "string") amount = parseFloat(amount);
+  
   if (isNaN(amount)) return includeSymbol ? `${CURRENCY.symbol} 0.00` : '0.00';
   
   const formattedAmount = amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');

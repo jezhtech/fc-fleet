@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { MapPin, Loader2, ChevronDown } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Location } from "./types";
 import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
 import { googleMapsService, PlaceResult } from "@/services/googleMapsService";
-import { cn } from "@/lib/utils";
+import {Location} from "@/types"
 
 interface LocationSelectorProps {
   id: string;
@@ -196,13 +195,11 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
       // Use the mainName from Google Places data
       const location: Location = {
         name: item.mainName,
-        longitude: parseFloat(item.lon),
-        latitude: parseFloat(item.lat),
         address: item.display_name,
         placeId: item.place_id.toString(),
         coordinates: {
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon),
+          latitude: parseFloat(item.lat),
+          longitude: parseFloat(item.lon),
         },
       };
 

@@ -2,68 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { firestore } from '@/lib/firebase';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Loader2, Check, ChevronLeft, ChevronRight } from 'lucide-react';
-
-// Define vehicle type
-interface Vehicle {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  price: number;
-  features: {
-    icon: string;
-    text: string;
-  }[];
-  taxiTypeId: string;
-  taxiTypeName: string;
-  capacity: number;
-  basePrice: number;
-  perKmPrice: number;
-  perMinutePrice: number;
-  images: string[];
-}
-
-// Define taxi type interface
-interface TaxiType {
-  id: string;
-  name: string;
-  description?: string;
-  emoji?: string;
-}
-
-// Define feature icon mapping
-const featureIcons: Record<string, string> = {
-  'economy': '⚡',
-  'comfort': '🛋️',
-  'premium': '✨',
-  'suv': '🚙',
-  'luxury': '💎',
-  'minivan': '👪',
-  'executive': '👔',
-  'passengers': '👤',
-  'ac': '❄️',
-  'luggage': '🧳',
-  'premium_features': '🌟',
-  'spacious': '📏',
-  'fuel_efficient': '🔋'
-};
-
-// Fallback mapping in case database fetch fails
-const taxiTypeNames: Record<string, string> = {
-  'economy': 'Economy',
-  'comfort': 'Comfort',
-  'premium': 'Premium',
-  'suv': 'SUV',
-  'luxury': 'Luxury',
-  'minivan': 'Minivan',
-  'executive': 'Executive'
-};
+import { toast } from 'sonner';
+import { transportService, vehicleService } from '@/services';
+import type { Transport, VehicleWithTransport, VehicleDisplay } from '@/types';
 
 const Vehicles = () => {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleDisplay[]>([]);
   const [taxiTypes, setTaxiTypes] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -94,33 +39,33 @@ const Vehicles = () => {
     };
   }, []);
 
-  // Fetch taxi types from Firestore
+  // Fetch taxi types from API
   const fetchTaxiTypes = async () => {
     try {
-      const taxiTypesRef = collection(firestore, 'taxiTypes');
-      const taxiTypesSnapshot = await getDocs(taxiTypesRef);
+      const response = await transportService.getAllTransports();
       
-      const taxiTypesData: Record<string, string> = {};
-      taxiTypesSnapshot.forEach((doc) => {
-        const data = doc.data();
-        taxiTypesData[doc.id] = data.name || 'Unknown';
-      });
-      
-      // If we got taxi types from database, use them
-      if (Object.keys(taxiTypesData).length > 0) {
+      if (response.success && response.data) {
+        const taxiTypesData: Record<string, string> = {};
+        response.data.forEach((transport) => {
+          taxiTypesData[transport.id] = transport.name;
+        });
+        
         setTaxiTypes(taxiTypesData);
+        // After getting taxi types, fetch vehicles
+        fetchVehicles(taxiTypesData);
       } else {
-        // Otherwise, use fallback
-        setTaxiTypes(taxiTypeNames);
+        console.error('Failed to fetch taxi types:', response.message);
+        toast.error('Failed to load transport types');
+        setTaxiTypes({});
+        setVehicles([]);
+        setIsLoading(false);
       }
-      
-      // After getting taxi types, fetch vehicles
-      fetchVehicles(taxiTypesData);
     } catch (error) {
       console.error('Error fetching taxi types:', error);
-      // Use fallback if there's an error
-      setTaxiTypes(taxiTypeNames);
-      fetchVehicles(taxiTypeNames);
+      toast.error('Failed to load transport types');
+      setTaxiTypes({});
+      setVehicles([]);
+      setIsLoading(false);
     }
   };
 
@@ -133,113 +78,110 @@ const Vehicles = () => {
     
     // If not found, try to fetch it directly
     try {
-      const taxiTypeRef = doc(firestore, 'taxiTypes', taxiTypeId);
-      const taxiTypeSnap = await getDoc(taxiTypeRef);
+      const response = await transportService.getTransportById(taxiTypeId);
       
-      if (taxiTypeSnap.exists()) {
-        const data = taxiTypeSnap.data();
-        return data.name || 'Unknown';
+      if (response.success && response.data) {
+        return response.data.name;
       }
     } catch (error) {
       console.error(`Error fetching taxi type ${taxiTypeId}:`, error);
     }
     
-    // Return a default if all else fails
-    return 'Standard';
+    // Return empty string if not found
+    return '';
   };
 
   const fetchVehicles = async (taxiTypeMapping: Record<string, string>) => {
     try {
       setIsLoading(true);
-      // Fetch from 'vehicleTypes' collection
-      const vehiclesRef = collection(firestore, 'vehicleTypes');
-      const vehiclesSnapshot = await getDocs(vehiclesRef);
       
-      // Create an array to hold promises for taxi type name resolution
-      const vehiclePromises = vehiclesSnapshot.docs.map(async (docSnapshot) => {
-        const data = docSnapshot.data();
-        const taxiTypeId = data.taxiTypeId || '';
-        
-        // Determine vehicle category for features (simplified categories)
-        let vehicleCategory = 'economy';
-        if (data.name?.toLowerCase().includes('premium') || 
-            data.description?.toLowerCase().includes('premium')) {
-          vehicleCategory = 'premium';
-        } else if (data.name?.toLowerCase().includes('suv') || 
-                  data.description?.toLowerCase().includes('suv') ||
-                  data.capacity >= 6) {
-          vehicleCategory = 'suv';
-        }
-        
-        // Get the taxi type name, either from our mapping or by fetching it
-        let taxiTypeName = vehicleCategory.charAt(0).toUpperCase() + vehicleCategory.slice(1);
-        if (taxiTypeId) {
-          taxiTypeName = await getTaxiTypeName(taxiTypeId, taxiTypeMapping);
-        }
-        
-        // Create feature list with appropriate icons
-        const featuresList = [
-          {
-            icon: '👤',
-            text: `${data.capacity || 4} Passengers`
-          },
-          {
-            icon: '❄️',
-            text: 'AC'
-          },
-          {
-            icon: '🧳',
-            text: `${Math.floor((data.capacity || 4) / 2)} Luggage`
+      // Fetch vehicles from API
+      const response = await vehicleService.getAllVehicles();
+      
+      if (response.success && response.data) {
+        // Create an array to hold promises for taxi type name resolution
+        const vehiclePromises = response.data.map(async (vehicleData) => {
+          const taxiTypeId = vehicleData.transportId || '';
+          
+          // Determine vehicle category for features (simplified categories)
+          let vehicleCategory = 'economy';
+          if (vehicleData.name?.toLowerCase().includes('premium') || 
+              vehicleData.description?.toLowerCase().includes('premium')) {
+            vehicleCategory = 'premium';
+          } else if (vehicleData.name?.toLowerCase().includes('suv') || 
+                    vehicleData.description?.toLowerCase().includes('suv') ||
+                    vehicleData.capacity >= 6) {
+            vehicleCategory = 'suv';
           }
-        ];
+          
+          // Get the taxi type name, either from our mapping or by fetching it
+          let taxiTypeName = '';
+          if (taxiTypeId) {
+            taxiTypeName = await getTaxiTypeName(taxiTypeId, taxiTypeMapping);
+          }
+          
+          // Create feature list with appropriate icons
+          const featuresList = [
+            {
+              icon: '👤',
+              text: `${vehicleData.capacity} Passengers`
+            },
+            {
+              icon: '❄️',
+              text: 'AC'
+            },
+            {
+              icon: '🧳',
+              text: `${Math.floor(vehicleData.capacity / 2)} Luggage`
+            }
+          ];
+          
+          // Add vehicle category specific feature
+          if (vehicleCategory === 'premium') {
+            featuresList.push({
+              icon: '🌟',
+              text: 'Premium Features'
+            });
+          } else if (vehicleCategory === 'suv') {
+            featuresList.push({
+              icon: '📏',
+              text: 'Spacious Interior'
+            });
+          }
+          
+          // Calculate estimated price (base price + some markup for display)
+          const estimatedPrice = vehicleData.basePrice + (vehicleData.perKmPrice * 10) + (vehicleData.perMinPrice * 15);
+          
+          // Use first image or empty array if no image
+          const images = vehicleData.imageUrl ? [vehicleData.imageUrl] : [];
+          
+          return {
+            id: vehicleData.id,
+            name: vehicleData.name,
+            description: vehicleData.description,
+            image: images[0] || '/placeholder.svg',
+            price: estimatedPrice,
+            features: featuresList,
+            taxiTypeId: taxiTypeId,
+            taxiTypeName: taxiTypeName,
+            capacity: vehicleData.capacity,
+            basePrice: vehicleData.basePrice,
+            perKmPrice: vehicleData.perKmPrice,
+            perMinutePrice: vehicleData.perMinPrice,
+            images: images
+          };
+        });
         
-        // Add vehicle category specific feature
-        if (vehicleCategory === 'premium') {
-          featuresList.push({
-            icon: '🌟',
-            text: 'Premium Features'
-          });
-        } else if (vehicleCategory === 'suv') {
-          featuresList.push({
-            icon: '📏',
-            text: 'Spacious'
-          });
-        } else {
-          featuresList.push({
-            icon: '🔋',
-            text: 'Fuel Efficient'
-          });
-        }
-        
-        // Return the vehicle data
-        return {
-          id: docSnapshot.id,
-          name: data.name || 'Unnamed Vehicle',
-          description: data.description || 'No description available',
-          image: data.images && data.images.length > 0 ? data.images[0] : '/placeholder.svg',
-          price: data.perMinutePrice ? Math.round(data.perMinutePrice * 60) : 0,
-          features: featuresList,
-          taxiTypeId: taxiTypeId,
-          taxiTypeName: taxiTypeName,
-          capacity: data.capacity || 4,
-          basePrice: data.basePrice || 0,
-          perKmPrice: data.perKmPrice || 0,
-          perMinutePrice: data.perMinutePrice || 0,
-          images: Array.isArray(data.images) && data.images.length > 0 ? data.images : ['/placeholder.svg']
-        };
-      });
-      
-      // Wait for all promises to resolve
-      const vehicleData = await Promise.all(vehiclePromises);
-      
-      if (vehicleData.length > 0) {
-        // Log image data for debugging        
-        setVehicles(vehicleData);
+        const processedVehicles = await Promise.all(vehiclePromises);
+        setVehicles(processedVehicles);
       } else {
+        console.error('Failed to fetch vehicles:', response.message);
+        toast.error('Failed to load vehicles');
         setVehicles([]);
       }
     } catch (error) {
       console.error('Error fetching vehicles:', error);
+      toast.error('Failed to load vehicles');
       setVehicles([]);
     } finally {
       setIsLoading(false);

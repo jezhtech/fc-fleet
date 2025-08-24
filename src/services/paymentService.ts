@@ -1,313 +1,230 @@
-import { toast } from "sonner";
-import { initiateCCavenuePayment, processCCavenueResponse } from './ccavenueService';
-import { config } from "@/constants/config";
+import { apiClient, API_ENDPOINTS } from "@/lib/api";
+import type {
+  ApiResponse,
+  PaymentRequest,
+  PaymentResponse,
+  PaymentStatusResponse,
+  PaymentHistoryResponse,
+} from "@/types";
 
-// Types for payment integration
-export interface PaymentRequest {
-  orderId: string;
-  amount: number;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  billingAddress?: string;
-  billingCity?: string;
-  billingState?: string;
-  billingZip?: string;
-  billingCountry?: string;
-  billingTel?: string;
-  deliveryName?: string;
-  deliveryAddress?: string;
-  deliveryCity?: string;
-  deliveryState?: string;
-  deliveryZip?: string;
-  deliveryCountry?: string;
-  deliveryTel?: string;
-  merchantParam1?: string;
-  merchantParam2?: string;
-  merchantParam3?: string;
-  merchantParam4?: string;
-  merchantParam5?: string;
-  promoCode?: string;
-  customerIdentifier?: string;
-  rsaKey?: string;
-}
-
-export interface PaymentResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    encRequest: string;
-    access_code: string;
-    paymentUrl: string;
-  };
-  error?: string;
-}
-
-export interface PaymentStatusResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    orderId: string;
-    trackingId: string;
-    orderStatus: string;
-    statusMessage: string;
-    bankRefNo: string;
-    transactionDate: string;
-    isSuccessful: boolean;
-  };
-  error?: string;
-}
-
-export interface PaymentHistoryResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    payments: any[];
-  };
-  error?: string;
-}
-
+// Payment Service Class
 class PaymentService {
   private baseUrl: string;
 
   constructor() {
-    // Use environment variable or default to localhost for development
-    this.baseUrl = config.apiUrl;
+    this.baseUrl =
+      import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
   }
 
   /**
-   * Initialize payment with CCAvenue
+   * Initialize payment
    */
   async initializePayment(
     paymentData: PaymentRequest
   ): Promise<PaymentResponse> {
     try {
-      const idToken = await this.getFirebaseIdToken();
+      const response = await apiClient.post<PaymentResponse["data"]>(
+        API_ENDPOINTS.PAYMENT.INITIATE,
+        paymentData
+      );
 
-      if (!idToken) {
-        throw new Error("Authentication token not available");
+      if (response.success && response.data) {
+        return {
+          success: true,
+          message: response.message,
+          data: response.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || "Payment initialization failed",
+          error: response.error || "Unknown error",
+        };
       }
-      
-      const response = await fetch(`${this.baseUrl}/payment/initialize`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify(paymentData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to initialize payment");
-      }
-
-      return result;
     } catch (error) {
       console.error("Payment initialization error:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Payment initialization failed"
-      );
+      return {
+        success: false,
+        message: "Payment initialization failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
   }
 
   /**
-   * Handle payment response from CCAvenue
+   * Handle payment response
    */
   async handlePaymentResponse(
     encResp: string,
     orderId: string
   ): Promise<PaymentStatusResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/payment/response`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ encResp, orderId }),
-      });
+      const response = await apiClient.post<PaymentStatusResponse["data"]>(
+        API_ENDPOINTS.PAYMENT.PROCESS,
+        { encResp, orderId }
+      );
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to process payment response");
+      if (response.success && response.data) {
+        return {
+          success: true,
+          message: response.message,
+          data: response.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || "Payment processing failed",
+          error: response.error || "Unknown error",
+        };
       }
-
-      return result;
     } catch (error) {
       console.error("Payment response handling error:", error);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Payment response processing failed"
-      );
+      return {
+        success: false,
+        message: "Payment processing failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
   }
 
   /**
-   * Handle payment success redirect
+   * Handle successful payment
    */
   async handlePaymentSuccess(
     encResp: string,
     orderId: string
   ): Promise<PaymentStatusResponse> {
     try {
-      const response = await fetch(
-        `${this.baseUrl}/api/payment/success?encResp=${encodeURIComponent(
-          encResp
-        )}&orderId=${encodeURIComponent(orderId)}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const response = await apiClient.post<PaymentStatusResponse["data"]>(
+        `${API_ENDPOINTS.PAYMENT.PROCESS}/success`,
+        { encResp, orderId }
       );
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to process payment success");
+      if (response.success && response.data) {
+        return {
+          success: true,
+          message: response.message,
+          data: response.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || "Payment success handling failed",
+          error: response.error || "Unknown error",
+        };
       }
-
-      return result;
     } catch (error) {
       console.error("Payment success handling error:", error);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Payment success processing failed"
-      );
+      return {
+        success: false,
+        message: "Payment success handling failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
   }
 
   /**
-   * Handle payment cancel redirect
+   * Handle cancelled payment
    */
   async handlePaymentCancel(
     encResp: string,
     orderId: string
   ): Promise<PaymentStatusResponse> {
     try {
-      const response = await fetch(
-        `${this.baseUrl}/api/payment/cancel?encResp=${encodeURIComponent(
-          encResp
-        )}&orderId=${encodeURIComponent(orderId)}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const response = await apiClient.post<PaymentStatusResponse["data"]>(
+        `${API_ENDPOINTS.PAYMENT.PROCESS}/cancel`,
+        { encResp, orderId }
       );
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.error || "Failed to process payment cancellation"
-        );
+      if (response.success && response.data) {
+        return {
+          success: true,
+          message: response.message,
+          data: response.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || "Payment cancellation handling failed",
+          error: response.error || "Unknown error",
+        };
       }
-
-      return result;
     } catch (error) {
-      console.error("Payment cancel handling error:", error);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Payment cancellation processing failed"
-      );
+      console.error("Payment cancellation handling error:", error);
+      return {
+        success: false,
+        message: "Payment cancellation handling failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
   }
 
-
-
   /**
-   * Get payment history for authenticated user
+   * Get payment history
    */
   async getPaymentHistory(): Promise<PaymentHistoryResponse> {
     try {
-      const idToken = await this.getFirebaseIdToken();
-
-      if (!idToken) {
-        throw new Error("Authentication token not available");
-      }
-
-      const response = await fetch(`${this.baseUrl}/api/payment/history`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to retrieve payment history");
-      }
-
-      return result;
-    } catch (error) {
-      console.error("Payment history error:", error);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Failed to retrieve payment history"
+      const response = await apiClient.get<PaymentHistoryResponse["data"]>(
+        API_ENDPOINTS.PAYMENT.HISTORY
       );
+
+      if (response.success && response.data) {
+        return {
+          success: true,
+          message: response.message,
+          data: response.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || "Failed to fetch payment history",
+          error: response.error || "Unknown error",
+        };
+      }
+    } catch (error) {
+      console.error("Payment history fetch error:", error);
+      return {
+        success: false,
+        message: "Failed to fetch payment history",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
   }
 
   /**
-   * Process CCAvenue payment form submission
+   * Process CCAvenue payment
    */
   async processCCAvenuePayment(
     paymentData: PaymentRequest
   ): Promise<{ success: boolean; paymentUrl?: string; error?: string }> {
     try {
-      // Use the new CCAvenue service instead of backend calls
-      const redirectUrl = `${window.location.origin}/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=success`;
-      const cancelUrl = `${window.location.origin}/book-chauffeur?orderId=${paymentData.orderId}&paymentStatus=cancel`;
-      
-      // Get authentication token
-      const token = await this.getFirebaseIdToken();
-      
-      const response = await initiateCCavenuePayment({
-        orderId: paymentData.orderId,
-        amount: paymentData.amount,
-        currency: 'AED', // Default to AED for UAE
-        customerData: {
-          name: paymentData.customerName,
-          email: paymentData.customerEmail,
-          phone: paymentData.customerPhone
-        },
-        redirectUrl,
-        cancelUrl,
-        token
-      });
+      const response = await apiClient.post<{ paymentUrl: string }>(
+        `${API_ENDPOINTS.PAYMENT.INITIATE}/ccavenue`,
+        paymentData
+      );
 
-      if (!response.success) {
-        throw new Error(response.error || "Payment initialization failed");
+      if (response.success && response.data?.paymentUrl) {
+        return {
+          success: true,
+          paymentUrl: response.data.paymentUrl,
+        };
+      } else {
+        return {
+          success: false,
+          error: response.message || "CCAvenue payment processing failed",
+        };
       }
-
-      // Return the payment URL for redirection
-      return {
-        success: true,
-        paymentUrl: response.paymentUrl,
-      };
     } catch (error) {
-      console.error("CCAvenue payment processing error:", error);
+      console.error("CCAvenue payment error:", error);
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : "Payment processing failed",
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
 
   /**
-   * Handle CCAvenue payment response (for webhook or redirect)
+   * Process CCAvenue response
    */
   async processCCAvenueResponse(
     encResp: string,
@@ -315,113 +232,46 @@ class PaymentService {
     isSuccess: boolean = true
   ): Promise<PaymentStatusResponse> {
     try {
-      // Use the new CCAvenue service instead of backend calls
-      const response = await processCCavenueResponse(encResp, orderId, isSuccess);
-      
-      if (!response.success) {
-        throw new Error(response.error || 'Payment response processing failed');
+      const response = await apiClient.post<PaymentStatusResponse["data"]>(
+        `${API_ENDPOINTS.PAYMENT.PROCESS}/ccavenue`,
+        { encResp, orderId, isSuccess }
+      );
+
+      if (response.success && response.data) {
+        return {
+          success: true,
+          message: response.message,
+          data: response.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || "CCAvenue response processing failed",
+          error: response.error || "Unknown error",
+        };
       }
-      
-      // Convert the response to match the expected PaymentStatusResponse format
-      const paymentStatusResponse: PaymentStatusResponse = {
-        success: true,
-        message: response.data?.statusMessage || 'Payment processed successfully',
-        data: {
-          orderId: response.data?.orderId || orderId,
-          trackingId: response.data?.trackingId || '',
-          orderStatus: response.data?.orderStatus || 'Success',
-          statusMessage: response.data?.statusMessage || 'Payment successful',
-          bankRefNo: response.data?.bankRefNo || '',
-          transactionDate: response.data?.transactionDate || new Date().toISOString(),
-          isSuccessful: response.data?.isSuccessful || true
-        }
-      };
-      
-      return paymentStatusResponse;
     } catch (error) {
       console.error("CCAvenue response processing error:", error);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Payment response processing failed"
-      );
+      return {
+        success: false,
+        message: "CCAvenue response processing failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
   }
 
   /**
-   * Get authentication token from localStorage or context
+   * Get authentication token
    */
   private getAuthToken(): string {
-    try {
-      // Try to get Firebase auth token from localStorage
-      const firebaseKeys = Object.keys(localStorage).filter(
-        (key) => key.includes("firebase:authUser:") && key.includes("[DEFAULT]")
-      );
-
-      if (firebaseKeys.length > 0) {
-        const firebaseKey = firebaseKeys[0];
-        const firebaseUser = localStorage.getItem(firebaseKey);
-
-        if (firebaseUser) {
-          try {
-            const parsed = JSON.parse(firebaseUser);
-            // Return the access token from Firebase auth
-            const accessToken = parsed.stsTokenManager?.accessToken;
-            
-            return accessToken || "";
-          } catch (error) {
-            console.error("Error parsing Firebase user data:", error);
-          }
-        }
-      }
-
-      // Fallback to other token sources
-      const token =
+    if (typeof window !== "undefined") {
+      return (
         localStorage.getItem("authToken") ||
-        sessionStorage.getItem("authToken") ||
-        localStorage.getItem("firebase_token");
-
-      if (token) {
-        try {
-          const parsed = JSON.parse(token);
-          return (
-            parsed.stsTokenManager?.accessToken || parsed.accessToken || token
-          );
-        } catch {
-          return token;
-        }
-      }
-
-      // Return empty string if no token found
-      
-      return "";
-    } catch (error) {
-      console.error("Error getting auth token:", error);
-      return "";
+        localStorage.getItem("firebaseToken") ||
+        ""
+      );
     }
-  }
-
-  /**
-   * Get Firebase ID token for backend authentication
-   */
-  async getFirebaseIdToken(): Promise<string> {
-    try {
-      // Import Firebase auth dynamically to avoid circular dependencies
-      const { getAuth } = await import("firebase/auth");
-      const auth = getAuth();
-
-      if (auth.currentUser) {
-        const idToken = await auth.currentUser.getIdToken();
-        
-        return idToken;
-      }
-
-      
-      return "";
-    } catch (error) {
-      console.error("Error getting Firebase ID token:", error);
-      return "";
-    }
+    return "";
   }
 
   /**
@@ -429,9 +279,8 @@ class PaymentService {
    */
   async isAuthenticated(): Promise<boolean> {
     try {
-      const idToken = await this.getFirebaseIdToken();
-      
-      return !!idToken;
+      const token = this.getAuthToken();
+      return !!token;
     } catch (error) {
       console.error("Error checking authentication:", error);
       return false;
@@ -462,10 +311,7 @@ class PaymentService {
 
     // Validate phone format (basic validation)
     const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    if (
-      data.customerPhone &&
-      !phoneRegex.test(data.customerPhone.replace(/\s/g, ""))
-    ) {
+    if (data.customerPhone && !phoneRegex.test(data.customerPhone)) {
       errors.push("Invalid phone number format");
     }
 
@@ -474,7 +320,23 @@ class PaymentService {
       errors,
     };
   }
+
+  async paymentWithCash(data: { orderId: string; amount: number }) {
+    try {
+      await apiClient.post<void>(
+        API_ENDPOINTS.PAYMENT.CASH,
+        data
+      );
+    } catch (error) {
+      console.error("Payment response handling error:", error);
+      return {
+        success: false,
+        message: "Payment processing failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
 }
 
-// Create and export singleton instance
+// Export singleton instance
 export const paymentService = new PaymentService();

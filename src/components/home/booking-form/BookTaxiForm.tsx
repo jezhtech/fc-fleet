@@ -1,31 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  addDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { firestore } from "@/lib/firebase";
+
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  LocationSelector,
-  RouteMap,
-  DateTimePicker,
-  TransportTypeSelector,
-  VehicleSelector,
-  BookingDetails,
-  Location,
-  Vehicle,
-  TransportType,
-} from ".";
+import { BookingForm, Location, Transport, Vehicle } from "@/types";
+import { transportService, vehicleService, bookingService } from "@/services";
 import { generateBookingId, getNextBookingCount } from "@/utils/booking";
 import { Clock, AlertTriangle } from "lucide-react";
 import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
+import LocationSelector from "./LocationSelector";
+import RouteMap from "./RouteMap";
+import DateTimePicker from "./DateTimePicker";
+import TransportTypeSelector from "./TransportTypeSelector";
+import VehicleSelector from "./VehicleSelector";
 
 const BookTaxiForm = () => {
   const navigate = useNavigate();
@@ -57,14 +45,14 @@ const BookTaxiForm = () => {
     return timeString;
   };
 
-  const [bookingDetails, setBookingDetails] = useState<BookingDetails>({
+  const [bookingDetails, setBookingDetails] = useState<{
+    pickup: string;
+    dropoff: string;
+    time: string;
+  }>({
     pickup: "",
     dropoff: "",
     time: getInitialTime(),
-    cardNumber: "",
-    cardName: "",
-    cardExpiry: "",
-    cardCVC: "",
   });
 
   // Transport selections
@@ -80,7 +68,7 @@ const BookTaxiForm = () => {
   >(undefined);
 
   // Lists for selection components
-  const [transportTypes, setTransportTypes] = useState<TransportType[]>([]);
+  const [transportTypes, setTransportTypes] = useState<Transport[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
   // Available transport types that have vehicles
@@ -116,25 +104,21 @@ const BookTaxiForm = () => {
   };
 
   // Check which transport types have available vehicles
-  const checkTransportTypeAvailability = async (types: TransportType[]) => {
+  const checkTransportTypeAvailability = async (types: Transport[]) => {
     try {
       setLoading((prev) => ({ ...prev, checkingAvailability: true }));
-      const vehiclesRef = collection(firestore, "vehicleTypes");
       const availableTypeIds: string[] = [];
 
       // Check each transport type for available vehicles
       for (const type of types) {
-        const q = query(vehiclesRef, where("taxiTypeId", "==", type.id));
-        const snapshot = await getDocs(q);
+        const response = await vehicleService.getVehiclesByTransport(type.id);
 
-        if (snapshot.docs.length > 0) {
+        if (response.success && response.data && response.data.length > 0) {
           availableTypeIds.push(type.id);
         }
       }
 
-      setAvailableTransportTypes(
-        availableTypeIds.length > 0 ? availableTypeIds : ["economy"]
-      );
+      setAvailableTransportTypes(availableTypeIds);
 
       // If there are no available types, show a message
       if (availableTypeIds.length === 0) {
@@ -149,92 +133,39 @@ const BookTaxiForm = () => {
       return availableTypeIds;
     } catch (error) {
       console.error("Error checking transport type availability:", error);
-      // Default to economy in case of error
-      return ["economy"];
+      toast.error("Failed to check vehicle availability");
+      return [];
     } finally {
       setLoading((prev) => ({ ...prev, checkingAvailability: false }));
     }
   };
 
-  // Fetch transport types from Firestore
+  // Fetch transport types from API
   const fetchTransportTypes = async () => {
     try {
       setLoading((prev) => ({ ...prev, transportTypes: true }));
-      const transportTypesRef = collection(firestore, "taxiTypes");
-      const snapshot = await getDocs(transportTypesRef);
 
-      const types = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as TransportType[];
+      // Use the transport service instead of Firestore
+      const response = await transportService.getAllTransports();
 
-      const fetchedTypes =
-        types.length > 0
-          ? types
-          : [
-              {
-                id: "economy",
-                name: "Economy",
-                description: "Affordable rides for everyday use",
-                emoji: "🚗",
-              },
-              {
-                id: "comfort",
-                name: "Comfort",
-                description: "More space and comfort",
-                emoji: "🚕",
-              },
-              {
-                id: "suv",
-                name: "SUV",
-                description: "Spacious vehicles for groups",
-                emoji: "🚙",
-              },
-              {
-                id: "premium",
-                name: "Premium",
-                description: "Luxury vehicles for special occasions",
-                emoji: "🏎️",
-              },
-            ];
+      if (response.success && response.data) {
+        const types = response.data;
 
-      setTransportTypes(fetchedTypes);
+        setTransportTypes(types);
 
-      // Check which transport types have available vehicles
-      await checkTransportTypeAvailability(fetchedTypes);
+        // Check which transport types have available vehicles
+        await checkTransportTypeAvailability(types);
+      } else {
+        console.error("Failed to fetch transport types:", response.message);
+        toast.error("Failed to load transport types");
+        setTransportTypes([]);
+        setAvailableTransportTypes([]);
+      }
     } catch (error) {
       console.error("Error fetching transport types:", error);
       toast.error("Failed to load transport types");
-      // Use fallback data
-      const fallbackTypes = [
-        {
-          id: "economy",
-          name: "Economy",
-          description: "Affordable rides for everyday use",
-          emoji: "🚗",
-        },
-        {
-          id: "comfort",
-          name: "Comfort",
-          description: "More space and comfort",
-          emoji: "🚕",
-        },
-        {
-          id: "suv",
-          name: "SUV",
-          description: "Spacious vehicles for groups",
-          emoji: "🚙",
-        },
-        {
-          id: "premium",
-          name: "Premium",
-          description: "Luxury vehicles for special occasions",
-          emoji: "🏎️",
-        },
-      ];
-      setTransportTypes(fallbackTypes);
-      // Set economy as default available type for fallback
-      setAvailableTransportTypes(["economy"]);
+      setTransportTypes([]);
+      setAvailableTransportTypes([]);
     } finally {
       setLoading((prev) => ({ ...prev, transportTypes: false }));
     }
@@ -252,147 +183,22 @@ const BookTaxiForm = () => {
   const fetchVehicles = async (taxiTypeId: string) => {
     try {
       setLoading((prev) => ({ ...prev, vehicles: true }));
-      const vehiclesRef = collection(firestore, "vehicleTypes");
-      const q = query(vehiclesRef, where("taxiTypeId", "==", taxiTypeId));
-      const snapshot = await getDocs(q);
+      // Use the vehicle service instead of Firestore
+      const response = await vehicleService.getVehiclesByTransport(taxiTypeId);
 
-      const fetchedVehicles = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Vehicle[];
+      if (response.success && response.data && response.data.length > 0) {
+        // Transform the API response to match the expected Vehicle interface
+        const fetchedVehicles = response.data.map((v) => ({
+          ...v,
+          basePrice: parseFloat(v.basePrice.toString()),
+          perKmPrice: parseFloat(v.perKmPrice.toString()),
+        }));
 
-      if (fetchedVehicles.length > 0) {
         setVehicles(fetchedVehicles);
       } else {
-        // Use fallback data if no vehicles found
-        setVehicles([
-          {
-            id: `${taxiTypeId}-1`,
-            taxiTypeId,
-            name: `${
-              taxiTypeId === "economy"
-                ? "Toyota Corolla"
-                : taxiTypeId === "comfort"
-                ? "Toyota Camry"
-                : taxiTypeId === "suv"
-                ? "Toyota RAV4"
-                : "Mercedes E-Class"
-            }`,
-            description: "Comfortable vehicle with AC",
-            basePrice:
-              taxiTypeId === "economy"
-                ? 100
-                : taxiTypeId === "comfort"
-                ? 150
-                : taxiTypeId === "suv"
-                ? 200
-                : 300,
-            perKmPrice:
-              taxiTypeId === "economy"
-                ? 10
-                : taxiTypeId === "comfort"
-                ? 15
-                : taxiTypeId === "suv"
-                ? 20
-                : 30,
-            perMinutePrice:
-              taxiTypeId === "economy"
-                ? 1
-                : taxiTypeId === "comfort"
-                ? 1.5
-                : taxiTypeId === "suv"
-                ? 2
-                : 3,
-            capacity:
-              taxiTypeId === "economy"
-                ? 4
-                : taxiTypeId === "comfort"
-                ? 4
-                : taxiTypeId === "suv"
-                ? 6
-                : 4,
-            images: [
-              taxiTypeId === "economy"
-                ? "https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop"
-                : taxiTypeId === "comfort"
-                ? "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?q=80&w=800&auto=format&fit=crop"
-                : taxiTypeId === "suv"
-                ? "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=800&auto=format&fit=crop"
-                : "https://images.unsplash.com/photo-1525609004556-c46c7d6cf023?q=80&w=800&auto=format&fit=crop",
-
-              taxiTypeId === "economy"
-                ? "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=800&auto=format&fit=crop"
-                : taxiTypeId === "comfort"
-                ? "https://images.unsplash.com/photo-1580273916550-e323be2ae537?q=80&w=800&auto=format&fit=crop"
-                : taxiTypeId === "suv"
-                ? "https://images.unsplash.com/photo-1646955673748-c835b0d9e9c5?q=80&w=800&auto=format&fit=crop"
-                : "https://images.unsplash.com/photo-1563720223177-599763ad1734?q=80&w=800&auto=format&fit=crop",
-            ],
-          },
-          {
-            id: `${taxiTypeId}-2`,
-            taxiTypeId,
-            name: `${
-              taxiTypeId === "economy"
-                ? "Honda Civic"
-                : taxiTypeId === "comfort"
-                ? "Honda Accord"
-                : taxiTypeId === "suv"
-                ? "Ford Explorer"
-                : "BMW 5 Series"
-            }`,
-            description: "Spacious with premium features",
-            basePrice:
-              taxiTypeId === "economy"
-                ? 120
-                : taxiTypeId === "comfort"
-                ? 170
-                : taxiTypeId === "suv"
-                ? 220
-                : 350,
-            perKmPrice:
-              taxiTypeId === "economy"
-                ? 12
-                : taxiTypeId === "comfort"
-                ? 17
-                : taxiTypeId === "suv"
-                ? 22
-                : 35,
-            perMinutePrice:
-              taxiTypeId === "economy"
-                ? 1.2
-                : taxiTypeId === "comfort"
-                ? 1.7
-                : taxiTypeId === "suv"
-                ? 2.2
-                : 3.5,
-            capacity:
-              taxiTypeId === "economy"
-                ? 4
-                : taxiTypeId === "comfort"
-                ? 5
-                : taxiTypeId === "suv"
-                ? 7
-                : 4,
-            images: [
-              taxiTypeId === "economy"
-                ? "https://images.unsplash.com/photo-1502877338535-766e1452684a?q=80&w=800&auto=format&fit=crop"
-                : taxiTypeId === "comfort"
-                ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800&auto=format&fit=crop"
-                : taxiTypeId === "suv"
-                ? "https://images.unsplash.com/photo-1593055357429-1bff44adba32?q=80&w=800&auto=format&fit=crop"
-                : "https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?q=80&w=800&auto=format&fit=crop",
-
-              taxiTypeId === "economy"
-                ? "https://images.unsplash.com/photo-1583121274602-3e2820c69888?q=80&w=800&auto=format&fit=crop"
-                : taxiTypeId === "comfort"
-                ? "https://images.unsplash.com/photo-1606152421802-db97b9c7a11b?q=80&w=800&auto=format&fit=crop"
-                : taxiTypeId === "suv"
-                ? "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=800&auto=format&fit=crop"
-                : "https://images.unsplash.com/photo-1549275301-41e9d0fd49b3?q=80&w=800&auto=format&fit=crop",
-            ],
-          },
-        ]);
+        console.error("No vehicles found for transport type:", taxiTypeId);
+        toast.error("No vehicles available for the selected transport type");
+        setVehicles([]);
       }
     } catch (error) {
       console.error("Error fetching vehicles:", error);
@@ -443,13 +249,9 @@ const BookTaxiForm = () => {
 
     setPickupDate(initialDate);
     setBookingDetails({
-      pickup: "",
-      dropoff: "",
+      pickup: null,
+      dropoff: null,
       time: initialTime,
-      cardNumber: "",
-      cardName: "",
-      cardExpiry: "",
-      cardCVC: "",
     });
     setSelectedTaxiType("");
     setSelectedCarModel("");
@@ -477,14 +279,15 @@ const BookTaxiForm = () => {
 
     // Calculate actual distance using the Haversine formula
     const distanceKm = calculateDistance(
-      pickupCoords.lat,
-      pickupCoords.lng,
-      dropoffCoords.lat,
-      dropoffCoords.lng
+      pickupCoords.latitude,
+      pickupCoords.longitude,
+      dropoffCoords.latitude,
+      dropoffCoords.longitude
     );
 
     // Calculate total fare
-    let totalFare = selectedVehicle.basePrice + distanceKm * selectedVehicle.perKmPrice;
+    let totalFare =
+      selectedVehicle.basePrice + distanceKm * selectedVehicle.perKmPrice;
 
     // Ensure minimum fare
     const minFare = 5; // Minimum fare in AED
@@ -531,79 +334,9 @@ const BookTaxiForm = () => {
       userData?.email || currentUser?.email || "customer@example.com";
 
     const customerPhone =
-      userData?.phoneNumber || currentUser?.phoneNumber || "123456789";
+      userData?.phone || currentUser?.phoneNumber || "123456789";
 
     return { customerName, customerEmail, customerPhone };
-  };
-
-  // Save booking to Firestore
-  const saveBookingToDatabase = async (
-    bookingData: any,
-    paymentInfo: any,
-    status: "initiated" | "awaiting" | "failed",
-    paymentStatus: "PENDING" | "SUCCESS" | "FAILED" = "PENDING"
-  ) => {
-    try {
-      setLoading((prev) => ({ ...prev, savingBooking: true }));
-
-      // Get the current date for the booking
-      const bookingDate = new Date();
-
-      // Get the next booking count for this month
-      const bookingCount = await getNextBookingCount(bookingDate);
-
-      // Generate a formatted booking ID
-      const formattedId = generateBookingId(bookingDate, bookingCount);
-
-      // Parse the selected pickup date and time to create a proper Date object
-      let pickupDateTime = new Date();
-      try {
-        // If we have date and time from the form
-        if (bookingData.date && bookingData.time) {
-          // Parse the time string (expected format: "HH:MM")
-          const [hours, minutes] = bookingData.time.split(":").map(Number);
-
-          // If date is already a Date object, use it, otherwise parse it
-          const pickupDate =
-            bookingData.date instanceof Date
-              ? bookingData.date
-              : new Date(bookingData.date);
-
-          // Create a new date object with the combined date and time
-          pickupDateTime = new Date(pickupDate);
-          pickupDateTime.setHours(hours, minutes, 0, 0);
-        }
-      } catch (error) {
-        console.error("Error parsing pickup date/time:", error);
-        // Fall back to current date/time if parsing fails
-        pickupDateTime = new Date();
-      }
-
-      // Create booking document
-      const bookingRef = collection(firestore, "bookings");
-      const newBooking = {
-        ...bookingData,
-        paymentInfo,
-        status,
-        paymentStatus, // Add payment status
-        formattedId, // Store the formatted ID
-        createdAt: serverTimestamp(), // When the booking was created
-        pickupDateTime: pickupDateTime, // When the service is scheduled
-        date: pickupDateTime, // Keep the original date field for backward compatibility
-        updatedAt: serverTimestamp(),
-      };
-
-      // Add document to Firestore
-      const docRef = await addDoc(bookingRef, newBooking);
-
-      return { id: docRef.id, formattedId };
-    } catch (error) {
-      console.error("Error saving booking:", error);
-      toast.error("Failed to save booking details");
-      return null;
-    } finally {
-      setLoading((prev) => ({ ...prev, savingBooking: false }));
-    }
   };
 
   // Validate booking time is at least 4 hours in advance
@@ -726,51 +459,35 @@ const BookTaxiForm = () => {
       // Calculate fare
       const estimatedFare = calculateEstimatedFare();
 
-      // Get customer information from auth context
-      const { customerName, customerEmail, customerPhone } = getCustomerInfo();
+      const [hours, minutes] = bookingDetails.time.split(":").map(Number);
 
-      // Generate an order ID using timestamp and random string
-      const newOrderId = `ORD-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 8)}`;
+      const pickupDateTime = pickupDate.setHours(hours, minutes, 0, 0);
 
       const bookingData = {
-        orderId: newOrderId,
-        vehicle: selectedVehicle,
+        bookingType: "ride" as const,
+        userId: currentUser?.uid,
+        vehicleId: selectedVehicle.id,
+        status: "initiated" as const,
         pickupLocation: selectedPickupLocation,
         dropoffLocation: selectedDropoffLocation,
-        date: pickupDate,
-        time: bookingDetails.time,
+        pickupDate: pickupDateTime,
         amount: estimatedFare,
-        customerInfo: {
-          name: customerName,
-          email: customerEmail,
-          phone: customerPhone,
-        },
-        userId: currentUser?.uid,
-        type: "Chauffeur",
-        status: "pending_confirmation",
-        paymentStatus: "PENDING",
       };
 
-      // Save booking to database
-      const result = await saveBookingToDatabase(
-        bookingData,
-        {
-          paymentMethod: "CCAvenue",
-          amount: estimatedFare,
-          timestamp: new Date().toISOString(),
-          status: "pending",
-        },
-        "initiated",
-        "PENDING"
-      );
-
-      if (result) {
-        setOrderId(newOrderId);
-        setStep(4); // Move to payment step
-      } else {
-        toast.error("Failed to create booking. Please try again.");
+      try {
+        setLoading({ ...loading, savingBooking: true });
+        const response = await bookingService.createBooking(bookingData);
+        if (response.success) {
+          setOrderId(response.data.id);
+          setStep(4); // Move to payment step
+        } else {
+          toast.error("Failed to create booking. Please try again.");
+        }
+      } catch (error) {
+        console.error("Failed to create booking", error);
+        toast.error("Failed to save booking details");
+      } finally {
+        setLoading({ ...loading, savingBooking: false });
       }
     }
   };
@@ -794,7 +511,7 @@ const BookTaxiForm = () => {
       )}
 
       {step === 1 && (
-        <>
+        <form onSubmit={handleSubmit}>
           <div className="space-y-3">
             <LocationSelector
               id="pickup"
@@ -837,7 +554,7 @@ const BookTaxiForm = () => {
           />
 
           {/* 4-hour advance booking notice */}
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-2">
             <div className="flex items-start gap-2">
               <Clock className="h-4 w-4 text-blue-600 mt-0.5" />
               <div className="text-sm">
@@ -853,9 +570,8 @@ const BookTaxiForm = () => {
           </div>
 
           <Button
-            type="button"
+            type="submit"
             className="w-full h-9 text-white text-sm font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all rounded-md mt-2"
-            onClick={() => handleSubmit(new Event("submit") as any)}
           >
             {loading.transportTypes || loading.checkingAvailability
               ? "Loading..."
@@ -863,11 +579,11 @@ const BookTaxiForm = () => {
               ? "Login to Book Chauffeur"
               : "Book Chauffeur"}
           </Button>
-        </>
+        </form>
       )}
 
       {step === 2 && (
-        <>
+        <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <h4 className="text-sm font-medium">Select Transport Type</h4>
             <p className="text-xs text-gray-500 mt-1">
@@ -886,7 +602,7 @@ const BookTaxiForm = () => {
           />
           <div className="flex justify-between mt-3">
             <Button
-              type="button"
+              type="submit"
               variant="outline"
               className="h-8 text-xs border-gray-300 hover:bg-gray-50 transition-all"
               onClick={() => setStep(1)}
@@ -894,7 +610,7 @@ const BookTaxiForm = () => {
               Back
             </Button>
             <Button
-              type="button"
+              type="submit"
               className="h-8 text-xs text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
               disabled={
                 loading.transportTypes ||
@@ -902,16 +618,15 @@ const BookTaxiForm = () => {
                 !selectedTaxiType ||
                 !availableTransportTypes.includes(selectedTaxiType)
               }
-              onClick={() => handleSubmit(new Event("submit") as any)}
             >
               Next
             </Button>
           </div>
-        </>
+        </form>
       )}
 
       {step === 3 && (
-        <>
+        <form onSubmit={handleSubmit}>
           <VehicleSelector
             vehicles={vehicles}
             selectedCarModel={selectedCarModel}
@@ -930,15 +645,17 @@ const BookTaxiForm = () => {
               Back
             </Button>
             <Button
-              type="button"
+              type="submit"
               className="h-8 text-xs text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
               disabled={!selectedCarModel}
-              onClick={() => handleSubmit(new Event("submit") as any)}
+              onClick={() =>
+                handleSubmit({} as React.FormEvent<HTMLFormElement>)
+              }
             >
               Proceed to Payment
             </Button>
           </div>
-        </>
+        </form>
       )}
 
       {step === 4 && (
@@ -958,8 +675,6 @@ const BookTaxiForm = () => {
               customerName={getCustomerInfo().customerName}
               customerEmail={getCustomerInfo().customerEmail}
               customerPhone={getCustomerInfo().customerPhone}
-              onPaymentSuccess={handlePaymentSuccess}
-              onPaymentFailure={handlePaymentFailure}
             />
           )}
 

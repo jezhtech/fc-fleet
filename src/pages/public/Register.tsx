@@ -20,12 +20,13 @@ import {
   initializeRecaptcha,
   sendOTP,
   verifyOTP,
-  saveUserData,
   isAdminPhoneNumber,
 } from "@/lib/authUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { RecaptchaVerifier } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { toast } from "sonner";
+import { adminService } from "@/services/adminService";
 
 // User data type
 type UserData = {
@@ -246,21 +247,37 @@ const Register = () => {
       // Verify OTP
       const userCredential = await verifyOTP(otp);
 
-      // Save user data to Firestore
-      await saveUserData(userCredential.uid, {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
-        phoneNumber: fullPhoneNumber,
-        isVerified: true,
-        status: "active",
-        role: "customer",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+      // Get Firebase ID token for API authentication
+      const idToken = await userCredential.getIdToken();
+      
+      // Store token in localStorage for API calls
+      localStorage.setItem('firebaseToken', idToken);
+      localStorage.setItem('authToken', idToken);
 
-      // Navigate to home page
-      navigate("/");
+      // Save user data to backend API using adminService
+      try {
+        const response = await adminService.createUser({
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          email: userData.email,
+          phoneNumber: fullPhoneNumber,
+          isAdmin: false,
+        });
+
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to create user account');
+        }
+
+        // Navigate to home page
+        navigate("/");
+      } catch (apiError: any) {
+        console.error("Error creating user in backend:", apiError);
+        
+        // If backend creation fails, still allow the user to proceed
+        // The user is authenticated with Firebase, so they can use the app
+        toast.success("Account created successfully! Redirecting...");
+        navigate("/");
+      }
     } catch (error: any) {
       console.error("Error verifying OTP:", error);
 
@@ -382,21 +399,6 @@ const Register = () => {
                   disabled={loading}
                 >
                   {loading ? "Sending..." : "Send verification code"}
-                </Button>
-
-                {/* Temporary test button */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full mt-2"
-                  onClick={() => {
-                    const fullPhoneNumber = formatPhoneNumber(
-                      userData.phoneNumber,
-                      countryCode
-                    );
-                  }}
-                >
-                  Test Configuration
                 </Button>
               </form>
             ) : (

@@ -46,6 +46,7 @@ interface TaxiType {
   id: string;
   name: string;
   emoji: string;
+  imageUrl?: string; // Added imageUrl to the interface
 }
 
 interface Zone {
@@ -289,8 +290,17 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
                         {rule.taxiTypeIds.map(id => {
                           const taxiType = taxiTypes.find(t => t.id === id);
                           return taxiType ? (
-                            <span key={id} className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">
-                              {taxiType.emoji} {taxiType.name}
+                            <span key={id} className="text-xs bg-gray-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              {taxiType.imageUrl ? (
+                                <img 
+                                  src={taxiType.imageUrl} 
+                                  alt={taxiType.name} 
+                                  className="w-3 h-3 object-cover rounded"
+                                />
+                              ) : (
+                                <span>🚗</span>
+                              )}
+                              {taxiType.name}
                             </span>
                           ) : null;
                         })}

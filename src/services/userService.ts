@@ -1,162 +1,201 @@
-import { auth } from "@/lib/firebase";
-import { config } from "@/constants/config";
-interface Driver {
-  id: string;
-  uid: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: "driver";
-  status: "active" | "inactive" | "suspended";
-  taxiTypeId: string;
-  vehicleTypeId: string;
-  vehicleNumber: string;
-  rating: number;
-  rides: number;
-  earnings: number;
-  joined: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { apiClient, API_ENDPOINTS } from "@/lib/api";
+import type {
+  ApiResponse,
+  Driver,
+  BackendDriverResponse,
+  CreateDriverRequest,
+  UpdateDriverRequest,
+} from "@/types";
 
-// Backend response structure
-interface BackendDriverResponse {
-  id: string;
-  uid: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: "driver";
-  status: "active" | "inactive" | "suspended";
-  taxiTypeId: string;
-  vehicleTypeId: string;
-  vehicleNumber: string;
-  rating: number;
-  rides: number;
-  earnings: number;
-  joined: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CreateDriverRequest {
-  name: string;
-  email?: string;
-  phone: string;
-  taxiTypeId: string;
-  vehicleTypeId: string;
-  vehicleNumber: string;
-  status: "active" | "inactive" | "suspended";
-}
-
-interface UpdateDriverRequest {
-  name?: string;
-  email?: string;
-  phone?: string;
-  taxiTypeId?: string;
-  vehicleTypeId?: string;
-  vehicleNumber?: string;
-  status?: "active" | "inactive" | "suspended";
-}
-
-// Helper function to get auth token
-export const getAuthToken = async (): Promise<string> => {
-  const user = auth.currentUser;
-  if (!user) {
-    throw new Error("User not authenticated");
+// User Service Class
+class UserService {
+  /**
+   * Get authentication token
+   */
+  async getAuthToken(): Promise<string> {
+    if (typeof window !== "undefined") {
+      return (
+        localStorage.getItem("authToken") ||
+        localStorage.getItem("firebaseToken") ||
+        ""
+      );
+    }
+    return "";
   }
-  return await user.getIdToken();
-};
 
-// Helper function to make authenticated API calls
-const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-  const token = await getAuthToken();
-
-  const response = await fetch(`${config.apiUrl}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || `HTTP error! status: ${response.status}`
+  /**
+   * Create a new driver
+   */
+  async createDriver(
+    driverData: CreateDriverRequest
+  ): Promise<ApiResponse<BackendDriverResponse>> {
+    return apiClient.post<BackendDriverResponse>(
+      API_ENDPOINTS.DRIVERS.BASE,
+      driverData
     );
   }
 
-  return response.json();
+  /**
+   * Get all drivers
+   */
+  async getDrivers(): Promise<ApiResponse<BackendDriverResponse[]>> {
+    return apiClient.get<BackendDriverResponse[]>(API_ENDPOINTS.DRIVERS.BASE);
+  }
+
+  /**
+   * Get driver by ID
+   */
+  async getDriver(id: string): Promise<ApiResponse<BackendDriverResponse>> {
+    return apiClient.get<BackendDriverResponse>(
+      `${API_ENDPOINTS.DRIVERS.BASE}/${id}`
+    );
+  }
+
+  /**
+   * Update driver
+   */
+  async updateDriver(
+    id: string,
+    updateData: UpdateDriverRequest
+  ): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.put<{ message: string }>(
+      `${API_ENDPOINTS.DRIVERS.BASE}/${id}`,
+      updateData
+    );
+  }
+
+  /**
+   * Delete driver
+   */
+  async deleteDriver(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete<{ message: string }>(
+      `${API_ENDPOINTS.DRIVERS.BASE}/${id}`
+    );
+  }
+
+  /**
+   * Update driver status
+   */
+  async updateDriverStatus(
+    id: string,
+    status: "active" | "inactive" | "suspended"
+  ): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.patch<{ message: string }>(
+      `${API_ENDPOINTS.DRIVERS.BASE}/${id}/status`,
+      { status }
+    );
+  }
+
+  /**
+   * Get driver profile
+   */
+  async getDriverProfile(): Promise<ApiResponse<BackendDriverResponse>> {
+    return apiClient.get<BackendDriverResponse>(API_ENDPOINTS.DRIVERS.PROFILE);
+  }
+
+  /**
+   * Update driver profile
+   */
+  async updateDriverProfile(
+    updateData: UpdateDriverRequest
+  ): Promise<ApiResponse<BackendDriverResponse>> {
+    return apiClient.put<BackendDriverResponse>(
+      API_ENDPOINTS.DRIVERS.PROFILE,
+      updateData
+    );
+  }
+
+  /**
+   * Get driver earnings
+   */
+  async getDriverEarnings(): Promise<
+    ApiResponse<{ earnings: number; history: any[] }>
+  > {
+    return apiClient.get<{ earnings: number; history: any[] }>(
+      API_ENDPOINTS.DRIVERS.EARNINGS
+    );
+  }
+
+  /**
+   * Get driver rides
+   */
+  async getDriverRides(): Promise<ApiResponse<any[]>> {
+    return apiClient.get<any[]>(API_ENDPOINTS.DRIVERS.RIDES);
+  }
+
+  /**
+   * Get driver bank details
+   */
+  async getDriverBankDetails(): Promise<ApiResponse<any>> {
+    return apiClient.get<any>(API_ENDPOINTS.DRIVERS.BANK_DETAILS);
+  }
+
+  /**
+   * Update driver bank details
+   */
+  async updateDriverBankDetails(
+    bankDetails: any
+  ): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.put<{ message: string }>(
+      API_ENDPOINTS.DRIVERS.BANK_DETAILS,
+      bankDetails
+    );
+  }
+
+  /**
+   * Get driver settings
+   */
+  async getDriverSettings(): Promise<ApiResponse<any>> {
+    return apiClient.get<any>(API_ENDPOINTS.DRIVERS.SETTINGS);
+  }
+
+  /**
+   * Update driver settings
+   */
+  async updateDriverSettings(
+    settings: any
+  ): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.put<{ message: string }>(
+      API_ENDPOINTS.DRIVERS.SETTINGS,
+      settings
+    );
+  }
+}
+
+// Export singleton instance
+export const userService = new UserService();
+
+// Legacy function exports for backward compatibility
+export const getAuthToken = async (): Promise<string> => {
+  return userService.getAuthToken();
 };
 
-/**
- * Create a new driver account
- */
-export const createDriver = async (
-  driverData: CreateDriverRequest
-): Promise<{ success: boolean; data: BackendDriverResponse; message: string }> => {
-  return apiCall("/user/drivers", {
-    method: "POST",
-    body: JSON.stringify(driverData),
-  });
+export const createDriver = async (driverData: CreateDriverRequest) => {
+  return userService.createDriver(driverData);
 };
 
-/**
- * Get all drivers
- */
-export const getDrivers = async (): Promise<{
-  success: boolean;
-  data: BackendDriverResponse[];
-}> => {
-  return apiCall("/user/drivers");
+export const getDrivers = async () => {
+  return userService.getDrivers();
 };
 
-/**
- * Get driver by ID
- */
-export const getDriver = async (
-  id: string
-): Promise<{ success: boolean; data: BackendDriverResponse }> => {
-  return apiCall(`/user/drivers/${id}`);
+export const getDriver = async (id: string) => {
+  return userService.getDriver(id);
 };
 
-/**
- * Update driver
- */
 export const updateDriver = async (
   id: string,
   updateData: UpdateDriverRequest
-): Promise<{ success: boolean; message: string }> => {
-  return apiCall(`/user/drivers/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(updateData),
-  });
+) => {
+  return userService.updateDriver(id, updateData);
 };
 
-/**
- * Delete driver
- */
-export const deleteDriver = async (
-  id: string
-): Promise<{ success: boolean; message: string }> => {
-  return apiCall(`/user/drivers/${id}`, {
-    method: "DELETE",
-  });
+export const deleteDriver = async (id: string) => {
+  return userService.deleteDriver(id);
 };
 
-/**
- * Update driver status
- */
 export const updateDriverStatus = async (
   id: string,
   status: "active" | "inactive" | "suspended"
-): Promise<{ success: boolean; message: string }> => {
-  return apiCall(`/user/drivers/${id}/status`, {
-    method: "PATCH",
-    body: JSON.stringify({ status }),
-  });
+) => {
+  return userService.updateDriverStatus(id, status);
 };
-
-export type { Driver, BackendDriverResponse, CreateDriverRequest, UpdateDriverRequest };

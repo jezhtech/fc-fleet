@@ -15,6 +15,7 @@ import {
   BookOpen,
   DollarSign,
   MapPin,
+  LogInIcon,
 } from "lucide-react";
 import { Badge } from "./ui/badge";
 
@@ -183,46 +184,6 @@ export const NavProfile = ({
   };
 
   if (currentUser) {
-    if (mobile) {
-      return (
-        <>
-          <div className="flex items-center gap-2 p-2">
-            <div className="w-8 h-8 rounded-full bg-red-100 text-red-800 flex items-center justify-center font-medium">
-              {getUserInitials()}
-            </div>
-            <div>
-              <p
-                className={cn(
-                  "font-medium",
-                  position === "sticky" && "text-fleet-dark"
-                )}
-              >
-                {getUserDisplayName()}
-              </p>
-              <Badge>{getUserRoleDisplay()}</Badge>
-            </div>
-          </div>
-
-          {getRoleSpecificLinks().map((link) => (
-            <Link key={link.to} to={link.to} className="w-full">
-              <Button variant="outline" className="w-full justify-start gap-2">
-                {link.icon}
-                {link.label}
-              </Button>
-            </Link>
-          ))}
-
-          <Button
-            variant="outline"
-            className="w-full justify-start text-red-600 gap-2"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4" />
-            {translate("nav.logout")}
-          </Button>
-        </>
-      );
-    }
 
     return (
       <div className="relative" ref={profileMenuRef}>
@@ -233,12 +194,12 @@ export const NavProfile = ({
           }`}
           aria-label="User menu"
         >
-          <div className="w-10 h-10 rounded-full bg-red-100 text-red-800 flex items-center justify-center font-medium">
+          <div className="w-9 h-9 shrink-0 rounded-md md:rounded-full bg-red-100 text-red-800 flex items-center justify-center font-medium">
             {getUserInitials()}
           </div>
           <span
             className={cn(
-              "hidden sm:inline",
+              "hidden md:inline",
               position === "sticky" && "text-fleet-dark"
             )}
           >
@@ -289,14 +250,9 @@ export const NavProfile = ({
   if (mobile) {
     return (
       <>
-        <Link to="/login" className="w-full">
-          <Button variant="outline" className="w-full">
-            {translate("nav.login")}
-          </Button>
-        </Link>
-        <Link to="/register" className="w-full">
-          <Button className="w-full bg-fleet-red text-white hover:bg-fleet-red/90">
-            {translate("nav.register")}
+        <Link to="/login">
+          <Button size="sm" variant="outline" className={`border font-medium`}>
+            <LogInIcon className="h-4 w-4" />
           </Button>
         </Link>
       </>

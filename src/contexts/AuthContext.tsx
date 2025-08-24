@@ -7,31 +7,20 @@ import React, {
   useMemo,
 } from "react";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
-import { auth, firestore, firebaseError } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { auth, firebaseError } from "@/lib/firebase";
+import { authService } from "@/services/authService";
 import FirebaseErrorBanner from "@/components/FirebaseErrorBanner";
 
 // Types
 export type UserData = {
-  name?: string;
-  firstName?: string;
-  lastName?: string;
+  id: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  phone?: string;
-  phoneNumber?: string;
-  isVerified: boolean;
+  phone: string;
+  role: "customer" | "driver" | "admin";
   createdAt: string;
   updatedAt: string;
-  status: string;
-  role?: "customer" | "driver" | "admin";
-  isDriver?: boolean;
-  isAdmin?: boolean;
-  driverId?: string;
-  vehicleInfo?: {
-    vehicleTypeId: string;
-    vehicleNumber: string;
-  };
-  tempPassword?: string; // Add this for driver onboarding
 };
 
 type AuthContextType = {
@@ -44,7 +33,7 @@ type AuthContextType = {
   isDriver: boolean;
   isAdmin: boolean;
   needsRegistration: boolean;
-  logout: () => Promise<void>; // Add logout function
+  logout: () => Promise<void>;
 };
 
 // Create context
@@ -78,6 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const logout = useCallback(async () => {
     try {
       await signOut(auth);
+      // Clear localStorage
+      localStorage.removeItem("firebaseToken");
+      localStorage.removeItem("authToken");
       // Clear all state
       setCurrentUser(null);
       setUserData(null);
@@ -90,72 +82,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  // Fetch user data from Firestore
+  // Fetch user data from backend API
   const fetchUserData = useCallback(
     async (user: User) => {
-      
-
       try {
-        const userDocRef = doc(firestore, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-
+        // Get the Firebase ID token
+        const idToken = await user.getIdToken();
         
+        // Store token in localStorage for API calls
+        localStorage.setItem("firebaseToken", idToken);
+        localStorage.setItem("authToken", idToken);
 
-        if (userDoc.exists()) {
-          const data = userDoc.data() as UserData;
+        // Fetch user profile from backend
+        const response = await authService.getCurrentUser();
+        
+        if (response.success && response.data) {
+          const data = response.data as UserData;
           
-
-          // Check if user is blocked or inactive
-          if (
-            data.status === "blocked" ||
-            data.status === "inactive" ||
-            data.isVerified === false
-          ) {
-            
-            await logout();
-            return;
-          }
-
-          // Determine user role with proper fallback logic
-          let role: "customer" | "driver" | "admin" = "customer";
-
-          const driverDocRef = doc(firestore, "drivers", user.uid);
-          const driverDoc = await getDoc(driverDocRef);
-          
-
-          let isDriverUser = false;
-          let isAdminUser = false;
-
-          if (driverDoc.exists()) {
-            const driverData = driverDoc.data();
-            
-            role = "driver";
-            isDriverUser = true;
-            isAdminUser = false;
-          } else {
-            role = "customer";
-            isDriverUser = false;
-            isAdminUser = false;
-          }
-
-          // Check explicit role first
-          if (data.role) {
-            role = data.role;
-            isDriverUser = role === "driver";
-            isAdminUser = role === "admin";
-          } else {
-            // Fall back to boolean flags
-            isDriverUser = !!data.isDriver;
-            isAdminUser = !!data.isAdmin;
-
-            if (isAdminUser) {
-              role = "admin";
-            } else if (isDriverUser) {
-              role = "driver";
-            } else {
-              role = "customer";
-            }
-          }
+          // Determine user role
+          const role = data.role || "customer";
+          const isDriverUser = role === "driver";
+          const isAdminUser = role === "admin";
 
           setUserData(data);
           setUserRole(role);
@@ -163,8 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setIsAdmin(isAdminUser);
           setNeedsRegistration(false);
         } else {
-            // User exists in Auth but not in Firestore - they need to complete registration
-            
+          // User exists in Auth but not in backend - they need to complete registration
           setUserData(null);
           setUserRole(null);
           setIsDriver(false);
@@ -181,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setNeedsRegistration(false);
       }
     },
-    [logout]
+    []
   );
 
   // Function to refresh user data
@@ -193,17 +139,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Listen to auth state changes
   useEffect(() => {
-    
-
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         setCurrentUser(user);
 
         if (user) {
-          
           await fetchUserData(user);
         } else {
-          
+          // Clear localStorage on logout
+          localStorage.removeItem("firebaseToken");
+          localStorage.removeItem("authToken");
           setUserData(null);
           setUserRole(null);
           setIsDriver(false);
@@ -224,10 +169,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
 
     return () => {
-      
       unsubscribe();
     };
-  }, [fetchUserData]); // Add fetchUserData as dependency
+  }, [fetchUserData]);
 
   // Memoized context value to prevent unnecessary re-renders
   const contextValue = useMemo(

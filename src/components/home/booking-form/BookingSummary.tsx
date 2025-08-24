@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { Vehicle, bookingStatuses, Location } from './types';
+import { Vehicle, bookingStatuses, Location } from '@/types';
 import { formatCurrency } from '@/utils/currency';
 
 interface BookingSummaryProps {
@@ -49,10 +49,10 @@ const BookingSummary: React.FC<BookingSummaryProps> = ({
     
     // Calculate actual distance using the Haversine formula
     const distanceKm = calculateDistance(
-      pickupCoords.lat, 
-      pickupCoords.lng, 
-      dropoffCoords.lat, 
-      dropoffCoords.lng
+      pickupCoords.latitude, 
+      pickupCoords.longitude, 
+      dropoffCoords.latitude, 
+      dropoffCoords.longitude
     );
     
     // Estimate travel time based on distance (assuming average speed of 30 km/h in city traffic)
@@ -63,7 +63,7 @@ const BookingSummary: React.FC<BookingSummaryProps> = ({
     // Apply pricing
     const basePrice = vehicle.basePrice || 0;
     const perKmPrice = vehicle.perKmPrice || 0;
-    const perMinutePrice = vehicle.perMinutePrice || 0;
+    const perMinutePrice = vehicle.perMinPrice || 0;
     
     // Check if we're in peak hours (7-9 AM or 5-7 PM on weekdays)
     const now = new Date();
