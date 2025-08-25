@@ -9,6 +9,8 @@ import type {
   UpdateUserRequest,
   AdminCreateDriverRequest,
   AdminUpdateDriverRequest,
+  Vehicle,
+  Transport,
 } from "@/types";
 
 // Admin Service Class
@@ -51,7 +53,7 @@ class AdminService {
    */
   async updateUser(
     id: string,
-    data: UpdateUserRequest
+    data: UpdateUserRequest,
   ): Promise<ApiResponse<User>> {
     return apiClient.put<User>(`${API_ENDPOINTS.ADMIN.USERS}/${id}`, data);
   }
@@ -61,7 +63,7 @@ class AdminService {
    */
   async deleteUser(id: string): Promise<ApiResponse<{ message: string }>> {
     return apiClient.delete<{ message: string }>(
-      `${API_ENDPOINTS.ADMIN.USERS}/${id}`
+      `${API_ENDPOINTS.ADMIN.USERS}/${id}`,
     );
   }
 
@@ -70,7 +72,7 @@ class AdminService {
    */
   async updateUserStatus(
     id: string,
-    status: "active" | "inactive" | "blocked"
+    status: "active" | "inactive" | "blocked",
   ): Promise<ApiResponse<User>> {
     return apiClient.patch<User>(`${API_ENDPOINTS.ADMIN.USERS}/${id}/status`, {
       status,
@@ -99,7 +101,7 @@ class AdminService {
    * Create new driver
    */
   async createDriver(
-    data: AdminCreateDriverRequest
+    data: AdminCreateDriverRequest,
   ): Promise<ApiResponse<AdminDriver>> {
     return apiClient.post<AdminDriver>(API_ENDPOINTS.ADMIN.DRIVERS, data);
   }
@@ -109,11 +111,11 @@ class AdminService {
    */
   async updateDriver(
     id: string,
-    data: AdminUpdateDriverRequest
+    data: AdminUpdateDriverRequest,
   ): Promise<ApiResponse<AdminDriver>> {
     return apiClient.put<AdminDriver>(
       `${API_ENDPOINTS.ADMIN.DRIVERS}/${id}`,
-      data
+      data,
     );
   }
 
@@ -122,7 +124,7 @@ class AdminService {
    */
   async deleteDriver(id: string): Promise<ApiResponse<{ message: string }>> {
     return apiClient.delete<{ message: string }>(
-      `${API_ENDPOINTS.ADMIN.DRIVERS}/${id}`
+      `${API_ENDPOINTS.ADMIN.DRIVERS}/${id}`,
     );
   }
 
@@ -131,11 +133,11 @@ class AdminService {
    */
   async updateDriverStatus(
     id: string,
-    status: "active" | "inactive" | "suspended"
+    status: "active" | "inactive" | "suspended",
   ): Promise<ApiResponse<AdminDriver>> {
     return apiClient.patch<AdminDriver>(
       `${API_ENDPOINTS.ADMIN.DRIVERS}/${id}/status`,
-      { status }
+      { status },
     );
   }
 
@@ -166,11 +168,11 @@ class AdminService {
    */
   async updateBookingStatus(
     id: string,
-    status: string
+    status: string,
   ): Promise<ApiResponse<AdminBooking>> {
     return apiClient.patch<AdminBooking>(
       `${API_ENDPOINTS.ADMIN.BOOKINGS}/${id}/status`,
-      { status }
+      { status },
     );
   }
 
@@ -179,11 +181,11 @@ class AdminService {
    */
   async assignDriverToBooking(
     bookingId: string,
-    driverId: string
+    driverId: string,
   ): Promise<ApiResponse<AdminBooking>> {
     return apiClient.post<AdminBooking>(
       `${API_ENDPOINTS.ADMIN.BOOKINGS}/${bookingId}/assign-driver`,
-      { driverId }
+      { driverId },
     );
   }
 
@@ -192,11 +194,11 @@ class AdminService {
    */
   async cancelBooking(
     bookingId: string,
-    reason: string
+    reason: string,
   ): Promise<ApiResponse<AdminBooking>> {
     return apiClient.post<AdminBooking>(
       `${API_ENDPOINTS.ADMIN.BOOKINGS}/${bookingId}/cancel`,
-      { reason }
+      { reason },
     );
   }
 
@@ -214,8 +216,8 @@ class AdminService {
   /**
    * Get vehicle by ID
    */
-  async getVehicleById(id: string): Promise<ApiResponse<any>> {
-    return apiClient.get<any>(`${API_ENDPOINTS.ADMIN.VEHICLES}/${id}`);
+  async getVehicleById(id: string): Promise<ApiResponse<Vehicle>> {
+    return apiClient.get<Vehicle>(`${API_ENDPOINTS.VEHICLES.BASE}/${id}`);
   }
 
   // Transport Management
@@ -225,15 +227,15 @@ class AdminService {
   async getAllTransports(filters?: {
     search?: string;
     isActive?: boolean;
-  }): Promise<ApiResponse<any[]>> {
-    return apiClient.get<any[]>(API_ENDPOINTS.ADMIN.TRANSPORTS, filters);
+  }): Promise<ApiResponse<Transport[]>> {
+    return apiClient.get<Transport[]>(API_ENDPOINTS.TRANSPORTS.BASE, filters);
   }
 
   /**
    * Get transport by ID
    */
-  async getTransportById(id: string): Promise<ApiResponse<any>> {
-    return apiClient.get<any>(`${API_ENDPOINTS.ADMIN.TRANSPORTS}/${id}`);
+  async getTransportById(id: string): Promise<ApiResponse<Transport>> {
+    return apiClient.get<Transport>(`${API_ENDPOINTS.ADMIN.TRANSPORTS}/${id}`);
   }
 
   // Settings
@@ -248,11 +250,11 @@ class AdminService {
    * Update admin settings
    */
   async updateAdminSettings(
-    settings: any
+    settings: any,
   ): Promise<ApiResponse<{ message: string }>> {
     return apiClient.put<{ message: string }>(
       API_ENDPOINTS.ADMIN.SETTINGS,
-      settings
+      settings,
     );
   }
 
@@ -263,7 +265,7 @@ class AdminService {
   async getRevenueAnalytics(
     period: "daily" | "weekly" | "monthly" | "yearly",
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<ApiResponse<any>> {
     return apiClient.get<any>(`${API_ENDPOINTS.ADMIN.STATS}/revenue`, {
       period,
@@ -278,7 +280,7 @@ class AdminService {
   async getBookingAnalytics(
     period: "daily" | "weekly" | "monthly" | "yearly",
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<ApiResponse<any>> {
     return apiClient.get<any>(`${API_ENDPOINTS.ADMIN.STATS}/bookings`, {
       period,
@@ -292,11 +294,11 @@ class AdminService {
    */
   async getDriverPerformanceAnalytics(
     driverId?: string,
-    period?: "daily" | "weekly" | "monthly" | "yearly"
+    period?: "daily" | "weekly" | "monthly" | "yearly",
   ): Promise<ApiResponse<any>> {
     return apiClient.get<any>(
       `${API_ENDPOINTS.ADMIN.STATS}/driver-performance`,
-      { driverId, period }
+      { driverId, period },
     );
   }
 
@@ -306,11 +308,11 @@ class AdminService {
   async exportData(
     type: "users" | "drivers" | "bookings" | "vehicles" | "transports",
     format: "csv" | "excel",
-    filters?: any
+    filters?: any,
   ): Promise<ApiResponse<{ downloadUrl: string }>> {
     return apiClient.post<{ downloadUrl: string }>(
       `${API_ENDPOINTS.ADMIN.STATS}/export`,
-      { type, format, filters }
+      { type, format, filters },
     );
   }
 }

@@ -2,7 +2,7 @@ import { toast } from "sonner";
 import type { ApiResponse } from "@/types";
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 // API Client Class
 class ApiClient {
