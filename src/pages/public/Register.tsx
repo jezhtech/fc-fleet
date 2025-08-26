@@ -28,7 +28,7 @@ type UserData = {
   firstName: string;
   lastName: string;
   email: string;
-  phoneNumber: string;
+  phone: string;
 };
 
 const Register = () => {
@@ -41,7 +41,7 @@ const Register = () => {
     firstName: "",
     lastName: "",
     email: "",
-    phoneNumber: "",
+    phone: "",
   });
 
   // State for country code
@@ -58,8 +58,8 @@ const Register = () => {
 
   // Check if phone number was passed from login page
   useEffect(() => {
-    if (location.state?.phoneNumber) {
-      const phoneFromLogin = location.state.phoneNumber;
+    if (location.state?.phone) {
+      const phoneFromLogin = location.state.phone;
 
       // Detect country code from the passed phone number
       const detectedCode = detectCountryCode(phoneFromLogin);
@@ -73,7 +73,7 @@ const Register = () => {
 
       setUserData((prev) => ({
         ...prev,
-        phoneNumber: numberWithoutCode,
+        phone: numberWithoutCode,
       }));
     }
   }, [location.state]);
@@ -141,7 +141,7 @@ const Register = () => {
       !userData.firstName ||
       !userData.lastName ||
       !userData.email ||
-      !userData.phoneNumber
+      !userData.phone
     ) {
       setError("All fields are required");
       return;
@@ -155,14 +155,14 @@ const Register = () => {
     }
 
     // Validate phone number length (minimum 7 digits)
-    if (userData.phoneNumber.length < 7) {
+    if (userData.phone.length < 7) {
       setError("Please enter a valid phone number");
       return;
     }
 
     // Format full phone number with country code
     const fullPhoneNumber = formatPhoneNumber(
-      userData.phoneNumber,
+      userData.phone,
       countryCode
     );
 
@@ -225,7 +225,7 @@ const Register = () => {
     }
 
     const fullPhoneNumber = formatPhoneNumber(
-      userData.phoneNumber,
+      userData.phone,
       countryCode
     );
 
@@ -361,7 +361,7 @@ const Register = () => {
                     <Input
                       id="phoneNumber"
                       name="phoneNumber"
-                      value={userData.phoneNumber}
+                      value={userData.phone}
                       onChange={handlePhoneNumberChange}
                       placeholder="50 123 4567"
                       disabled={loading}
@@ -373,10 +373,10 @@ const Register = () => {
                   <p className="text-sm text-gray-500">
                     We'll send a verification code to this number
                   </p>
-                  {userData.phoneNumber && (
+                  {userData.phone && (
                     <p className="text-xs text-gray-400">
                       Full number:{" "}
-                      {formatPhoneNumber(userData.phoneNumber, countryCode)}
+                      {formatPhoneNumber(userData.phone, countryCode)}
                     </p>
                   )}
                 </div>
@@ -406,7 +406,7 @@ const Register = () => {
                   />
                   <p className="text-sm text-gray-500">
                     Enter the verification code sent to{" "}
-                    {formatPhoneNumber(userData.phoneNumber, countryCode)}
+                    {formatPhoneNumber(userData.phone, countryCode)}
                   </p>
                 </div>
 

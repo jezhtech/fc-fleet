@@ -25,9 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { auth } from "@/lib/firebase";
 import { RecaptchaVerifier, signOut } from "firebase/auth";
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import { userService } from "@/services/userService";
 import { authService } from "@/services/authService";
-import { adminService } from "@/services/adminService";
 
 const Login = () => {
   const navigate = useNavigate();
