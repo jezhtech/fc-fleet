@@ -35,6 +35,12 @@ class UserService {
     );
   }
 
+  async checkUserExists(phone: string): Promise<ApiResponse<void>> {
+    return apiClient.get<void>(
+      `${API_ENDPOINTS.USERS.BASE}/check?phone=${phone}`
+    );
+  }
+
   /**
    * Get all drivers
    */
@@ -168,6 +174,16 @@ export const userService = new UserService();
 // Legacy function exports for backward compatibility
 export const getAuthToken = async (): Promise<string> => {
   return userService.getAuthToken();
+};
+
+export const checkUserExists = async (
+  phone: string
+): Promise<{
+  success: boolean;
+  message: string;
+  error?: string;
+}> => {
+  return await userService.checkUserExists(phone);
 };
 
 export const createDriver = async (driverData: CreateDriverRequest) => {

@@ -27,6 +27,7 @@ import { RecaptchaVerifier, signOut } from "firebase/auth";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { authService } from "@/services/authService";
 import { userService } from "@/services";
+import { checkUserExists } from "@/services/userService";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -111,6 +112,15 @@ const Login = () => {
 
     setLoading(true);
     setError(null);
+
+    const data = await checkUserExists(phoneNumber);
+
+    if(!data.success){
+      setError(data.error)
+      setLoading(false);
+      return;
+    }
+    
 
     try {
       // Create new recaptcha verifier
@@ -203,7 +213,7 @@ const Login = () => {
 
       // If user doesn't exist or is admin, create/update user data via services
       if (!userExists) {
-        setError("User not found")
+        setError("User not found");
         return;
       }
       // User exists in backend, check if their data is available

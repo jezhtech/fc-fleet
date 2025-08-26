@@ -161,10 +161,7 @@ const Register = () => {
     }
 
     // Format full phone number with country code
-    const fullPhoneNumber = formatPhoneNumber(
-      userData.phone,
-      countryCode
-    );
+    const fullPhoneNumber = formatPhoneNumber(userData.phone, countryCode);
 
     setLoading(true);
     setError(null);
@@ -224,10 +221,7 @@ const Register = () => {
       return;
     }
 
-    const fullPhoneNumber = formatPhoneNumber(
-      userData.phone,
-      countryCode
-    );
+    const fullPhoneNumber = formatPhoneNumber(userData.phone, countryCode);
 
     setVerifying(true);
     setError(null);
