@@ -89,6 +89,7 @@ const AdminBookings = () => {
             status: booking.status,
             pickupLocation: booking.pickupLocation,
             dropoffLocation: booking.dropoffLocation,
+            pickupDate: booking.pickupDate,
             paymentInfo: booking.paymentInfo,
             createdAt: booking.createdAt,
             updatedAt: booking.updatedAt,
@@ -97,7 +98,7 @@ const AdminBookings = () => {
               firstName: booking.user.firstName,
               lastName: booking.user.lastName,
               email: booking.user.email,
-              phoneNumber: booking.user.phone || '',
+              phone: booking.user.phone || '',
               isVerified: true,
               isAdmin: false,
               createdAt: new Date().toISOString(),
@@ -205,6 +206,7 @@ const AdminBookings = () => {
             status: booking.status,
             pickupLocation: booking.pickupLocation,
             dropoffLocation: booking.dropoffLocation,
+            pickupDate: booking.pickupDate,
             paymentInfo: booking.paymentInfo,
             createdAt: booking.createdAt,
             updatedAt: booking.updatedAt,
@@ -213,7 +215,7 @@ const AdminBookings = () => {
               firstName: booking.user.firstName,
               lastName: booking.user.lastName,
               email: booking.user.email,
-              phoneNumber: booking.user.phone || '',
+              phone: booking.user.phone || '',
               isVerified: true,
               isAdmin: false,
               createdAt: new Date().toISOString(),
@@ -257,6 +259,7 @@ const AdminBookings = () => {
             status: booking.status,
             pickupLocation: booking.pickupLocation,
             dropoffLocation: booking.dropoffLocation,
+            pickupDate: booking.pickupDate,
             paymentInfo: booking.paymentInfo,
             createdAt: booking.createdAt,
             updatedAt: booking.updatedAt,
@@ -265,7 +268,7 @@ const AdminBookings = () => {
               firstName: booking.user.firstName,
               lastName: booking.user.lastName,
               email: booking.user.email,
-              phoneNumber: booking.user.phone || '',
+              phone: booking.user.phone || '',
               isVerified: true,
               isAdmin: false,
               createdAt: new Date().toISOString(),
@@ -543,8 +546,8 @@ const AdminBookings = () => {
                                             {booking.user?.firstName} {booking.user?.lastName}
                                           </p>
                                         </div>
-                                        {booking.user?.phoneNumber && (
-                                          <p className="text-sm text-gray-500 mt-1">{booking.user.phoneNumber}</p>
+                                        {booking.user?.phone && (
+                                          <p className="text-sm text-gray-500 mt-1">{booking.user.phone}</p>
                                         )}
                                         {booking.user?.email && (
                                           <p className="text-sm text-gray-500 mt-1">{booking.user.email}</p>

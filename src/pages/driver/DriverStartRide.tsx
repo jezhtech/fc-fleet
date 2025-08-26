@@ -141,56 +141,36 @@ const DriverStartRide = () => {
         const transformedRide: RideDetails = {
           id: data.id,
           pickupLocation: {
-            lat:
-              data.pickupLocation?.coordinates?.lat ||
-              data.pickup?.coordinates?.lat ||
-              25.2048,
-            lng:
-              data.pickupLocation?.coordinates?.lng ||
-              data.pickup?.coordinates?.lng ||
-              55.2708,
-            name: data.pickupLocation?.name || data.pickup || "Pickup Location",
-            address:
-              data.pickupLocation?.address || data.pickup || "Pickup Address",
+            lat: data.pickupLocation?.coordinates?.latitude || 25.2048,
+            lng: data.pickupLocation?.coordinates?.longitude || 55.2708,
+            name: data.pickupLocation?.name || "Pickup Location",
+            address: data.pickupLocation?.address || "Pickup Address",
           },
           dropoffLocation: {
-            lat:
-              data.dropoffLocation?.coordinates?.lat ||
-              data.dropoff?.coordinates?.lat ||
-              25.2048,
-            lng:
-              data.dropoffLocation?.coordinates?.lng ||
-              data.dropoff?.coordinates?.lng ||
-              55.2708,
-            name:
-              data.dropoffLocation?.name || data.dropoff || "Dropoff Location",
-            address:
-              data.dropoffLocation?.address ||
-              data.dropoff ||
-              "Dropoff Address",
+            lat: data.dropoffLocation?.coordinates?.latitude || 25.2048,
+            lng: data.dropoffLocation?.coordinates?.longitude || 55.2708,
+            name: data.dropoffLocation?.name || "Dropoff Location",
+            address: data.dropoffLocation?.address || "Dropoff Address",
           },
           customerInfo: {
-            name: data.customerInfo?.name || "Customer",
-            phone: data.customerInfo?.phone || "N/A",
-            email: data.customerInfo?.email || "N/A",
+            name: data.user?.firstName || "Customer",
+            phone: data.user?.phone || "N/A",
+            email: data.user?.email || "N/A",
           },
           vehicleInfo: {
             type:
-              typeof data.vehicle === "object"
-                ? data.vehicle?.name || "Vehicle"
-                : data.vehicle || data.vehicleType || "Vehicle",
+              typeof data.vehicle === "object" ? data.vehicle?.name : "Vehicle",
             model:
               typeof data.vehicle === "object"
-                ? data.vehicle?.description || "Model"
-                : data.vehicleModel || "Model",
-            number: data.vehicleNumber || "N/A",
+                ? data.vehicle?.description
+                : "Model",
+            number: data.user?.driverDetails.vehicleNumber || "N/A",
           },
-          fare: data.amount || data.fare || 0,
-          status: data.status || "pending",
-          pickupDateTime:
-            data.pickupDateTime || data.date || new Date().toISOString(),
-          estimatedDuration: data.estimatedDuration || 30,
-          estimatedDistance: data.estimatedDistance || 10,
+          fare: data.amount || 0,
+          status: data.status as RideStatus,
+          pickupDateTime: data.pickupDate || new Date().toISOString(),
+          estimatedDuration: 30,
+          estimatedDistance: 10,
         };
 
         setRideDetails(transformedRide);

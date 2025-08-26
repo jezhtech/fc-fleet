@@ -45,7 +45,6 @@ import {
   updateDriver,
   deleteDriver,
   updateDriverStatus,
-  type Driver as APIDriver,
 } from "@/services/userService";
 
 interface TaxiType {

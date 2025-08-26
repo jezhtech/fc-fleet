@@ -16,12 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import CountryCodeSelect, {
   detectCountryCode,
 } from "@/components/CountryCodeSelect";
-import {
-  initializeRecaptcha,
-  sendOTP,
-  verifyOTP,
-  isAdminPhoneNumber,
-} from "@/lib/authUtils";
+import { sendOTP, verifyOTP } from "@/lib/authUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { RecaptchaVerifier } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -39,7 +34,7 @@ type UserData = {
 const Register = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser } = useAuth();
+  const { currentUser, refreshUserData } = useAuth();
 
   // State for user data
   const [userData, setUserData] = useState<UserData>({
@@ -171,12 +166,6 @@ const Register = () => {
       countryCode
     );
 
-    // Check if the phone number is the admin number
-    if (isAdminPhoneNumber(fullPhoneNumber)) {
-      setError("This phone number cannot be used for registration");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -249,10 +238,10 @@ const Register = () => {
 
       // Get Firebase ID token for API authentication
       const idToken = await userCredential.getIdToken();
-      
+
       // Store token in localStorage for API calls
-      localStorage.setItem('firebaseToken', idToken);
-      localStorage.setItem('authToken', idToken);
+      localStorage.setItem("firebaseToken", idToken);
+      localStorage.setItem("authToken", idToken);
 
       // Save user data to backend API using adminService
       try {
@@ -260,19 +249,20 @@ const Register = () => {
           firstName: userData.firstName,
           lastName: userData.lastName,
           email: userData.email,
-          phoneNumber: fullPhoneNumber,
+          phone: fullPhoneNumber,
           isAdmin: false,
         });
 
         if (!response.success) {
-          throw new Error(response.error || 'Failed to create user account');
+          throw new Error(response.error || "Failed to create user account");
         }
-
+        // Refresh user data to ensure we have the latest
+        await refreshUserData();
         // Navigate to home page
         navigate("/");
       } catch (apiError: any) {
         console.error("Error creating user in backend:", apiError);
-        
+
         // If backend creation fails, still allow the user to proceed
         // The user is authenticated with Firebase, so they can use the app
         toast.success("Account created successfully! Redirecting...");

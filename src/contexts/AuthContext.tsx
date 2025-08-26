@@ -87,11 +87,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     async (user: User) => {
       try {
         // Get the Firebase ID token
-        const idToken = await user.getIdToken();
-        
-        // Store token in localStorage for API calls
-        localStorage.setItem("firebaseToken", idToken);
-        localStorage.setItem("authToken", idToken);
+        const authToken = localStorage.getItem("authToken")
+        if(authToken){
+          // fallback to firebase if authToken not found
+          const idToken = await user.getIdToken();
+          
+          // Store token in localStorage for API calls
+          localStorage.setItem("firebaseToken", idToken);
+          localStorage.setItem("authToken", idToken);
+        }
 
         // Fetch user profile from backend
         const response = await authService.getCurrentUser();

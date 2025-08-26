@@ -50,7 +50,7 @@ const MyAccount = () => {
               <div>
                 <h2 className="text-2xl font-semibold">{userData.firstName} {userData.lastName}</h2>
                 <p className="text-gray-600">{userData.email}</p>
-                <p className="text-gray-600">{userData.phoneNumber}</p>
+                <p className="text-gray-600">{userData.phone}</p>
         </div>
       </div>
       
@@ -68,7 +68,7 @@ const MyAccount = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Phone Number</p>
-                    <p>{userData.phoneNumber}</p>
+                    <p>{userData.phone}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Account Created</p>

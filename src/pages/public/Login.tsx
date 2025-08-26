@@ -19,17 +19,11 @@ import CountryCodeSelect, {
 import {
   sendOTP,
   verifyOTP,
-  isAdminPhoneNumber,
   checkPhoneNumberRegistered,
-  checkAndLinkDriverAccount,
 } from "@/lib/authUtils";
 import { useAuth } from "@/contexts/AuthContext";
-import { auth, firebaseError } from "@/lib/firebase";
-import {
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  signOut,
-} from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { RecaptchaVerifier, signOut } from "firebase/auth";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { userService } from "@/services/userService";
 import { authService } from "@/services/authService";
@@ -91,30 +85,18 @@ const Login = () => {
 
     // Remove only leading plus signs, not country codes and it should accept empty
     const regex = /^[0-9]+$|^$/;
-    if(!regex.test(value)) {
+    if (!regex.test(value)) {
       return;
     }
 
     setPhoneNumber(value);
-    
+
     // Clear registration prompt when phone number changes
     if (showRegistrationPrompt) {
       setShowRegistrationPrompt(false);
       setError(null);
     }
   };
-
-  // Reset form and clear errors
-  const resetForm = useCallback(() => {
-    setPhoneNumber("");
-    setOtp("");
-    setOtpSent(false);
-    setError(null);
-    setShowRegistrationPrompt(false);
-    setLoginSuccess(false);
-    setLoading(false);
-    setVerifying(false);
-  }, []);
 
   // Handle send verification code
   const handleSendVerificationCode = async (e: React.FormEvent) => {
@@ -132,18 +114,6 @@ const Login = () => {
     setError(null);
 
     try {
-      // Check if phone number is registered (except for admin numbers)
-      const isAdmin = isAdminPhoneNumber(formattedPhone);
-      if (!isAdmin) {
-        const isRegistered = await checkPhoneNumberRegistered(formattedPhone);
-        if (!isRegistered) {
-          setError("This phone number is not registered.");
-          setShowRegistrationPrompt(true);
-          setLoading(false);
-          return;
-        }
-      }
-
       // Create new recaptcha verifier
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = await new RecaptchaVerifier(
@@ -211,15 +181,12 @@ const Login = () => {
       // Verify OTP
       const userCredential = await verifyOTP(otp);
 
-      // Check if the phone number is an admin number
-      const isAdmin = isAdminPhoneNumber(fullPhoneNumber);
-
       // Get Firebase ID token for API authentication
       const idToken = await userCredential.getIdToken();
-      
+
       // Store token in localStorage for API calls
-      localStorage.setItem('firebaseToken', idToken);
-      localStorage.setItem('authToken', idToken);
+      localStorage.setItem("firebaseToken", idToken);
+      localStorage.setItem("authToken", idToken);
 
       // Check if user exists in backend API using authService
       let userExists = false;
@@ -232,82 +199,44 @@ const Login = () => {
           userData = response.data;
         }
       } catch (apiError) {
-        console.log('User not found in backend, will create new user');
+        console.log("User not found in backend, will create new user");
       }
 
       // If user doesn't exist or is admin, create/update user data via services
       if (!userExists) {
-        if (isAdmin) {
-          // Create admin user via adminService
-          try {
-            const createResponse = await adminService.createUser({
-              firstName: "Admin",
-              lastName: "JezX",
-              email: "admin@jezx.in",
-              phoneNumber: fullPhoneNumber,
-              isAdmin: true,
-            });
+        setError("User not found")
+        return;
+      }
+      // User exists in backend, check if their data is available
+      if (!userData) {
+        setError(
+          "Your account data is not available. Please contact customer care for assistance."
+        );
+        setVerifying(false);
+        // Sign out immediately to prevent auto-login
+        await signOut(auth);
+        return;
+      }
 
-            if (!createResponse.success) {
-              throw new Error('Failed to create admin user in backend');
-            }
-          } catch (apiError) {
-            console.error('Error creating admin user in backend:', apiError);
-            // Continue with login even if backend creation fails
-          }
-        }
-      } else {
-        // User exists in backend, check if their data is available
-        if (!userData) {
-          setError(
-            "Your account data is not available. Please contact customer care for assistance."
-          );
-          setVerifying(false);
-          // Sign out immediately to prevent auto-login
-          await signOut(auth);
-          return;
-        }
+      // Check if the existing user is blocked or inactive
+      if (userData.status === "blocked") {
+        setError(
+          "Your account has been blocked. Please contact customer care for further details."
+        );
+        setVerifying(false);
+        // Sign out immediately to prevent auto-login
+        await signOut(auth);
+        return;
+      }
 
-        // Update existing user as admin if admin phone is used
-        if (isAdmin) {
-          try {
-            const updateResponse = await authService.updateProfile({
-              firstName: "Admin",
-              lastName: "JezX",
-              email: "admin@jezx.in",
-              phoneNumber: fullPhoneNumber,
-              isAdmin: true,
-            });
-
-            if (!updateResponse.success) {
-              console.error('Failed to update admin user in backend');
-            }
-          } catch (apiError) {
-            console.error('Error updating admin user in backend:', apiError);
-            // Continue with login even if backend update fails
-          }
-        }
-
-        // Check if the existing user is blocked or inactive
-        if (userData.status === "blocked") {
-          setError(
-            "Your account has been blocked. Please contact customer care for further details."
-          );
-          setVerifying(false);
-          // Sign out immediately to prevent auto-login
-          await signOut(auth);
-          return;
-        }
-
-        if (userData.status === "inactive" || userData.isVerified === false) {
-          setError(
-            "Your account is inactive. Please contact customer care for assistance."
-          );
-          setVerifying(false);
-          // Sign out immediately to prevent auto-login
-          await signOut(auth);
-          return;
-        }
+      if (userData.status === "inactive" || userData.isVerified === false) {
+        setError(
+          "Your account is inactive. Please contact customer care for assistance."
+        );
+        setVerifying(false);
+        // Sign out immediately to prevent auto-login
+        await signOut(auth);
+        return;
       }
 
       // Refresh user data to ensure we have the latest
