@@ -110,7 +110,7 @@ const Register = () => {
 
     setUserData((prev) => ({
       ...prev,
-      phoneNumber: value,
+      phone: value,
     }));
 
     // Clear any previous errors
@@ -359,8 +359,8 @@ const Register = () => {
                       onChange={setCountryCode}
                     />
                     <Input
-                      id="phoneNumber"
-                      name="phoneNumber"
+                      id="phone"
+                      name="phone"
                       value={userData.phone}
                       onChange={handlePhoneNumberChange}
                       placeholder="50 123 4567"

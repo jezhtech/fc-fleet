@@ -26,6 +26,7 @@ import { auth } from "@/lib/firebase";
 import { RecaptchaVerifier, signOut } from "firebase/auth";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { authService } from "@/services/authService";
+import { userService } from "@/services";
 
 const Login = () => {
   const navigate = useNavigate();
