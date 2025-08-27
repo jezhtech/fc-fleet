@@ -175,7 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       unsubscribe();
     };
-  }, [fetchUserData]);
+  }, [fetchUserData, refreshUserData]);
 
   // Memoized context value to prevent unnecessary re-renders
   const contextValue = useMemo(
