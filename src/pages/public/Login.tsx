@@ -113,14 +113,14 @@ const Login = () => {
     setLoading(true);
     setError(null);
 
-    const data = await checkUserExists(phoneNumber);
+    const encodedPhone = formattedPhone.replace(/^\+/, "%2B");
+    const data = await checkUserExists(encodedPhone);
 
-    if(!data.success){
-      setError(data.error)
+    if (!data.success) {
+      setError(data.error);
       setLoading(false);
       return;
     }
-    
 
     try {
       // Create new recaptcha verifier
@@ -130,7 +130,7 @@ const Login = () => {
           "recaptcha-container",
           {
             size: "invisible",
-          }
+          },
         );
       }
       await sendOTP(formattedPhone);
@@ -142,29 +142,29 @@ const Login = () => {
       // Handle common Firebase auth errors more gracefully
       if (error.code === "auth/invalid-api-key") {
         setError(
-          "Firebase API key is invalid. This application is not properly configured."
+          "Firebase API key is invalid. This application is not properly configured.",
         );
       } else if (error.code === "auth/network-request-failed") {
         setError(
-          "Network error. Please check your internet connection and try again."
+          "Network error. Please check your internet connection and try again.",
         );
       } else if (error.code === "auth/invalid-phone-number") {
         setError(
-          "Invalid phone number format. Please check your phone number and try again."
+          "Invalid phone number format. Please check your phone number and try again.",
         );
       } else if (error.code === "auth/too-many-requests") {
         setError(
-          "Too many attempts. Please wait a few minutes before trying again."
+          "Too many attempts. Please wait a few minutes before trying again.",
         );
       } else if (error.code === "auth/quota-exceeded") {
         setError("SMS quota exceeded. Please try again later.");
       } else if (error.code === "auth/captcha-check-failed") {
         setError(
-          "reCAPTCHA verification failed. Please refresh the page and try again."
+          "reCAPTCHA verification failed. Please refresh the page and try again.",
         );
       } else {
         setError(
-          error.message || "Error sending verification code. Please try again."
+          error.message || "Error sending verification code. Please try again.",
         );
       }
     } finally {
@@ -219,7 +219,7 @@ const Login = () => {
       // User exists in backend, check if their data is available
       if (!userData) {
         setError(
-          "Your account data is not available. Please contact customer care for assistance."
+          "Your account data is not available. Please contact customer care for assistance.",
         );
         setVerifying(false);
         // Sign out immediately to prevent auto-login
@@ -230,7 +230,7 @@ const Login = () => {
       // Check if the existing user is blocked or inactive
       if (userData.status === "blocked") {
         setError(
-          "Your account has been blocked. Please contact customer care for further details."
+          "Your account has been blocked. Please contact customer care for further details.",
         );
         setVerifying(false);
         // Sign out immediately to prevent auto-login
@@ -240,7 +240,7 @@ const Login = () => {
 
       if (userData.status === "inactive" || userData.isVerified === false) {
         setError(
-          "Your account is inactive. Please contact customer care for assistance."
+          "Your account is inactive. Please contact customer care for assistance.",
         );
         setVerifying(false);
         // Sign out immediately to prevent auto-login
@@ -259,7 +259,7 @@ const Login = () => {
       // Handle specific OTP verification errors
       if (error.code === "auth/invalid-verification-code") {
         setError(
-          "Invalid verification code. Please check the code and try again."
+          "Invalid verification code. Please check the code and try again.",
         );
       } else if (error.code === "auth/invalid-verification-id") {
         setError("Verification session expired. Please request a new code.");
@@ -269,7 +269,7 @@ const Login = () => {
         setOtpSent(false);
       } else {
         setError(
-          error.message || "Invalid verification code. Please try again."
+          error.message || "Invalid verification code. Please try again.",
         );
       }
     } finally {
