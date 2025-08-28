@@ -76,49 +76,27 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-// User Types
-export interface Driver {
-  id: string;
-  uid: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: "driver";
-  status: "active" | "inactive" | "suspended";
-  taxiTypeId: string;
-  vehicleTypeId: string;
-  vehicleNumber: string;
-  rating: number;
-  rides: number;
-  earnings: number;
-  joined: string;
-  createdAt: string;
-  updatedAt: string;
+export interface UserWithDriverDetail extends UserProfile {
+  driverDetails: DriverDetails;
 }
 
-export interface BackendDriverResponse {
+// User Types
+export interface DriverDetails {
   id: string;
-  uid: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: "driver";
-  status: "active" | "inactive" | "suspended";
+  userId: string;
   taxiTypeId: string;
   vehicleTypeId: string;
   vehicleNumber: string;
+  status: "active" | "inactive" | "suspended";
   rating: number;
-  rides: number;
-  earnings: number;
-  joined: string;
   createdAt: string;
   updatedAt: string;
+  vehicleType?: Vehicle;
+  transportType?: Transport;
 }
 
 export interface CreateDriverRequest {
-  name: string;
-  email?: string;
-  phone: string;
+  userId: string;
   taxiTypeId: string;
   vehicleTypeId: string;
   vehicleNumber: string;
@@ -126,9 +104,7 @@ export interface CreateDriverRequest {
 }
 
 export interface UpdateDriverRequest {
-  name?: string;
-  email?: string;
-  phone?: string;
+  userId: string;
   taxiTypeId?: string;
   vehicleTypeId?: string;
   vehicleNumber?: string;
@@ -264,6 +240,7 @@ export interface PaymentInfo {
 export interface Booking {
   id: string;
   bookingType: "ride" | "rent";
+  driverId: string;
   userId: string;
   vehicleId: string;
   status:
@@ -432,7 +409,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   role?: "customer" | "driver" | "admin";
-  driverDetails?: Driver
+  driverDetails?: Driver;
 }
 
 export interface AdminDriver {

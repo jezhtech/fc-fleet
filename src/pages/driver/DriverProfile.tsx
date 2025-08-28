@@ -1,16 +1,15 @@
-
-import React from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Car, Star, Phone, Mail, MapPin, Calendar } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
-import { getDriver, updateDriver } from '@/services/userService';
-import { useState, useEffect } from 'react';
+import React from "react";
+import DashboardLayout from "@/components/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { User, Car, Star, Phone, Mail, MapPin, Calendar } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { userService } from "@/services";
 
 const DriverProfile = () => {
   const { currentUser, userData } = useAuth();
@@ -18,31 +17,31 @@ const DriverProfile = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    emergencyContact: '',
-    emergencyPhone: '',
-    vehicleMake: '',
-    vehicleModel: '',
-    year: '',
-    color: '',
-    licensePlate: '',
-    registrationNumber: '',
-    insurance: '',
-    policyNumber: '',
-    expiryDate: ''
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    emergencyContact: "",
+    emergencyPhone: "",
+    vehicleMake: "",
+    vehicleModel: "",
+    year: "",
+    color: "",
+    licensePlate: "",
+    registrationNumber: "",
+    insurance: "",
+    policyNumber: "",
+    expiryDate: "",
   });
 
   useEffect(() => {
     const fetchDriverData = async () => {
       if (!currentUser?.uid) return;
-      
+
       try {
         setLoading(true);
         const response = await getDriver(currentUser.uid);
@@ -50,30 +49,30 @@ const DriverProfile = () => {
           const driver = response.data;
           setDriverData(driver);
           setFormData({
-            firstName: driver.name?.split(' ')[0] || '',
-            lastName: driver.name?.split(' ').slice(1).join(' ') || '',
-            email: driver.email || '',
-            phone: driver.phone || '',
-            address: '',
-            city: '',
-            state: '',
-            zipCode: '',
-            emergencyContact: '',
-            emergencyPhone: '',
-            vehicleMake: '',
-            vehicleModel: '',
-            year: '',
-            color: '',
-            licensePlate: driver.vehicleNumber || '',
-            registrationNumber: '',
-            insurance: '',
-            policyNumber: '',
-            expiryDate: ''
+            firstName: driver.name?.split(" ")[0] || "",
+            lastName: driver.name?.split(" ").slice(1).join(" ") || "",
+            email: driver.email || "",
+            phone: driver.phone || "",
+            address: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            emergencyContact: "",
+            emergencyPhone: "",
+            vehicleMake: "",
+            vehicleModel: "",
+            year: "",
+            color: "",
+            licensePlate: driver.vehicleNumber || "",
+            registrationNumber: "",
+            insurance: "",
+            policyNumber: "",
+            expiryDate: "",
           });
         }
       } catch (error) {
-        console.error('Error fetching driver data:', error);
-        toast.error('Failed to load profile data');
+        console.error("Error fetching driver data:", error);
+        toast.error("Failed to load profile data");
       } finally {
         setLoading(false);
       }
@@ -85,32 +84,35 @@ const DriverProfile = () => {
   const handleSave = async () => {
     try {
       if (!currentUser?.uid) return;
-      
+
       const updateData = {
         name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
         phone: formData.phone,
-        vehicleNumber: formData.licensePlate
+        vehicleNumber: formData.licensePlate,
       };
 
-      const response = await updateDriver(currentUser.uid, updateData);
+      const response = await userService.updateDriver(currentUser.uid, {
+        userId: currentUser.uid,
+        ...updateData,
+      });
       if (response.success) {
-        toast.success('Profile updated successfully');
+        toast.success("Profile updated successfully");
         setEditing(false);
         // Refresh driver data
-        const refreshResponse = await getDriver(currentUser.uid);
+        const refreshResponse = await userService.getDriver(currentUser.uid);
         if (refreshResponse.success && refreshResponse.data) {
           setDriverData(refreshResponse.data);
         }
       } else {
-        toast.error('Failed to update profile');
+        toast.error("Failed to update profile");
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile");
     }
   };
-  
+
   if (loading) {
     return (
       <DashboardLayout userType="driver">
@@ -127,11 +129,11 @@ const DriverProfile = () => {
         <h1 className="text-2xl font-bold">My Profile</h1>
         <div className="flex items-center gap-2 mt-2 md:mt-0">
           <Badge className="bg-green-100 text-green-800">
-            {driverData?.status === 'active' ? 'Active' : 'Inactive'}
+            {driverData?.status === "active" ? "Active" : "Inactive"}
           </Badge>
           {!editing && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setEditing(true)}
             >
@@ -140,7 +142,7 @@ const DriverProfile = () => {
           )}
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
           <Card>
@@ -149,58 +151,72 @@ const DriverProfile = () => {
                 <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                   <User className="h-16 w-16 text-gray-600" />
                 </div>
-                <h2 className="text-xl font-bold">{driverData?.name || 'Loading...'}</h2>
-                <p className="text-gray-500">Driver ID: {currentUser?.uid?.substring(0, 8) || 'N/A'}</p>
-                
+                <h2 className="text-xl font-bold">
+                  {driverData?.name || "Loading..."}
+                </h2>
+                <p className="text-gray-500">
+                  Driver ID: {currentUser?.uid?.substring(0, 8) || "N/A"}
+                </p>
+
                 <div className="flex items-center mt-2">
                   <Star className="h-5 w-5 text-yellow-400" />
-                  <span className="ml-1 font-medium">{driverData?.rating?.toFixed(1) || '0.0'}</span>
-                  <span className="text-gray-500 ml-1">({driverData?.rides || 0} rides)</span>
+                  <span className="ml-1 font-medium">
+                    {driverData?.rating?.toFixed(1) || "0.0"}
+                  </span>
+                  <span className="text-gray-500 ml-1">
+                    ({driverData?.rides || 0} rides)
+                  </span>
                 </div>
-                
+
                 <div className="mt-6 w-full">
-                  <Button 
+                  <Button
                     className="w-full bg-fleet-red hover:bg-fleet-red/90"
-                    onClick={() => toast.success('Profile photo updated')}
+                    onClick={() => toast.success("Profile photo updated")}
                   >
                     Update Photo
                   </Button>
                 </div>
               </div>
-              
+
               <div className="mt-8 space-y-4">
                 <div className="flex items-center gap-3">
                   <Car className="h-5 w-5 text-gray-500" />
                   <div>
                     <p className="text-sm text-gray-500">Vehicle</p>
-                    <p className="font-medium">{driverData?.vehicleNumber || 'N/A'}</p>
+                    <p className="font-medium">
+                      {driverData?.vehicleNumber || "N/A"}
+                    </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-gray-500" />
                   <div>
                     <p className="text-sm text-gray-500">Member Since</p>
-                    <p className="font-medium">{driverData?.joined ? new Date(driverData.joined).toLocaleDateString() : 'N/A'}</p>
+                    <p className="font-medium">
+                      {driverData?.joined
+                        ? new Date(driverData.joined).toLocaleDateString()
+                        : "N/A"}
+                    </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   <Phone className="h-5 w-5 text-gray-500" />
                   <div>
                     <p className="text-sm text-gray-500">Phone</p>
-                    <p className="font-medium">{driverData?.phone || 'N/A'}</p>
+                    <p className="font-medium">{driverData?.phone || "N/A"}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   <Mail className="h-5 w-5 text-gray-500" />
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{driverData?.email || 'N/A'}</p>
+                    <p className="font-medium">{driverData?.email || "N/A"}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   <MapPin className="h-5 w-5 text-gray-500" />
                   <div>
@@ -212,7 +228,7 @@ const DriverProfile = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="lg:col-span-2">
           <Tabs defaultValue="personal">
             <TabsList className="mb-6">
@@ -220,7 +236,7 @@ const DriverProfile = () => {
               <TabsTrigger value="vehicle">Vehicle</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="personal">
               <Card>
                 <CardHeader>
@@ -229,83 +245,141 @@ const DriverProfile = () => {
                 <CardContent>
                   <form className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                                          <div className="space-y-2">
-                      <label htmlFor="firstName" className="text-sm font-medium">First Name</label>
-                      <Input 
-                        id="firstName" 
-                        value={formData.firstName}
-                        onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="firstName"
+                          className="text-sm font-medium"
+                        >
+                          First Name
+                        </label>
+                        <Input
+                          id="firstName"
+                          value={formData.firstName}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              firstName: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="lastName"
+                          className="text-sm font-medium"
+                        >
+                          Last Name
+                        </label>
+                        <Input
+                          id="lastName"
+                          value={formData.lastName}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              lastName: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="email" className="text-sm font-medium">
+                        Email Address
+                      </label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            email: e.target.value,
+                          }))
+                        }
                       />
                     </div>
+
                     <div className="space-y-2">
-                      <label htmlFor="lastName" className="text-sm font-medium">Last Name</label>
-                      <Input 
-                        id="lastName" 
-                        value={formData.lastName}
-                        onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                      <label htmlFor="phone" className="text-sm font-medium">
+                        Phone Number
+                      </label>
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            phone: e.target.value,
+                          }))
+                        }
                       />
                     </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="email" className="text-sm font-medium">Email Address</label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="phone" className="text-sm font-medium">Phone Number</label>
-                    <Input 
-                      id="phone" 
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    />
-                  </div>
-                    
+
                     <div className="space-y-2">
-                      <label htmlFor="address" className="text-sm font-medium">Address</label>
+                      <label htmlFor="address" className="text-sm font-medium">
+                        Address
+                      </label>
                       <Input id="address" defaultValue="123 Main St" />
                     </div>
-                    
+
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <label htmlFor="city" className="text-sm font-medium">City</label>
+                        <label htmlFor="city" className="text-sm font-medium">
+                          City
+                        </label>
                         <Input id="city" defaultValue="New York" />
                       </div>
                       <div className="space-y-2">
-                        <label htmlFor="state" className="text-sm font-medium">State</label>
+                        <label htmlFor="state" className="text-sm font-medium">
+                          State
+                        </label>
                         <Input id="state" defaultValue="NY" />
                       </div>
                       <div className="space-y-2">
-                        <label htmlFor="zipCode" className="text-sm font-medium">Zip Code</label>
+                        <label
+                          htmlFor="zipCode"
+                          className="text-sm font-medium"
+                        >
+                          Zip Code
+                        </label>
                         <Input id="zipCode" defaultValue="10001" />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <label htmlFor="emergencyContact" className="text-sm font-medium">Emergency Contact</label>
+                      <label
+                        htmlFor="emergencyContact"
+                        className="text-sm font-medium"
+                      >
+                        Emergency Contact
+                      </label>
                       <Input id="emergencyContact" defaultValue="Lisa Chen" />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <label htmlFor="emergencyPhone" className="text-sm font-medium">Emergency Contact Phone</label>
-                      <Input id="emergencyPhone" defaultValue="+1 (555) 987-6543" />
+                      <label
+                        htmlFor="emergencyPhone"
+                        className="text-sm font-medium"
+                      >
+                        Emergency Contact Phone
+                      </label>
+                      <Input
+                        id="emergencyPhone"
+                        defaultValue="+1 (555) 987-6543"
+                      />
                     </div>
-                    
+
                     <div className="flex gap-2">
-                      <Button 
-                        type="button" 
+                      <Button
+                        type="button"
                         variant="outline"
                         onClick={() => setEditing(false)}
                       >
                         Cancel
                       </Button>
-                      <Button 
-                        type="button" 
+                      <Button
+                        type="button"
                         className="bg-fleet-red hover:bg-fleet-red/90"
                         onClick={handleSave}
                       >
@@ -316,7 +390,7 @@ const DriverProfile = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="vehicle">
               <Card>
                 <CardHeader>
@@ -326,57 +400,105 @@ const DriverProfile = () => {
                   <form className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label htmlFor="make" className="text-sm font-medium">Vehicle Make</label>
+                        <label htmlFor="make" className="text-sm font-medium">
+                          Vehicle Make
+                        </label>
                         <Input id="make" defaultValue="Toyota" />
                       </div>
                       <div className="space-y-2">
-                        <label htmlFor="model" className="text-sm font-medium">Vehicle Model</label>
+                        <label htmlFor="model" className="text-sm font-medium">
+                          Vehicle Model
+                        </label>
                         <Input id="model" defaultValue="Camry" />
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label htmlFor="year" className="text-sm font-medium">Year</label>
+                        <label htmlFor="year" className="text-sm font-medium">
+                          Year
+                        </label>
                         <Input id="year" defaultValue="2020" />
                       </div>
                       <div className="space-y-2">
-                        <label htmlFor="color" className="text-sm font-medium">Color</label>
+                        <label htmlFor="color" className="text-sm font-medium">
+                          Color
+                        </label>
                         <Input id="color" defaultValue="Silver" />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <label htmlFor="licensePlate" className="text-sm font-medium">License Plate Number</label>
-                      <Input 
-                        id="licensePlate" 
+                      <label
+                        htmlFor="licensePlate"
+                        className="text-sm font-medium"
+                      >
+                        License Plate Number
+                      </label>
+                      <Input
+                        id="licensePlate"
                         value={formData.licensePlate}
-                        onChange={(e) => setFormData(prev => ({ ...prev, licensePlate: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            licensePlate: e.target.value,
+                          }))
+                        }
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <label htmlFor="registrationNumber" className="text-sm font-medium">Registration Number</label>
-                      <Input id="registrationNumber" defaultValue="REG-5678901" />
+                      <label
+                        htmlFor="registrationNumber"
+                        className="text-sm font-medium"
+                      >
+                        Registration Number
+                      </label>
+                      <Input
+                        id="registrationNumber"
+                        defaultValue="REG-5678901"
+                      />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <label htmlFor="insurance" className="text-sm font-medium">Insurance Provider</label>
-                      <Input id="insurance" defaultValue="SafeDrive Insurance" />
+                      <label
+                        htmlFor="insurance"
+                        className="text-sm font-medium"
+                      >
+                        Insurance Provider
+                      </label>
+                      <Input
+                        id="insurance"
+                        defaultValue="SafeDrive Insurance"
+                      />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <label htmlFor="policyNumber" className="text-sm font-medium">Policy Number</label>
+                      <label
+                        htmlFor="policyNumber"
+                        className="text-sm font-medium"
+                      >
+                        Policy Number
+                      </label>
                       <Input id="policyNumber" defaultValue="POL-987654321" />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <label htmlFor="expiryDate" className="text-sm font-medium">Insurance Expiry Date</label>
-                      <Input id="expiryDate" type="date" defaultValue="2025-12-31" />
+                      <label
+                        htmlFor="expiryDate"
+                        className="text-sm font-medium"
+                      >
+                        Insurance Expiry Date
+                      </label>
+                      <Input
+                        id="expiryDate"
+                        type="date"
+                        defaultValue="2025-12-31"
+                      />
                     </div>
-                    
-                    <Button 
-                      type="button" 
+
+                    <Button
+                      type="button"
                       className="bg-fleet-red hover:bg-fleet-red/90"
                       onClick={handleSave}
                     >
@@ -386,7 +508,7 @@ const DriverProfile = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="documents">
               <Card>
                 <CardHeader>
@@ -401,13 +523,19 @@ const DriverProfile = () => {
                           <p className="text-sm text-green-600">Verified</p>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">View</Button>
-                          <Button variant="outline" size="sm">Update</Button>
+                          <Button variant="outline" size="sm">
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            Update
+                          </Button>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500 mt-2">Expires: December 15, 2025</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Expires: December 15, 2025
+                      </p>
                     </div>
-                    
+
                     <div className="border rounded-md p-4">
                       <div className="flex justify-between items-center">
                         <div>
@@ -415,13 +543,19 @@ const DriverProfile = () => {
                           <p className="text-sm text-green-600">Verified</p>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">View</Button>
-                          <Button variant="outline" size="sm">Update</Button>
+                          <Button variant="outline" size="sm">
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            Update
+                          </Button>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500 mt-2">Expires: March 10, 2026</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Expires: March 10, 2026
+                      </p>
                     </div>
-                    
+
                     <div className="border rounded-md p-4">
                       <div className="flex justify-between items-center">
                         <div>
@@ -429,27 +563,41 @@ const DriverProfile = () => {
                           <p className="text-sm text-green-600">Verified</p>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">View</Button>
-                          <Button variant="outline" size="sm">Update</Button>
+                          <Button variant="outline" size="sm">
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            Update
+                          </Button>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500 mt-2">Expires: December 31, 2025</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Expires: December 31, 2025
+                      </p>
                     </div>
-                    
+
                     <div className="border rounded-md p-4">
                       <div className="flex justify-between items-center">
                         <div>
-                          <h3 className="font-medium">Background Check Certificate</h3>
+                          <h3 className="font-medium">
+                            Background Check Certificate
+                          </h3>
                           <p className="text-sm text-green-600">Verified</p>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">View</Button>
-                          <Button variant="outline" size="sm">Update</Button>
+                          <Button variant="outline" size="sm">
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            Update
+                          </Button>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500 mt-2">Completed: June 10, 2023</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Completed: June 10, 2023
+                      </p>
                     </div>
-                    
+
                     <div className="border rounded-md p-4">
                       <div className="flex justify-between items-center">
                         <div>
@@ -457,16 +605,24 @@ const DriverProfile = () => {
                           <p className="text-sm text-green-600">Verified</p>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">View</Button>
-                          <Button variant="outline" size="sm">Update</Button>
+                          <Button variant="outline" size="sm">
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            Update
+                          </Button>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500 mt-2">Last updated: August 5, 2023</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Last updated: August 5, 2023
+                      </p>
                     </div>
-                    
-                    <Button 
+
+                    <Button
                       className="bg-fleet-red hover:bg-fleet-red/90"
-                      onClick={() => toast.success('All documents are up to date')}
+                      onClick={() =>
+                        toast.success("All documents are up to date")
+                      }
                     >
                       Upload New Document
                     </Button>

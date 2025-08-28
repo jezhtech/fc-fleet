@@ -1,34 +1,45 @@
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { userService } from "@/services/userService";
+import { transportService } from "@/services/transportService";
+import { vehicleService } from "@/services/vehicleService";
+import type {
+  User,
+  DriverDetails,
+  Vehicle,
+  Transport,
+  UserWithDriverDetail,
+} from "@/types";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-  Search,
-  UserPlus,
-  Mail,
-  Phone,
-  Star,
   Car,
   Edit,
-  Trash,
   Eye,
-  UserCheck,
   Loader2,
+  Mail,
+  Phone,
+  Search,
+  Star,
+  Trash,
+  UserCheck,
+  UserPlus,
   UserX,
 } from "lucide-react";
-import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -36,96 +47,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { firestore } from "@/lib/firebase";
-import {
-  createDriver,
-  getDrivers,
-  updateDriver,
-  deleteDriver,
-  updateDriverStatus,
-} from "@/services/userService";
-
-interface TaxiType {
-  id: string;
-  name: string;
-  description: string;
-  emoji: string;
-}
-
-interface VehicleType {
-  id: string;
-  taxiTypeId: string;
-  taxiTypeName?: string;
-  name: string;
-  description: string;
-  basePrice: number;
-  perKmPrice: number;
-  perMinutePrice: number;
-  capacity: number;
-  images: string[];
-}
-
-interface Driver {
-  id: string;
-  uid: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: "driver";
-  status: "active" | "inactive" | "suspended";
-  taxiTypeId: string;
-  vehicleTypeId: string;
-  vehicleNumber: string;
-  rating: number;
-  rides: number;
-  earnings: number;
-  joined: string;
-  createdAt: string;
-  updatedAt: string;
-  feedback?: DriverFeedback[];
-}
-
-// Separate interfaces for the new schema
-interface User {
-  uid: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber: string;
-  role: string;
-  status: "active" | "inactive" | "suspended";
-  isVerified: boolean;
-  joined: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface DriverData {
-  userId: string;
-  name: string;
-  email: string;
-  phone: string;
-  taxiTypeId: string;
-  vehicleTypeId: string;
-  vehicleNumber: string;
-  rating: number;
-  rides: number;
-  earnings: number;
-  status: "active" | "inactive" | "suspended";
-  joined: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface DriverFeedback {
-  id: string;
-  bookingId: string;
-  rating: number;
-  comment: string;
-  createdAt: Date;
-}
 
 const AdminDrivers = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -133,154 +54,68 @@ const AdminDrivers = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
+  const [driverToDelete, setDriverToDelete] =
+    useState<UserWithDriverDetail | null>(null);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [driverToUpdateStatus, setDriverToUpdateStatus] =
-    useState<Driver | null>(null);
+    useState<UserWithDriverDetail | null>(null);
   const [newStatus, setNewStatus] = useState<
     "active" | "inactive" | "suspended"
   >("active");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentDriver, setCurrentDriver] = useState<Driver | null>(null);
+  const [currentDriver, setCurrentDriver] =
+    useState<Partial<UserWithDriverDetail> | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [driverToView, setDriverToView] = useState<Driver | null>(null);
+  const [driverToView, setDriverToView] = useState<UserWithDriverDetail | null>(
+    null,
+  );
 
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [taxiTypes, setTaxiTypes] = useState<TaxiType[]>([]);
-  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [filteredVehicleTypes, setFilteredVehicleTypes] = useState<
-    VehicleType[]
-  >([]);
+  const [drivers, setDrivers] = useState<UserWithDriverDetail[]>([]);
+  const [taxiTypes, setTaxiTypes] = useState<Transport[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<Vehicle[]>([]);
+  const [filteredVehicleTypes, setFilteredVehicleTypes] = useState<Vehicle[]>(
+    [],
+  );
 
   const filteredDrivers = drivers.filter(
     (driver) =>
-      (driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (`${driver.firstName} ${driver.lastName}`
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
         driver.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         driver.phone.includes(searchTerm)) &&
-      (selectedTab === "all" || driver.status === selectedTab)
+      (selectedTab === "all" || driver.driverDetails?.status === selectedTab),
   );
 
-  const handleDeleteDriver = (id: number) => {
-    toast.success(`Driver ${id} has been deleted`);
-  };
-
-  // Fetch drivers, taxi types, and vehicle types from Firestore
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+        const [driversRes, taxiTypesRes, vehicleTypesRes] = await Promise.all([
+          userService.getAllDrivers(),
+          transportService.getAllTransports(),
+          vehicleService.getAllVehicles(),
+        ]);
 
-        // Fetch taxi types
-        const taxiTypesRef = collection(firestore, "taxiTypes");
-        const taxiSnapshot = await getDocs(taxiTypesRef);
+        if (driversRes.success && driversRes.data) {
+          setDrivers(driversRes.data);
+        } else {
+          toast.error(driversRes.message || "Failed to load drivers");
+        }
 
-        const fetchedTaxiTypes = taxiSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as TaxiType[];
+        if (taxiTypesRes.success && taxiTypesRes.data) {
+          setTaxiTypes(taxiTypesRes.data);
+        } else {
+          toast.error(taxiTypesRes.message || "Failed to load taxi types");
+        }
 
-        
-        setTaxiTypes(fetchedTaxiTypes);
-
-        // Fetch vehicle types
-        const vehicleTypesRef = collection(firestore, "vehicleTypes");
-        const vehicleSnapshot = await getDocs(vehicleTypesRef);
-
-        const fetchedVehicleTypes = vehicleSnapshot.docs.map((doc) => {
-          const data = doc.data();
-          // Find the associated taxi type name
-          const taxiType = fetchedTaxiTypes.find(
-            (taxi) => taxi.id === data.taxiTypeId
+        if (vehicleTypesRes.success && vehicleTypesRes.data) {
+          setVehicleTypes(vehicleTypesRes.data);
+        } else {
+          toast.error(
+            vehicleTypesRes.message || "Failed to load vehicle types",
           );
-          return {
-            id: doc.id,
-            ...data,
-            taxiTypeName: taxiType?.name || "Unknown",
-          } as VehicleType;
-        });
-
-        
-        setVehicleTypes(fetchedVehicleTypes);
-
-        // Fetch drivers from API (which already combines user and driver data)
-        try {
-          const driversResponse = await getDrivers();
-          const apiDrivers = driversResponse.data;
-          
-
-          // Transform API response to match our Driver interface
-          const transformedDrivers: Driver[] = apiDrivers.map((apiDriver) => ({
-            id: apiDriver.id,
-            uid: apiDriver.uid,
-            name: apiDriver.name,
-            email: apiDriver.email,
-            phone: apiDriver.phone,
-            role: apiDriver.role,
-            status: apiDriver.status,
-            taxiTypeId: apiDriver.taxiTypeId,
-            vehicleTypeId: apiDriver.vehicleTypeId,
-            vehicleNumber: apiDriver.vehicleNumber,
-            rating: apiDriver.rating,
-            rides: apiDriver.rides,
-            earnings: apiDriver.earnings,
-            joined: apiDriver.joined,
-            createdAt: apiDriver.createdAt,
-            updatedAt: apiDriver.updatedAt,
-            feedback: [], // Initialize empty feedback array
-          }));
-
-          
-          setDrivers(transformedDrivers);
-        } catch (apiError) {
-          console.error("Error fetching from API, falling back to Firestore:", apiError);
-          
-          // Fallback to direct Firestore calls
-          const usersRef = collection(firestore, "users");
-          const usersSnapshot = await getDocs(usersRef);
-          const fetchedUsers = usersSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          })) as any[];
-
-          const driverUsers = fetchedUsers.filter((user) => user.role === "driver") as User[];
-          
-          const driversRef = collection(firestore, "drivers");
-          const driversSnapshot = await getDocs(driversRef);
-          const fetchedDrivers = driversSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          })) as any[];
-
-          const combinedDrivers: Driver[] = [];
-
-          for (const driverData of fetchedDrivers) {
-            const userData = driverUsers.find((user) => user.uid === driverData.userId);
-            
-            if (userData) {
-              combinedDrivers.push({
-                id: driverData.userId,
-                uid: userData.uid,
-                name: driverData.name,
-                email: driverData.email,
-                phone: driverData.phone,
-                role: userData.role as "driver",
-                status: driverData.status,
-                taxiTypeId: driverData.taxiTypeId,
-                vehicleTypeId: driverData.vehicleTypeId,
-                vehicleNumber: driverData.vehicleNumber,
-                rating: driverData.rating || 0,
-                rides: driverData.rides || 0,
-                earnings: driverData.earnings || 0,
-                joined: driverData.joined,
-                createdAt: driverData.createdAt,
-                updatedAt: driverData.updatedAt,
-                feedback: [],
-              });
-            }
-          }
-
-          setDrivers(combinedDrivers);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -293,102 +128,80 @@ const AdminDrivers = () => {
     fetchData();
   }, []);
 
-  // Function to handle taxi type selection and filter vehicle types
   const handleTaxiTypeChange = (taxiTypeId: string) => {
     if (!currentDriver) return;
 
-    
-
     setCurrentDriver({
       ...currentDriver,
-      taxiTypeId,
-      vehicleTypeId: "", // Reset vehicle type when taxi type changes
+      driverDetails: {
+        ...(currentDriver.driverDetails as DriverDetails),
+        taxiTypeId,
+        vehicleTypeId: "",
+      },
     });
 
-    // Filter vehicle types based on selected taxi type
     const filteredTypes = vehicleTypes.filter(
-      (vehicle) => vehicle.taxiTypeId === taxiTypeId
+      (vehicle) => vehicle.transportId === taxiTypeId,
     );
-    
     setFilteredVehicleTypes(filteredTypes);
   };
 
-  // Handle adding or editing a driver
-  const handleAddEdit = (driver: Driver | null) => {
+  const handleAddEdit = (driver: UserWithDriverDetail | null) => {
     if (driver) {
-      // Edit existing driver
       setCurrentDriver({ ...driver });
-
-      
-      
-
-      // Set filtered vehicle types
       const filteredTypes = vehicleTypes.filter(
-        (vehicle) => vehicle.taxiTypeId === driver.taxiTypeId
+        (vehicle) => vehicle.transportId === driver.driverDetails?.taxiTypeId,
       );
-      
       setFilteredVehicleTypes(filteredTypes);
     } else {
-      // Add new driver
       const defaultTaxiType = taxiTypes.length > 0 ? taxiTypes[0].id : "";
       const defaultVehicleTypes = vehicleTypes.filter(
-        (vehicle) => vehicle.taxiTypeId === defaultTaxiType
+        (vehicle) => vehicle.transportId === defaultTaxiType,
       );
-
-      
-      
-      
-
       setCurrentDriver({
-        id: "",
-        uid: "",
-        name: "",
-        email: "",
-        phone: "",
         role: "driver",
-        status: "active",
-        taxiTypeId: defaultTaxiType,
-        vehicleTypeId: "",
-        vehicleNumber: "",
-        rating: 0,
-        rides: 0,
-        earnings: 0,
-        joined: new Date().toISOString().split("T")[0],
-        createdAt: "",
-        updatedAt: "",
+        driverDetails: {
+          id: "",
+          userId: "",
+          taxiTypeId: defaultTaxiType,
+          vehicleTypeId: "",
+          vehicleNumber: "",
+          rating: 0,
+          createdAt: "",
+          updatedAt: "",
+          status: "active",
+        },
       });
-
-      // Set filtered vehicle types for the default taxi type
       setFilteredVehicleTypes(defaultVehicleTypes);
     }
-
     setIsDialogOpen(true);
   };
 
-  // Handle changing driver status
-  const openStatusDialog = (driver: Driver) => {
+  const openStatusDialog = (driver: UserWithDriverDetail) => {
     setDriverToUpdateStatus(driver);
-    setNewStatus(driver.status);
+    setNewStatus(driver.driverDetails?.status || "active");
     setIsStatusDialogOpen(true);
   };
 
-  // Function to update driver status
   const handleUpdateDriverStatus = async () => {
-    if (!driverToUpdateStatus) return;
+    if (!driverToUpdateStatus?.id) return;
 
     setIsSubmitting(true);
     try {
-      await updateDriverStatus(driverToUpdateStatus.id, newStatus);
-
-      // Update local state
+      await userService.updateDriverStatus(driverToUpdateStatus.id, newStatus);
       setDrivers(
         drivers.map((driver) =>
           driver.id === driverToUpdateStatus.id
-            ? { ...driver, status: newStatus }
-            : driver
-        )
+            ? {
+                ...driver,
+                driverDetails: {
+                  ...(driver.driverDetails as DriverDetails),
+                  status: newStatus,
+                },
+              }
+            : driver,
+        ),
       );
-
       toast.success("Driver status updated successfully");
       setIsStatusDialogOpen(false);
     } catch (error) {
@@ -399,27 +212,22 @@ const AdminDrivers = () => {
     }
   };
 
-  // View driver details
-  const handleViewDriver = (driver: Driver) => {
+  const handleViewDriver = (driver: UserWithDriverDetail) => {
     setDriverToView(driver);
     setIsViewDialogOpen(true);
   };
 
-  // Handle deleting a driver
-  const confirmDelete = (driver: Driver) => {
+  const confirmDelete = (driver: UserWithDriverDetail) => {
     setDriverToDelete(driver);
     setIsDeleteDialogOpen(true);
   };
 
   const handleDelete = async () => {
-    if (!driverToDelete) return;
+    if (!driverToDelete?.id) return;
 
     setIsSubmitting(true);
     try {
-      // Delete from API
-      await deleteDriver(driverToDelete.id);
-
-      // Update local state
+      await userService.deleteDriver(driverToDelete.id);
       setDrivers(drivers.filter((driver) => driver.id !== driverToDelete.id));
       toast.success("Driver deleted successfully");
       setIsDeleteDialogOpen(false);
@@ -431,18 +239,16 @@ const AdminDrivers = () => {
     }
   };
 
-  // Handle form submission for adding/editing driver
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentDriver) return;
 
-    // Validate form
     if (
-      !currentDriver.name ||
+      !currentDriver.firstName ||
       !currentDriver.phone ||
-      !currentDriver.taxiTypeId ||
-      !currentDriver.vehicleTypeId ||
-      !currentDriver.vehicleNumber
+      !currentDriver.driverDetails?.taxiTypeId ||
+      !currentDriver.driverDetails?.vehicleTypeId ||
+      !currentDriver.driverDetails?.vehicleNumber
     ) {
       toast.error("Please fill in all required fields");
       return;
@@ -451,50 +257,32 @@ const AdminDrivers = () => {
     setIsSubmitting(true);
 
     try {
-      // Generate email if not provided
-      if (!currentDriver.email) {
-        currentDriver.email = `${currentDriver.name
-          .toLowerCase()
-          .replace(/\s+/g, ".")}@booba-rides.com`;
-      }
-
       if (currentDriver.id) {
-        // Update existing driver
-        const { id, uid, role, createdAt, updatedAt, ...updateData } =
-          currentDriver;
-
-        await updateDriver(id, updateData);
-
-        // Update local state
+        await userService.updateDriver(currentDriver.id, {
+          userId: currentDriver.id,
+          ...currentDriver,
+        });
         setDrivers(
           drivers.map((driver) =>
             driver.id === currentDriver.id
-              ? { ...driver, ...currentDriver }
-              : driver
-          )
+              ? ({ ...driver, ...currentDriver } as UserWithDriverDetail)
+              : driver,
+          ),
         );
-
         toast.success("Driver updated successfully");
       } else {
-        // Add new driver
-        const { id, uid, role, createdAt, updatedAt, ...driverData } =
-          currentDriver;
-
-        try {
-          // Create driver using API
-          const result = await createDriver(driverData);
-
-          // Update local state with new driver
-          const newDriver = result.data as Driver;
-          setDrivers([...drivers, newDriver]);
-          toast.success(`Driver added successfully. ${result.message}`);
-        } catch (error) {
-          console.error("Error creating driver account:", error);
-          toast.error("Failed to create driver account");
-          throw error;
+        const result = await userService.createDriver({
+          status: "active",
+          userId: currentDriver.id,
+          vehicleNumber: currentDriver.driverDetails.vehicleNumber,
+          taxiTypeId: currentDriver.driverDetails.taxiTypeId,
+          vehicleTypeId: currentDriver.driverDetails.vehicleTypeId,
+        });
+        if (result.success && result.data) {
+          setDrivers([...drivers, result.data as UserWithDriverDetail]);
+          toast.success("Driver added successfully");
         }
       }
-
       setIsDialogOpen(false);
     } catch (error) {
       console.error("Error saving driver:", error);
@@ -520,7 +308,6 @@ const AdminDrivers = () => {
           </DialogTrigger>
         </Dialog>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
@@ -531,7 +318,10 @@ const AdminDrivers = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">
-              {drivers.filter((d) => d.status === "active").length}
+              {
+                drivers.filter((d) => d.driverDetails?.status === "active")
+                  .length
+              }
             </div>
             <p className="text-sm text-gray-500">Active Drivers</p>
           </CardContent>
@@ -539,7 +329,10 @@ const AdminDrivers = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">
-              {drivers.filter((d) => d.status === "inactive").length}
+              {
+                drivers.filter((d) => d.driverDetails?.status === "inactive")
+                  .length
+              }
             </div>
             <p className="text-sm text-gray-500">Inactive Drivers</p>
           </CardContent>
@@ -549,8 +342,10 @@ const AdminDrivers = () => {
             <div className="text-2xl font-bold">
               {drivers.length > 0
                 ? (
-                    drivers.reduce((acc, d) => acc + d.rating, 0) /
-                    drivers.length
+                    drivers.reduce(
+                      (acc, d) => acc + (d.driverDetails?.rating || 0),
+                      0,
+                    ) / drivers.length
                   ).toFixed(1)
                 : "0.0"}
             </div>
@@ -558,7 +353,6 @@ const AdminDrivers = () => {
           </CardContent>
         </Card>
       </div>
-
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -629,16 +423,15 @@ const AdminDrivers = () => {
                       </tr>
                     ) : filteredDrivers.length > 0 ? (
                       filteredDrivers.map((driver) => {
-                        // Find vehicle type name
                         const vehicleType = vehicleTypes.find(
-                          (v) => v.id === driver.vehicleTypeId
+                          (v) => v.id === driver.driverDetails?.vehicleTypeId,
                         );
                         const vehicleName =
                           vehicleType?.name || "Unknown Vehicle";
 
                         return (
                           <tr key={driver.id} className="border-b">
-                            <td className="p-4 font-medium">{driver.name}</td>
+                            <td className="p-4 font-medium">{`${driver.firstName} ${driver.lastName}`}</td>
                             <td className="p-4">
                               <div className="flex flex-col">
                                 <div className="flex items-center gap-1">
@@ -659,34 +452,36 @@ const AdminDrivers = () => {
                               <div className="flex items-center gap-1">
                                 <Car className="h-4 w-4 text-gray-500" />
                                 <span>
-                                  {vehicleName} ({driver.vehicleNumber})
+                                  {vehicleName} (
+                                  {driver.driverDetails?.vehicleNumber})
                                 </span>
                               </div>
                             </td>
                             <td className="p-4">
                               <div className="flex items-center">
                                 <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                                <span>{driver.rating}</span>
+                                <span>{driver.driverDetails?.rating}</span>
                               </div>
                             </td>
-                            <td className="p-4">{driver.rides}</td>
-                            <td className="p-4">
-                              AED {driver.earnings}
-                            </td>
+                            <td className="p-4">{0}</td>
+                            <td className="p-4">AED {0}</td>
                             <td className="p-4">
                               <Badge
                                 className={`
                                 ${
-                                  driver.status === "active"
+                                  driver.driverDetails?.status === "active"
                                     ? "bg-green-100 text-green-800"
-                                    : driver.status === "inactive"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-red-100 text-red-800"
+                                    : driver.driverDetails?.status ===
+                                        "inactive"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-red-100 text-red-800"
                                 }
                               `}
                               >
-                                {driver.status.charAt(0).toUpperCase() +
-                                  driver.status.slice(1)}
+                                {driver.driverDetails?.status
+                                  ?.charAt(0)
+                                  .toUpperCase() +
+                                  driver.driverDetails?.status?.slice(1)}
                               </Badge>
                             </td>
                             <td className="p-4 text-right">
@@ -713,9 +508,10 @@ const AdminDrivers = () => {
                                   onClick={() => openStatusDialog(driver)}
                                   title="Change Status"
                                 >
-                                  {driver.status === "active" ? (
+                                  {driver.driverDetails?.status === "active" ? (
                                     <UserCheck className="h-4 w-4 text-green-600" />
-                                  ) : driver.status === "inactive" ? (
+                                  ) : driver.driverDetails?.status ===
+                                    "inactive" ? (
                                     <UserX className="h-4 w-4 text-yellow-600" />
                                   ) : (
                                     <UserX className="h-4 w-4 text-red-600" />
@@ -751,7 +547,6 @@ const AdminDrivers = () => {
           </Tabs>
         </CardContent>
       </Card>
-
       {/* Add/Edit Driver Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -762,14 +557,28 @@ const AdminDrivers = () => {
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Driver Name</Label>
+              <Label htmlFor="firstName">First Name</Label>
               <Input
-                id="name"
-                placeholder="Full Name"
-                value={currentDriver?.name || ""}
+                id="firstName"
+                placeholder="First Name"
+                value={currentDriver?.firstName || ""}
                 onChange={(e) =>
                   setCurrentDriver((curr) =>
-                    curr ? { ...curr, name: e.target.value } : null
+                    curr ? { ...curr, firstName: e.target.value } : null,
+                  )
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                placeholder="Last Name"
+                value={currentDriver?.lastName || ""}
+                onChange={(e) =>
+                  setCurrentDriver((curr) =>
+                    curr ? { ...curr, lastName: e.target.value } : null,
                   )
                 }
                 required
@@ -784,7 +593,7 @@ const AdminDrivers = () => {
                 value={currentDriver?.phone || ""}
                 onChange={(e) =>
                   setCurrentDriver((curr) =>
-                    curr ? { ...curr, phone: e.target.value } : null
+                    curr ? { ...curr, phone: e.target.value } : null,
                   )
                 }
                 required
@@ -800,7 +609,7 @@ const AdminDrivers = () => {
                 value={currentDriver?.email || ""}
                 onChange={(e) =>
                   setCurrentDriver((curr) =>
-                    curr ? { ...curr, email: e.target.value } : null
+                    curr ? { ...curr, email: e.target.value } : null,
                   )
                 }
               />
@@ -811,7 +620,7 @@ const AdminDrivers = () => {
               <select
                 id="taxi-type"
                 className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={currentDriver?.taxiTypeId || ""}
+                value={currentDriver?.driverDetails?.taxiTypeId || ""}
                 onChange={(e) => handleTaxiTypeChange(e.target.value)}
                 required
               >
@@ -820,7 +629,7 @@ const AdminDrivers = () => {
                 </option>
                 {taxiTypes.map((type) => (
                   <option key={type.id} value={type.id}>
-                    {type.emoji} {type.name}
+                    {type.name}
                   </option>
                 ))}
               </select>
@@ -831,17 +640,25 @@ const AdminDrivers = () => {
               <select
                 id="vehicle-type"
                 className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={currentDriver?.vehicleTypeId || ""}
+                value={currentDriver?.driverDetails?.vehicleTypeId || ""}
                 onChange={(e) =>
                   setCurrentDriver((curr) =>
-                    curr ? { ...curr, vehicleTypeId: e.target.value } : null
+                    curr
+                      ? {
+                          ...curr,
+                          driverDetails: {
+                            ...(curr.driverDetails as DriverDetails),
+                            vehicleTypeId: e.target.value,
+                          },
+                        }
+                      : null,
                   )
                 }
-                disabled={!currentDriver?.taxiTypeId}
+                disabled={!currentDriver?.driverDetails?.taxiTypeId}
                 required
               >
                 <option value="" disabled>
-                  {currentDriver?.taxiTypeId
+                  {currentDriver?.driverDetails?.taxiTypeId
                     ? "Select a vehicle type"
                     : "Select a taxi type first"}
                 </option>
@@ -851,7 +668,7 @@ const AdminDrivers = () => {
                   </option>
                 ))}
               </select>
-              {currentDriver?.taxiTypeId &&
+              {currentDriver?.driverDetails?.taxiTypeId &&
                 filteredVehicleTypes.length === 0 && (
                   <p className="text-xs text-red-500 mt-1">
                     No vehicles available for this taxi type
@@ -864,10 +681,18 @@ const AdminDrivers = () => {
               <Input
                 id="vehicle-number"
                 placeholder="ABC123"
-                value={currentDriver?.vehicleNumber || ""}
+                value={currentDriver?.driverDetails?.vehicleNumber || ""}
                 onChange={(e) =>
                   setCurrentDriver((curr) =>
-                    curr ? { ...curr, vehicleNumber: e.target.value } : null
+                    curr
+                      ? {
+                          ...curr,
+                          driverDetails: {
+                            ...(curr.driverDetails as DriverDetails),
+                            vehicleNumber: e.target.value,
+                          },
+                        }
+                      : null,
                   )
                 }
                 required
@@ -901,7 +726,6 @@ const AdminDrivers = () => {
           </form>
         </DialogContent>
       </Dialog>
-
       {/* Status Update Dialog */}
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -931,8 +755,8 @@ const AdminDrivers = () => {
                 {newStatus === "active"
                   ? "Driver will be active and available for bookings."
                   : newStatus === "inactive"
-                  ? "Driver will be inactive and not available for bookings."
-                  : "Driver will be suspended and not allowed to log in."}
+                    ? "Driver will be inactive and not available for bookings."
+                    : "Driver will be suspended and not allowed to log in."}
               </p>
             </div>
           </div>
@@ -951,8 +775,8 @@ const AdminDrivers = () => {
                   newStatus === "active"
                     ? "bg-green-600 hover:bg-green-700"
                     : newStatus === "inactive"
-                    ? "bg-yellow-600 hover:bg-yellow-700"
-                    : "bg-red-600 hover:bg-red-700"
+                      ? "bg-yellow-600 hover:bg-yellow-700"
+                      : "bg-red-600 hover:bg-red-700"
                 } text-white
               `}
               disabled={isSubmitting}
@@ -969,7 +793,6 @@ const AdminDrivers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* View Driver Details Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -980,20 +803,20 @@ const AdminDrivers = () => {
           {driverToView && (
             <div className="py-4 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{driverToView.name}</h3>
+                <h3 className="text-lg font-semibold">{`${driverToView.firstName} ${driverToView.lastName}`}</h3>
                 <Badge
                   className={`
                   ${
-                    driverToView.status === "active"
+                    driverToView.driverDetails?.status === "active"
                       ? "bg-green-100 text-green-800"
-                      : driverToView.status === "inactive"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-red-100 text-red-800"
+                      : driverToView.driverDetails?.status === "inactive"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
                   }
                 `}
                 >
-                  {driverToView.status.charAt(0).toUpperCase() +
-                    driverToView.status.slice(1)}
+                  {driverToView.driverDetails?.status?.charAt(0).toUpperCase() +
+                    driverToView.driverDetails?.status?.slice(1)}
                 </Badge>
               </div>
 
@@ -1016,9 +839,10 @@ const AdminDrivers = () => {
                     <Car className="h-3 w-3 text-gray-500" />
                     <p>
                       {vehicleTypes.find(
-                        (v) => v.id === driverToView.vehicleTypeId
+                        (v) =>
+                          v.id === driverToView.driverDetails?.vehicleTypeId,
                       )?.name || "Unknown"}
-                      ({driverToView.vehicleNumber})
+                      ({driverToView.driverDetails?.vehicleNumber})
                     </p>
                   </div>
                 </div>
@@ -1030,61 +854,32 @@ const AdminDrivers = () => {
                   <div className="flex items-center justify-center mt-1">
                     <Star className="h-4 w-4 text-yellow-400 mr-1" />
                     <p className="font-medium">
-                      {driverToView.rating.toFixed(1)}
+                      {driverToView.driverDetails?.rating?.toFixed(1)}
                     </p>
                   </div>
                 </div>
 
                 <div className="text-center">
                   <p className="text-sm text-gray-500">Rides</p>
-                  <p className="font-medium mt-1">{driverToView.rides}</p>
+                  <p className="font-medium mt-1">{0}</p>
                 </div>
 
                 <div className="text-center">
                   <p className="text-sm text-gray-500">Earnings</p>
-                  <p className="font-medium mt-1">
-                    AED {driverToView.earnings.toFixed(2)}
-                  </p>
+                  <p className="font-medium mt-1">AED {0}</p>
                 </div>
               </div>
 
               <div>
                 <p className="text-sm text-gray-500">Joined</p>
-                <p className="mt-1">{driverToView.joined}</p>
+                <p className="mt-1">
+                  {new Date(driverToView.createdAt).toLocaleDateString()}
+                </p>
               </div>
-
-              {driverToView.feedback && driverToView.feedback.length > 0 && (
-                <div>
-                  <p className="text-sm text-gray-500 mb-2">Recent Feedback</p>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {driverToView.feedback.map((feedback, index) => (
-                      <div key={index} className="bg-gray-50 p-2 rounded-md">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Star className="h-3 w-3 text-yellow-400 mr-1" />
-                            <p className="text-sm font-medium">
-                              {feedback.rating.toFixed(1)}
-                            </p>
-                          </div>
-                          <p className="text-xs text-gray-500">
-                            {feedback.createdAt instanceof Date
-                              ? feedback.createdAt.toLocaleDateString()
-                              : new Date(
-                                  feedback.createdAt
-                                ).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <p className="text-sm mt-1">{feedback.comment}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>
       </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -1119,7 +914,7 @@ const AdminDrivers = () => {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog>{" "}
     </DashboardLayout>
   );
 };

@@ -16,11 +16,20 @@ class BookingService {
    * Get all bookings with optional filtering
    */
   async getAllBookings(
-    filters?: BookingFilters
+    filters?: BookingFilters,
   ): Promise<ApiResponse<BookingWithRelations[]>> {
     return apiClient.get<BookingWithRelations[]>(
       `${API_ENDPOINTS.BOOKINGS.BASE}/all`,
-      filters
+      filters,
+    );
+  }
+
+  async getAllBookingsWithRelations(
+    filters?: BookingFilters,
+  ): Promise<ApiResponse<BookingWithRelations[]>> {
+    return apiClient.get<BookingWithRelations[]>(
+      `${API_ENDPOINTS.BOOKINGS.BASE}/all/relations`,
+      filters,
     );
   }
 
@@ -29,7 +38,7 @@ class BookingService {
    */
   async getBookingById(id: string): Promise<ApiResponse<BookingWithRelations>> {
     return apiClient.get<BookingWithRelations>(
-      `${API_ENDPOINTS.BOOKINGS.BASE}/${id}`
+      `${API_ENDPOINTS.BOOKINGS.BASE}/${id}`,
     );
   }
 
@@ -37,7 +46,7 @@ class BookingService {
    * Create a new booking
    */
   async createBooking(
-    data: CreateBookingRequest
+    data: CreateBookingRequest,
   ): Promise<ApiResponse<Booking>> {
     return apiClient.post<Booking>(API_ENDPOINTS.BOOKINGS.BASE, data);
   }
@@ -47,7 +56,7 @@ class BookingService {
    */
   async updateBooking(
     id: string,
-    data: UpdateBookingRequest
+    data: UpdateBookingRequest,
   ): Promise<ApiResponse<Booking>> {
     return apiClient.put<Booking>(`${API_ENDPOINTS.BOOKINGS.BASE}/${id}`, data);
   }
@@ -57,7 +66,7 @@ class BookingService {
    */
   async deleteBooking(id: string): Promise<ApiResponse<{ message: string }>> {
     return apiClient.delete<{ message: string }>(
-      `${API_ENDPOINTS.BOOKINGS.BASE}/${id}`
+      `${API_ENDPOINTS.BOOKINGS.BASE}/${id}`,
     );
   }
 
@@ -66,11 +75,11 @@ class BookingService {
    */
   async updateBookingStatus(
     id: string,
-    status: string
+    status: string,
   ): Promise<ApiResponse<Booking>> {
     return apiClient.patch<Booking>(
       `${API_ENDPOINTS.BOOKINGS.BASE}/${id}/status`,
-      { status }
+      { status },
     );
   }
 
@@ -78,10 +87,10 @@ class BookingService {
    * Get bookings by user ID
    */
   async getBookingsByUserId(
-    userId: string
+    userId: string,
   ): Promise<ApiResponse<BookingWithRelations[]>> {
     return apiClient.get<BookingWithRelations[]>(
-      `${API_ENDPOINTS.BOOKINGS.BY_USER}/${userId}`
+      `${API_ENDPOINTS.BOOKINGS.BY_USER}/${userId}`,
     );
   }
 
@@ -89,10 +98,10 @@ class BookingService {
    * Get bookings by vehicle ID
    */
   async getBookingsByVehicleId(
-    vehicleId: string
+    vehicleId: string,
   ): Promise<ApiResponse<BookingWithRelations[]>> {
     return apiClient.get<BookingWithRelations[]>(
-      `${API_ENDPOINTS.BOOKINGS.BY_VEHICLE}/${vehicleId}`
+      `${API_ENDPOINTS.BOOKINGS.BY_VEHICLE}/${vehicleId}`,
     );
   }
 
@@ -124,7 +133,7 @@ class BookingService {
    */
   async assignDriver(
     bookingId: string,
-    driverId: string
+    driverId: string,
   ): Promise<ApiResponse<Booking>> {
     return apiClient.post<Booking>(API_ENDPOINTS.BOOKINGS.ASSIGN_DRIVER, {
       bookingId,
@@ -137,7 +146,7 @@ class BookingService {
    */
   async cancelBooking(
     bookingId: string,
-    reason: string
+    reason: string,
   ): Promise<ApiResponse<Booking>> {
     return apiClient.post<Booking>(API_ENDPOINTS.BOOKINGS.CANCEL, {
       bookingId,
@@ -150,7 +159,7 @@ class BookingService {
    */
   async updatePaymentInfo(
     id: string,
-    paymentInfo: Partial<PaymentInfo>
+    paymentInfo: Partial<PaymentInfo>,
   ): Promise<ApiResponse<Booking>> {
     return apiClient.patch<Booking>(`${API_ENDPOINTS.BOOKINGS.BASE}/${id}`, {
       paymentInfo,

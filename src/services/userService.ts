@@ -1,10 +1,11 @@
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import type {
   ApiResponse,
-  Driver,
-  BackendDriverResponse,
+  DriverDetails,
   CreateDriverRequest,
   UpdateDriverRequest,
+  UserWithDriverDetail,
+  User,
 } from "@/types";
 
 // User Service Class
@@ -27,33 +28,67 @@ class UserService {
    * Create a new driver
    */
   async createDriver(
-    driverData: CreateDriverRequest
-  ): Promise<ApiResponse<BackendDriverResponse>> {
-    return apiClient.post<BackendDriverResponse>(
+    driverData: CreateDriverRequest,
+  ): Promise<ApiResponse<UserWithDriverDetail>> {
+    return apiClient.post<UserWithDriverDetail>(
       API_ENDPOINTS.DRIVERS.BASE,
-      driverData
+      driverData,
     );
   }
 
   async checkUserExists(phone: string): Promise<ApiResponse<void>> {
     return apiClient.get<void>(
-      `${API_ENDPOINTS.USERS.BASE}/check?phone=${phone}`
+      `${API_ENDPOINTS.USERS.BASE}/check?phone=${phone}`,
+    );
+  }
+
+  async getAllUsers(): Promise<ApiResponse<User[]>> {
+    return apiClient.get<User[]>(`${API_ENDPOINTS.USERS.BASE}/all`);
+  }
+
+  /**
+   * Create a new user
+   */
+  async createUser(
+    userData: Omit<User, "id" | "createdAt" | "updatedAt">,
+  ): Promise<ApiResponse<User>> {
+    return apiClient.post<User>(API_ENDPOINTS.USERS.BASE, userData);
+  }
+
+  /**
+   * Update a user
+   */
+  async updateUser(
+    id: string,
+    updateData: Partial<Omit<User, "id" | "createdAt" | "updatedAt">>,
+  ): Promise<ApiResponse<User>> {
+    return apiClient.put<User>(`${API_ENDPOINTS.USERS.BASE}/${id}`, updateData);
+  }
+
+  /**
+   * Delete a user
+   */
+  async deleteUser(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete<{ message: string }>(
+      `${API_ENDPOINTS.USERS.BASE}/${id}`,
     );
   }
 
   /**
    * Get all drivers
    */
-  async getDrivers(): Promise<ApiResponse<BackendDriverResponse[]>> {
-    return apiClient.get<BackendDriverResponse[]>(API_ENDPOINTS.DRIVERS.BASE);
+  async getAllDrivers(): Promise<ApiResponse<UserWithDriverDetail[]>> {
+    return apiClient.get<UserWithDriverDetail[]>(
+      `${API_ENDPOINTS.USERS.BASE}/all/drivers`,
+    );
   }
 
   /**
    * Get driver by ID
    */
-  async getDriver(id: string): Promise<ApiResponse<BackendDriverResponse>> {
-    return apiClient.get<BackendDriverResponse>(
-      `${API_ENDPOINTS.DRIVERS.BASE}/${id}`
+  async getDriver(id: string): Promise<ApiResponse<UserWithDriverDetail>> {
+    return apiClient.get<UserWithDriverDetail>(
+      `${API_ENDPOINTS.DRIVERS.BASE}/${id}`,
     );
   }
 
@@ -62,11 +97,11 @@ class UserService {
    */
   async updateDriver(
     id: string,
-    updateData: UpdateDriverRequest
+    updateData: UpdateDriverRequest,
   ): Promise<ApiResponse<{ message: string }>> {
     return apiClient.put<{ message: string }>(
       `${API_ENDPOINTS.DRIVERS.BASE}/${id}`,
-      updateData
+      updateData,
     );
   }
 
@@ -75,7 +110,7 @@ class UserService {
    */
   async deleteDriver(id: string): Promise<ApiResponse<{ message: string }>> {
     return apiClient.delete<{ message: string }>(
-      `${API_ENDPOINTS.DRIVERS.BASE}/${id}`
+      `${API_ENDPOINTS.DRIVERS.BASE}/${id}`,
     );
   }
 
@@ -84,30 +119,30 @@ class UserService {
    */
   async updateDriverStatus(
     id: string,
-    status: "active" | "inactive" | "suspended"
+    status: "active" | "inactive" | "suspended",
   ): Promise<ApiResponse<{ message: string }>> {
     return apiClient.patch<{ message: string }>(
       `${API_ENDPOINTS.DRIVERS.BASE}/${id}/status`,
-      { status }
+      { status },
     );
   }
 
   /**
    * Get driver profile
    */
-  async getDriverProfile(): Promise<ApiResponse<BackendDriverResponse>> {
-    return apiClient.get<BackendDriverResponse>(API_ENDPOINTS.DRIVERS.PROFILE);
+  async getDriverProfile(): Promise<ApiResponse<DriverDetails>> {
+    return apiClient.get<DriverDetails>(API_ENDPOINTS.DRIVERS.PROFILE);
   }
 
   /**
    * Update driver profile
    */
   async updateDriverProfile(
-    updateData: UpdateDriverRequest
-  ): Promise<ApiResponse<BackendDriverResponse>> {
-    return apiClient.put<BackendDriverResponse>(
+    updateData: UpdateDriverRequest,
+  ): Promise<ApiResponse<DriverDetails>> {
+    return apiClient.put<DriverDetails>(
       API_ENDPOINTS.DRIVERS.PROFILE,
-      updateData
+      updateData,
     );
   }
 
@@ -118,7 +153,7 @@ class UserService {
     ApiResponse<{ earnings: number; history: any[] }>
   > {
     return apiClient.get<{ earnings: number; history: any[] }>(
-      API_ENDPOINTS.DRIVERS.EARNINGS
+      API_ENDPOINTS.DRIVERS.EARNINGS,
     );
   }
 
@@ -140,11 +175,11 @@ class UserService {
    * Update driver bank details
    */
   async updateDriverBankDetails(
-    bankDetails: any
+    bankDetails: any,
   ): Promise<ApiResponse<{ message: string }>> {
     return apiClient.put<{ message: string }>(
       API_ENDPOINTS.DRIVERS.BANK_DETAILS,
-      bankDetails
+      bankDetails,
     );
   }
 
@@ -159,11 +194,11 @@ class UserService {
    * Update driver settings
    */
   async updateDriverSettings(
-    settings: any
+    settings: any,
   ): Promise<ApiResponse<{ message: string }>> {
     return apiClient.put<{ message: string }>(
       API_ENDPOINTS.DRIVERS.SETTINGS,
-      settings
+      settings,
     );
   }
 }
@@ -177,41 +212,11 @@ export const getAuthToken = async (): Promise<string> => {
 };
 
 export const checkUserExists = async (
-  phone: string
+  phone: string,
 ): Promise<{
   success: boolean;
   message: string;
   error?: string;
 }> => {
   return await userService.checkUserExists(phone);
-};
-
-export const createDriver = async (driverData: CreateDriverRequest) => {
-  return userService.createDriver(driverData);
-};
-
-export const getDrivers = async () => {
-  return userService.getDrivers();
-};
-
-export const getDriver = async (id: string) => {
-  return userService.getDriver(id);
-};
-
-export const updateDriver = async (
-  id: string,
-  updateData: UpdateDriverRequest
-) => {
-  return userService.updateDriver(id, updateData);
-};
-
-export const deleteDriver = async (id: string) => {
-  return userService.deleteDriver(id);
-};
-
-export const updateDriverStatus = async (
-  id: string,
-  status: "active" | "inactive" | "suspended"
-) => {
-  return userService.updateDriverStatus(id, status);
 };

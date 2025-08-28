@@ -17,15 +17,7 @@ export {
   bookingWithCash,
 } from "./bookingService";
 
-export {
-  getAuthToken,
-  createDriver,
-  getDrivers,
-  getDriver,
-  updateDriver,
-  deleteDriver,
-  updateDriverStatus,
-} from "./userService";
+export { getAuthToken } from "./userService";
 
 // Export all types from centralized types file
 export type * from "@/types";

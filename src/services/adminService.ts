@@ -153,7 +153,7 @@ class AdminService {
     userId?: string;
     vehicleId?: string;
   }): Promise<ApiResponse<AdminBooking[]>> {
-    return apiClient.get<AdminBooking[]>(API_ENDPOINTS.ADMIN.BOOKINGS, filters);
+    return apiClient.get<AdminBooking[]>(API_ENDPOINTS.BOOKINGS.BASE, filters);
   }
 
   /**

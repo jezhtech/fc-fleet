@@ -120,7 +120,7 @@ const Register = () => {
   // Format phone number for display and validation
   const formatPhoneNumber = (
     phoneNumber: string,
-    countryCode: string
+    countryCode: string,
   ): string => {
     // Remove any non-digit characters
     const cleanNumber = phoneNumber.replace(/\D/g, "");
@@ -174,7 +174,7 @@ const Register = () => {
           "recaptcha-container",
           {
             size: "invisible",
-          }
+          },
         );
       }
       // Send OTP
@@ -250,6 +250,8 @@ const Register = () => {
         if (!response.success) {
           throw new Error(response.error || "Failed to create user account");
         }
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         // Refresh user data to ensure we have the latest
         await refreshUserData();
         // Navigate to home page

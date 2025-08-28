@@ -23,60 +23,10 @@ import {
 } from "recharts";
 import { formatCurrency } from "@/utils/currency";
 import CurrencyNotice from "@/components/CurrencyNotice";
-import {
-  collection,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  Timestamp,
-} from "firebase/firestore";
-import { firestore } from "@/lib/firebase";
+import { adminService, bookingService, userService } from "@/services";
+import type { User, BookingWithRelations, UserWithDriverDetail } from "@/types";
 
-// Types for Firebase data
-interface FirebaseBooking {
-  id: string;
-  userId: string;
-  pickupLocation: {
-    name: string;
-    address: string;
-  };
-  dropoffLocation: {
-    name: string;
-    address: string;
-  };
-  vehicleType: string;
-  fare: number;
-  status: "pending" | "confirmed" | "completed" | "cancelled";
-  paymentStatus: "pending" | "paid" | "failed";
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  user?: {
-    displayName?: string;
-    email?: string;
-  };
-}
-
-interface FirebaseUser {
-  id: string;
-  email: string;
-  displayName?: string;
-  phoneNumber?: string;
-  createdAt: Timestamp;
-  role: "user" | "admin";
-}
-
-interface FirebaseDriver {
-  id: string;
-  userId: string;
-  name: string;
-  email: string;
-  phone: string;
-  status: "active" | "inactive" | "suspended";
-  vehicleNumber?: string;
-  rating?: number;
-  createdAt: Timestamp;
-}
+// Combined interface for recent bookings with user info
 
 interface DashboardStats {
   totalBookings: number;
@@ -85,7 +35,7 @@ interface DashboardStats {
   activeDrivers: number;
   monthlyBookings: number;
   monthlyRevenue: number;
-  recentBookings: FirebaseBooking[];
+  recentBookings: BookingWithRelations[];
 }
 
 const AdminDashboard = () => {
@@ -99,128 +49,109 @@ const AdminDashboard = () => {
     recentBookings: [],
   });
   const [loading, setLoading] = useState(true);
-  const [allBookings, setAllBookings] = useState<FirebaseBooking[]>([]);
-  const [allUsers, setAllUsers] = useState<FirebaseUser[]>([]);
-  const [allDrivers, setAllDrivers] = useState<FirebaseDriver[]>([]);
+  const [allBookings, setAllBookings] = useState<BookingWithRelations[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allDrivers, setAllDrivers] = useState<UserWithDriverDetail[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<"today" | "yesterday" | "7days" | "30days" | "6months">("7days");
+  const [dateRange, setDateRange] = useState<
+    "today" | "yesterday" | "7days" | "30days" | "6months"
+  >("7days");
 
-  // Fetch data from Firebase
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        // Fetch bookings
-        const bookingsRef = collection(firestore, "bookings");
-        const bookingsSnapshot = await getDocs(bookingsRef);
-        const fetchedBookings = bookingsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as FirebaseBooking[];
-        setAllBookings(fetchedBookings);
+      // Fetch bookings, users, and drivers in parallel
+      const [bookingsRes, usersRes, driversRes] = await Promise.all([
+        bookingService.getAllBookingsWithRelations(),
+        userService.getAllUsers(),
+        userService.getAllDrivers(),
+      ]);
 
-        // Fetch users
-        const usersRef = collection(firestore, "users");
-        const usersSnapshot = await getDocs(usersRef);
-        const fetchedUsers = usersSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as FirebaseUser[];
-        setAllUsers(fetchedUsers);
-
-        // Fetch drivers
-        const driversRef = collection(firestore, "drivers");
-        const driversSnapshot = await getDocs(driversRef);
-        const fetchedDrivers = driversSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as FirebaseDriver[];
-        setAllDrivers(fetchedDrivers);
-
-        // Calculate dashboard statistics
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-        // Calculate total bookings and revenue
-        const totalBookings = fetchedBookings.length;
-        const totalRevenue = fetchedBookings.reduce(
-          (sum, booking) => sum + (booking.fare || 0),
-          0
+      if (!bookingsRes.success || !usersRes.success || !driversRes.success) {
+        throw new Error(
+          bookingsRes.error ||
+            usersRes.error ||
+            driversRes.error ||
+            "Failed to fetch data",
         );
-
-        // Calculate monthly stats
-        const monthlyBookings = fetchedBookings.filter((booking) => {
-          const createdAt = booking.createdAt?.toDate?.() || new Date();
-          return createdAt >= startOfMonth && createdAt <= endOfMonth;
-        }).length;
-
-        const monthlyRevenue = fetchedBookings
-          .filter((booking) => {
-            const createdAt = booking.createdAt?.toDate?.() || new Date();
-            return createdAt >= startOfMonth && createdAt <= endOfMonth;
-          })
-          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
-
-        // Get recent bookings (last 5) with user information
-        const recentBookings = fetchedBookings
-          .sort((a, b) => {
-            const dateA = a.createdAt?.toDate?.() || new Date();
-            const dateB = b.createdAt?.toDate?.() || new Date();
-            return dateB.getTime() - dateA.getTime();
-          })
-          .slice(0, 5)
-          .map((booking) => {
-            // Find user information for this booking
-            const user = fetchedUsers.find((u) => u.id === booking.userId);
-            return {
-              ...booking,
-              user: user
-                ? {
-                    displayName: user.displayName,
-                    email: user.email,
-                  }
-                : undefined,
-            };
-          });
-
-        // Calculate total users (excluding drivers)
-        const totalUsers = fetchedUsers.filter(
-          (user) => user.role === "user"
-        ).length;
-
-        // Calculate active drivers
-        const activeDrivers = fetchedDrivers.filter(
-          (driver) => driver.status === "active"
-        ).length;
-
-        setStats({
-          totalBookings,
-          totalRevenue,
-          totalUsers,
-          activeDrivers,
-          monthlyBookings,
-          monthlyRevenue,
-          recentBookings,
-        });
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        setError(err instanceof Error ? err.message : "Failed to fetch data");
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchData();
+      const fetchedBookings = bookingsRes.data || [];
+      const fetchedUsers = usersRes.data || [];
+      const fetchedDrivers = driversRes.data || [];
+
+      console.log("User: ", fetchedUsers);
+
+      setAllBookings(fetchedBookings);
+      setAllUsers(fetchedUsers);
+      setAllDrivers(fetchedDrivers);
+
+      // Calculate dashboard statistics
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      // Calculate total bookings and revenue
+      const totalBookings = fetchedBookings.length;
+      const totalRevenue = fetchedBookings.reduce(
+        (sum, booking) => sum + (booking.paymentInfo.amount || 0),
+        0,
+      );
+
+      // Calculate monthly stats
+      const monthlyBookings = fetchedBookings.filter((booking) => {
+        const createdAt = new Date(booking.createdAt || new Date());
+        return createdAt >= startOfMonth && createdAt <= endOfMonth;
+      }).length;
+
+      const monthlyRevenue = fetchedBookings
+        .filter((booking) => {
+          const createdAt = new Date(booking.createdAt || new Date());
+          return createdAt >= startOfMonth && createdAt <= endOfMonth;
+        })
+        .reduce((sum, booking) => sum + (booking.paymentInfo.amount || 0), 0);
+
+      // Get recent bookings (last 5) with user information
+      const recentBookings: BookingWithRelations[] = fetchedBookings
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt || new Date());
+          const dateB = new Date(b.createdAt || new Date());
+          return dateB.getTime() - dateA.getTime();
+        })
+        .slice(0, 5);
+
+      // Calculate total users (excluding drivers)
+      const totalUsers = fetchedUsers;
+
+      setStats({
+        totalBookings,
+        totalRevenue,
+        totalUsers: fetchedUsers.length,
+        activeDrivers: fetchedDrivers.length,
+        monthlyBookings,
+        monthlyRevenue,
+        recentBookings,
+      });
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch data");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Get date range based on selection
   const getDateRange = useCallback((range: string) => {
     const now = new Date();
     const start = new Date();
-    
+
     switch (range) {
       case "today":
         start.setHours(0, 0, 0, 0);
@@ -254,7 +185,7 @@ const AdminDashboard = () => {
   const chartData = useMemo(() => {
     const { start, end } = getDateRange(dateRange);
     const data = [];
-    
+
     if (dateRange === "today" || dateRange === "yesterday") {
       // For today/yesterday, show hourly data
       const hours = [];
@@ -263,19 +194,19 @@ const AdminDashboard = () => {
         hour.setHours(i, 0, 0, 0);
         const nextHour = new Date(hour);
         nextHour.setHours(i + 1, 0, 0, 0);
-        
+
         const hourBookings = allBookings.filter((booking) => {
-          const createdAt = booking.createdAt?.toDate?.() || new Date();
+          const createdAt = new Date(booking.createdAt || new Date());
           return createdAt >= hour && createdAt < nextHour;
         }).length;
-        
+
         const hourRevenue = allBookings
           .filter((booking) => {
-            const createdAt = booking.createdAt?.toDate?.() || new Date();
+            const createdAt = new Date(booking.createdAt || new Date());
             return createdAt >= hour && createdAt < nextHour;
           })
-          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
-        
+          .reduce((sum, booking) => sum + (booking.paymentInfo.amount || 0), 0);
+
         hours.push({
           name: `${hour.getHours()}:00`,
           bookings: hourBookings,
@@ -291,21 +222,25 @@ const AdminDashboard = () => {
         date.setHours(0, 0, 0, 0);
         const nextDate = new Date(date);
         nextDate.setDate(nextDate.getDate() + 1);
-        
+
         const dayBookings = allBookings.filter((booking) => {
-          const createdAt = booking.createdAt?.toDate?.() || new Date();
+          const createdAt = new Date(booking.createdAt || new Date());
           return createdAt >= date && createdAt < nextDate;
         }).length;
-        
+
         const dayRevenue = allBookings
           .filter((booking) => {
-            const createdAt = booking.createdAt?.toDate?.() || new Date();
+            const createdAt = new Date(booking.createdAt || new Date());
             return createdAt >= date && createdAt < nextDate;
           })
-          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
-        
+          .reduce((sum, booking) => sum + (booking.paymentInfo.amount || 0), 0);
+
         data.push({
-          name: date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+          name: date.toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+          }),
           bookings: dayBookings,
           revenue: dayRevenue,
         });
@@ -315,23 +250,23 @@ const AdminDashboard = () => {
       // For 30 days, show weekly data
       for (let i = 3; i >= 0; i--) {
         const weekStart = new Date();
-        weekStart.setDate(weekStart.getDate() - (i * 7));
+        weekStart.setDate(weekStart.getDate() - i * 7);
         weekStart.setHours(0, 0, 0, 0);
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 7);
-        
+
         const weekBookings = allBookings.filter((booking) => {
-          const createdAt = booking.createdAt?.toDate?.() || new Date();
+          const createdAt = new Date(booking.createdAt || new Date());
           return createdAt >= weekStart && createdAt < weekEnd;
         }).length;
-        
+
         const weekRevenue = allBookings
           .filter((booking) => {
-            const createdAt = booking.createdAt?.toDate?.() || new Date();
+            const createdAt = new Date(booking.createdAt || new Date());
             return createdAt >= weekStart && createdAt < weekEnd;
           })
-          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
-        
+          .reduce((sum, booking) => sum + (booking.paymentInfo.amount || 0), 0);
+
         data.push({
           name: `Week ${4 - i}`,
           bookings: weekBookings,
@@ -348,19 +283,19 @@ const AdminDashboard = () => {
         date.setHours(0, 0, 0, 0);
         const nextMonth = new Date(date);
         nextMonth.setMonth(nextMonth.getMonth() + 1);
-        
+
         const monthBookings = allBookings.filter((booking) => {
-          const createdAt = booking.createdAt?.toDate?.() || new Date();
+          const createdAt = new Date(booking.createdAt || new Date());
           return createdAt >= date && createdAt < nextMonth;
         }).length;
-        
+
         const monthRevenue = allBookings
           .filter((booking) => {
-            const createdAt = booking.createdAt?.toDate?.() || new Date();
+            const createdAt = new Date(booking.createdAt || new Date());
             return createdAt >= date && createdAt < nextMonth;
           })
-          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
-        
+          .reduce((sum, booking) => sum + (booking.paymentInfo.amount || 0), 0);
+
         data.push({
           name: date.toLocaleDateString("en-US", { month: "short" }),
           bookings: monthBookings,
@@ -374,7 +309,7 @@ const AdminDashboard = () => {
   // Custom formatter for chart tooltip - memoized to prevent recreation on every render
   const currencyFormatter = useCallback(
     (value: number) => formatCurrency(value),
-    []
+    [],
   );
 
   if (loading) {
@@ -387,7 +322,7 @@ const AdminDashboard = () => {
     );
   }
 
-  // Show error message if Firebase queries failed
+  // Show error message if data fetching failed
   if (error) {
     return (
       <DashboardLayout userType="admin">
@@ -425,105 +360,6 @@ const AdminDashboard = () => {
   }
 
   const handleRefresh = () => {
-    setLoading(true);
-    setError(null);
-    // Trigger a re-fetch by calling the useEffect again
-    const fetchData = async () => {
-      try {
-        // Fetch bookings
-        const bookingsRef = collection(firestore, "bookings");
-        const bookingsSnapshot = await getDocs(bookingsRef);
-        const fetchedBookings = bookingsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as FirebaseBooking[];
-        setAllBookings(fetchedBookings);
-
-        // Fetch users
-        const usersRef = collection(firestore, "users");
-        const usersSnapshot = await getDocs(usersRef);
-        const fetchedUsers = usersSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as FirebaseUser[];
-        setAllUsers(fetchedUsers);
-
-        // Fetch drivers
-        const driversRef = collection(firestore, "drivers");
-        const driversSnapshot = await getDocs(driversRef);
-        const fetchedDrivers = driversSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as FirebaseDriver[];
-        setAllDrivers(fetchedDrivers);
-
-        // Recalculate stats
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-        const totalBookings = fetchedBookings.length;
-        const totalRevenue = fetchedBookings.reduce(
-          (sum, booking) => sum + (booking.fare || 0),
-          0
-        );
-
-        const monthlyBookings = fetchedBookings.filter((booking) => {
-          const createdAt = booking.createdAt?.toDate?.() || new Date();
-          return createdAt >= startOfMonth && createdAt <= endOfMonth;
-        }).length;
-
-        const monthlyRevenue = fetchedBookings
-          .filter((booking) => {
-            const createdAt = booking.createdAt?.toDate?.() || new Date();
-            return createdAt >= startOfMonth && createdAt <= endOfMonth;
-          })
-          .reduce((sum, booking) => sum + (booking.fare || 0), 0);
-
-        const recentBookings = fetchedBookings
-          .sort((a, b) => {
-            const dateA = a.createdAt?.toDate?.() || new Date();
-            const dateB = b.createdAt?.toDate?.() || new Date();
-            return dateB.getTime() - dateA.getTime();
-          })
-          .slice(0, 5)
-          .map((booking) => {
-            const user = fetchedUsers.find((u) => u.id === booking.userId);
-            return {
-              ...booking,
-              user: user
-                ? {
-                    displayName: user.displayName,
-                    email: user.email,
-                  }
-                : undefined,
-            };
-          });
-
-        const totalUsers = fetchedUsers.filter(
-          (user) => user.role === "user"
-        ).length;
-        const activeDrivers = fetchedDrivers.filter(
-          (driver) => driver.status === "active"
-        ).length;
-
-        setStats({
-          totalBookings,
-          totalRevenue,
-          totalUsers,
-          activeDrivers,
-          monthlyBookings,
-          monthlyRevenue,
-          recentBookings,
-        });
-      } catch (err) {
-        console.error("Error refreshing dashboard data:", err);
-        setError(err instanceof Error ? err.message : "Failed to refresh data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   };
 
@@ -607,7 +443,10 @@ const AdminDashboard = () => {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Chart Data Range</h2>
-          <Select value={dateRange} onValueChange={(value: any) => setDateRange(value)}>
+          <Select
+            value={dateRange}
+            onValueChange={(value: any) => setDateRange(value)}
+          >
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Select date range" />
             </SelectTrigger>
@@ -620,7 +459,7 @@ const AdminDashboard = () => {
             </SelectContent>
           </Select>
         </div>
-        
+
         {/* Summary cards for selected date range */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <Card>
@@ -635,18 +474,30 @@ const AdminDashboard = () => {
             <CardContent className="pt-4">
               <div className="text-sm text-gray-500">Revenue in Range</div>
               <div className="text-xl font-bold">
-                {formatCurrency(chartData.reduce((sum, item) => sum + item.revenue, 0))}
+                {formatCurrency(
+                  chartData.reduce((sum, item) => sum + item.revenue, 0),
+                )}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <div className="text-sm text-gray-500">Average per {dateRange === "today" || dateRange === "yesterday" ? "Hour" : 
-                dateRange === "7days" ? "Day" : 
-                dateRange === "30days" ? "Week" : "Month"}</div>
+              <div className="text-sm text-gray-500">
+                Average per{" "}
+                {dateRange === "today" || dateRange === "yesterday"
+                  ? "Hour"
+                  : dateRange === "7days"
+                    ? "Day"
+                    : dateRange === "30days"
+                      ? "Week"
+                      : "Month"}
+              </div>
               <div className="text-xl font-bold">
-                {formatCurrency(chartData.length > 0 ? 
-                  chartData.reduce((sum, item) => sum + item.revenue, 0) / chartData.length : 0
+                {formatCurrency(
+                  chartData.length > 0
+                    ? chartData.reduce((sum, item) => sum + item.revenue, 0) /
+                        chartData.length
+                    : 0,
                 )}
               </div>
             </CardContent>
@@ -658,11 +509,16 @@ const AdminDashboard = () => {
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>
-              Revenue Overview - {dateRange === "today" ? "Today" : 
-                dateRange === "yesterday" ? "Yesterday" : 
-                dateRange === "7days" ? "Last 7 Days" : 
-                dateRange === "30days" ? "Last 30 Days" : 
-                "Last 6 Months"}
+              Revenue Overview -{" "}
+              {dateRange === "today"
+                ? "Today"
+                : dateRange === "yesterday"
+                  ? "Yesterday"
+                  : dateRange === "7days"
+                    ? "Last 7 Days"
+                    : dateRange === "30days"
+                      ? "Last 30 Days"
+                      : "Last 6 Months"}
             </CardTitle>
           </CardHeader>
           <CardContent className="h-80">
@@ -688,11 +544,16 @@ const AdminDashboard = () => {
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>
-              Booking Stats - {dateRange === "today" ? "Today" : 
-                dateRange === "yesterday" ? "Yesterday" : 
-                dateRange === "7days" ? "Last 7 Days" : 
-                dateRange === "30days" ? "Last 30 Days" : 
-                "Last 6 Months"}
+              Booking Stats -{" "}
+              {dateRange === "today"
+                ? "Today"
+                : dateRange === "yesterday"
+                  ? "Yesterday"
+                  : dateRange === "7days"
+                    ? "Last 7 Days"
+                    : dateRange === "30days"
+                      ? "Last 30 Days"
+                      : "Last 6 Months"}
             </CardTitle>
           </CardHeader>
           <CardContent className="h-80">
@@ -744,21 +605,21 @@ const AdminDashboard = () => {
                         <tr key={booking.id} className="border-b">
                           <td className="p-4">{booking.id}</td>
                           <td className="p-4">
-                            {booking.user?.displayName ||
-                              booking.user?.email ||
-                              "Unknown User"}
+                            {booking.user?.email || "Unknown User"}
                           </td>
-                          <td className="p-4">{booking.vehicleType}</td>
+                          <td className="p-4">
+                            {booking.user?.driverDetails.vehicleNumber}
+                          </td>
                           <td className="p-4">
                             <span
                               className={`inline-block px-2 py-1 text-xs rounded-full ${
                                 booking.status === "completed"
                                   ? "bg-green-100 text-green-800"
-                                  : booking.status === "confirmed"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : booking.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
+                                  : booking.paymentInfo.status === "paid"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : booking.paymentInfo.status === "pending"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-red-100 text-red-800"
                               }`}
                             >
                               {booking.status.charAt(0).toUpperCase() +
@@ -766,7 +627,7 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="p-4">
-                            {formatCurrency(booking.fare || 0)}
+                            {formatCurrency(booking.paymentInfo.amount || 0)}
                           </td>
                         </tr>
                       ))

@@ -6,9 +6,8 @@ import { cn } from "@/lib/utils";
 import { logout } from "@/lib/authUtils";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { getDriver } from "@/services/userService";
 import {
-  User,
+  User as UserIcon,
   Car,
   Settings,
   LogOut,
@@ -18,6 +17,8 @@ import {
   LogInIcon,
 } from "lucide-react";
 import { Badge } from "./ui/badge";
+import { User } from "@/types";
+import { User as FirebaseUser } from "firebase/auth";
 
 export const NavProfile = ({
   mobile = false,
@@ -27,8 +28,8 @@ export const NavProfile = ({
   position = "sticky",
 }: {
   mobile?: boolean;
-  currentUser: any;
-  userData: any;
+  currentUser: FirebaseUser;
+  userData: User;
   scrolled?: boolean;
   position?: "fixed" | "sticky";
 }) => {
@@ -37,25 +38,6 @@ export const NavProfile = ({
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const { translate } = useTranslation();
   const { isDriver, isAdmin, userRole } = useAuth();
-  const [driverData, setDriverData] = useState<any>(null);
-
-  // Fetch driver data if user is a driver
-  useEffect(() => {
-    const fetchDriverData = async () => {
-      if (isDriver && currentUser?.uid) {
-        try {
-          const response = await getDriver(currentUser.uid);
-          if (response.success && response.data) {
-            setDriverData(response.data);
-          }
-        } catch (error) {
-          console.error("Error fetching driver data:", error);
-        }
-      }
-    };
-
-    fetchDriverData();
-  }, [isDriver, currentUser?.uid]);
 
   const handleLogout = async () => {
     try {
@@ -96,9 +78,6 @@ export const NavProfile = ({
 
   // Get user display name
   const getUserDisplayName = () => {
-    if (isDriver && driverData?.name) {
-      return driverData.name;
-    }
     if (userData?.firstName) {
       return `${userData.firstName} ${userData.lastName || ""}`.trim();
     }
@@ -119,7 +98,7 @@ export const NavProfile = ({
         {
           to: "/admin",
           label: "Dashboard",
-          icon: <User className="h-4 w-4" />,
+          icon: <UserIcon className="h-4 w-4" />,
         },
         {
           to: "/admin/drivers",
@@ -159,7 +138,7 @@ export const NavProfile = ({
         {
           to: "/driver/profile",
           label: "Profile",
-          icon: <User className="h-4 w-4" />,
+          icon: <UserIcon className="h-4 w-4" />,
         },
         {
           to: "/driver/settings",
@@ -173,7 +152,7 @@ export const NavProfile = ({
       {
         to: "/user/my-account",
         label: "My Account",
-        icon: <User className="h-4 w-4" />,
+        icon: <UserIcon className="h-4 w-4" />,
       },
       {
         to: "/user/my-bookings",
@@ -184,7 +163,6 @@ export const NavProfile = ({
   };
 
   if (currentUser) {
-
     return (
       <div className="relative" ref={profileMenuRef}>
         <button
@@ -200,7 +178,7 @@ export const NavProfile = ({
           <span
             className={cn(
               "hidden md:inline",
-              position === "sticky" && "text-fleet-dark"
+              position === "sticky" && "text-fleet-dark",
             )}
           >
             {getUserDisplayName()}
@@ -214,10 +192,10 @@ export const NavProfile = ({
                 <p className="font-medium">{getUserDisplayName()}</p>
                 <Badge>{getUserRoleDisplay()}</Badge>
               </div>
-              {isDriver && driverData && (
+              {isDriver && userData.driverDetails && (
                 <p className="text-xs text-gray-400 mt-1">
-                  Rating: {driverData.rating?.toFixed(1) || "0.0"} •{" "}
-                  {driverData.rides || 0} rides
+                  Rating: {userData.driverDetails.rating?.toFixed(1) || "0.0"} •{" "}
+                  {userData.driverDetails.rides || 0} rides
                 </p>
               )}
             </div>
