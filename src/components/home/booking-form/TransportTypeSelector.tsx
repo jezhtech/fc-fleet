@@ -64,7 +64,7 @@ const TransportTypeSelector: React.FC<TransportTypeSelectorProps> = ({
                 disabled={!isAvailable}
               />
               <div className="flex items-start gap-2">
-                <img src={type.imageUrl} alt={type.name} className="w-20 mr-2"/>
+                <span className="text-xl">{type.emoji}</span>
                 <div className="flex-1">
                   <h4 className="text-sm font-medium">{type.name}</h4>
                   <p className="text-xs text-gray-500">{type.description}</p>

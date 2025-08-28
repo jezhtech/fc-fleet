@@ -131,7 +131,7 @@ export interface VehicleWithTransport extends Vehicle {
     id: string;
     name: string;
     description: string;
-    imageUrl: string;
+    emoji: string;
   };
 }
 
@@ -171,7 +171,7 @@ export interface Transport {
   id: string;
   name: string;
   description: string;
-  imageUrl: string;
+  emoji: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -199,13 +199,13 @@ export interface TransportStats {
 export interface CreateTransportRequest {
   name: string;
   description: string;
-  imageUrl: string;
+  emoji: string;
 }
 
 export interface UpdateTransportRequest {
   name?: string;
   description?: string;
-  imageUrl?: string;
+  emoji?: string;
 }
 
 export interface TransportFilters {
