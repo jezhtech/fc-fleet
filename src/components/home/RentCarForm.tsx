@@ -43,7 +43,7 @@ import { firestore } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
 import { generateBookingId, getNextBookingCount } from "@/utils/booking";
-import { Transport, Vehicle } from "@/types";
+import { Location, Transport, Vehicle } from "@/types";
 import { bookingService, transportService, vehicleService } from "@/services";
 
 // Emirates and their tour options
@@ -54,12 +54,12 @@ const emiratesData = {
       {
         id: "dubai-half-day",
         name: "Dubai Half Day, 5hrs City Tour",
-        duration: "5 hours",
+        duration: 5,
       },
       {
         id: "dubai-full-day",
         name: "Dubai Full Day, 10hrs City Tour",
-        duration: "10 hours",
+        duration: 10,
       },
     ],
   },
@@ -69,22 +69,22 @@ const emiratesData = {
       {
         id: "abu-dhabi-half-day",
         name: "Abu Dhabi Half Day, 5hrs City Tour",
-        duration: "5 hours",
+        duration: 5,
       },
       {
         id: "sharjah-half-day",
         name: "Sharjah Half Day, 5hrs City Tour",
-        duration: "5 hours",
+        duration: 5,
       },
       {
         id: "fujairah-half-day",
         name: "Fujairah Half Day, 5hrs City Tour",
-        duration: "5 hours",
+        duration: 5,
       },
       {
         id: "al-ain-half-day",
         name: "Al Ain Half Day, 5hrs City Tour",
-        duration: "5 hours",
+        duration: 5,
       },
     ],
   },
@@ -147,9 +147,9 @@ const RentCarForm = () => {
 
   // Location states for map integration
   const [selectedPickupLocation, setSelectedPickupLocation] =
-    useState<any>(undefined);
+    useState<Location>(undefined);
   const [selectedDropoffLocation, setSelectedDropoffLocation] =
-    useState<any>(undefined);
+    useState<Location>(undefined);
 
   // Payment integration states
   const [orderId, setOrderId] = useState<string>("");
@@ -176,9 +176,8 @@ const RentCarForm = () => {
   };
 
   // Calculate total amount for rental
-  const calculateTotalAmount = () => {
-    const selectedVehicle = vehicles.find((v) => v.id === selectedCarModel);
-    if (!selectedVehicle) return 0;
+  const getVehicleHourPrice = (vehicle: Vehicle) => {
+    if (!vehicle) return 0;
 
     // Get the selected tour duration
     const selectedTour = emiratesData[selectedEmirate].hourlyTours.find(
@@ -188,11 +187,11 @@ const RentCarForm = () => {
     if (!selectedTour) return 0;
 
     // Parse duration to get hours (e.g., "5 hours" -> 5)
-    const durationMatch = selectedTour.duration.match(/(\d+)/);
-    const hours = durationMatch ? parseInt(durationMatch[1]) : 5; // Default to 5 hours
+    const duration = selectedTour.duration;
+    const hours = duration || 5; // Default to 5 hours
 
     // Calculate total: base price per hour × number of hours
-    return selectedVehicle.basePrice * hours;
+    return vehicle.basePrice + vehicle.perMinPrice * hours;
   };
 
   useEffect(() => {
@@ -233,7 +232,11 @@ const RentCarForm = () => {
     try {
       const vehicleResponse =
         await vehicleService.getVehiclesByTransport(taxiTypeId);
-      const vehiclesData = vehicleResponse.data;
+      const vehiclesData = vehicleResponse.data.map((v) => ({
+        ...v,
+        basePrice: parseFloat(v.basePrice.toString()),
+        perMinPrice: parseFloat(v.perMinPrice.toString()),
+      }));
 
       if (vehiclesData.length > 0) {
         setVehicles(vehiclesData);
@@ -289,7 +292,7 @@ const RentCarForm = () => {
   };
 
   // Handler for pickup location selection
-  const handlePickupLocationSelect = (location: any) => {
+  const handlePickupLocationSelect = (location: Location) => {
     setSelectedPickupLocation(location);
     setFormData((prev) => ({ ...prev, pickupLocation: location.name }));
   };
@@ -366,7 +369,7 @@ const RentCarForm = () => {
       }
 
       // Calculate total amount
-      const totalAmount = calculateTotalAmount();
+      const totalAmount = getVehicleHourPrice(selectedVehicle);
 
       const bookingData = {
         bookingType: "rent" as const,
@@ -624,80 +627,69 @@ const RentCarForm = () => {
                 </p>
               </div>
 
-              <RadioGroup
-                value={selectedCarModel}
-                onValueChange={setSelectedCarModel}
-                className="space-y-0"
-              >
-                {getFilteredVehicleTypes().map((vehicle) => (
-                  <div
-                    key={vehicle.id}
-                    className={`border rounded-lg p-4 hover:border-fleet-red cursor-pointer transition-all ${
-                      selectedCarModel === vehicle.id
-                        ? "border-fleet-red bg-fleet-red/5 shadow-sm"
-                        : "border-gray-200 bg-white hover:shadow-sm"
-                    }`}
-                    onClick={() => setSelectedCarModel(vehicle.id)}
-                  >
-                    <RadioGroupItem
-                      value={vehicle.id}
-                      id={vehicle.id}
-                      className="sr-only"
-                    />
-                    <div className="flex items-center gap-4">
-                      {/* Vehicle Image */}
-                      <div className="flex-shrink-0">
-                        <div className="w-28 h-20 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                          {vehicle.imageUrl ? (
-                            <img
-                              src={vehicle.imageUrl}
-                              alt={vehicle.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-4xl">🚗</span>
-                          )}
+              {getFilteredVehicleTypes().map((vehicle) => (
+                <div
+                  key={vehicle.id}
+                  className={`border rounded-lg p-4 hover:border-fleet-red cursor-pointer transition-all ${
+                    selectedCarModel === vehicle.id
+                      ? "border-fleet-red bg-fleet-red/5 shadow-sm"
+                      : "border-gray-200 bg-white hover:shadow-sm"
+                  }`}
+                  onClick={() => setSelectedCarModel(vehicle.id)}
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Vehicle Image */}
+                    <div className="flex-shrink-0">
+                      <div className="w-28 h-20 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                        {vehicle.imageUrl ? (
+                          <img
+                            src={vehicle.imageUrl}
+                            alt={vehicle.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-4xl">🚗</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Vehicle Details */}
+                    <div className="flex-1 space-y-2">
+                      {/* Vehicle Class Name */}
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {vehicle.name}
+                      </h3>
+
+                      {/* Capacity Icons */}
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <span className="text-lg">👥</span>
+                          <span>{vehicle.capacity}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-lg">💼</span>
+                          <span>{Math.min(vehicle.capacity - 1, 5)}</span>
                         </div>
                       </div>
 
-                      {/* Vehicle Details */}
-                      <div className="flex-1 space-y-2">
-                        {/* Vehicle Class Name */}
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {vehicle.name}
-                        </h3>
+                      {/* Description/Model */}
+                      <p className="text-sm text-gray-500">
+                        {vehicle.description}
+                      </p>
+                    </div>
 
-                        {/* Capacity Icons */}
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <span className="text-lg">👥</span>
-                            <span>{vehicle.capacity}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-lg">💼</span>
-                            <span>{Math.min(vehicle.capacity - 1, 5)}</span>
-                          </div>
-                        </div>
-
-                        {/* Description/Model */}
-                        <p className="text-sm text-gray-500">
-                          {vehicle.description}
+                    {/* Price and Action */}
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-gray-900">
+                          {getVehicleHourPrice(vehicle)}
                         </p>
-                      </div>
-
-                      {/* Price and Action */}
-                      <div className="flex items-center gap-2">
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-gray-900">
-                            ${vehicle.basePrice}/hour
-                          </p>
-                          <p className="text-xs text-gray-500">per hour</p>
-                        </div>
+                        <p className="text-xs text-gray-500">per hour</p>
                       </div>
                     </div>
                   </div>
-                ))}
-              </RadioGroup>
+                </div>
+              ))}
             </div>
 
             <div className="flex gap-2">
@@ -733,7 +725,9 @@ const RentCarForm = () => {
           {orderId && (
             <CCavenueCheckout
               orderId={orderId}
-              amount={calculateTotalAmount()}
+              amount={getVehicleHourPrice(
+                vehicles.find((vehicle) => vehicle.id === selectedCarModel),
+              )}
               customerName={getCustomerInfo().customerName}
               customerEmail={getCustomerInfo().customerEmail}
               customerPhone={getCustomerInfo().customerPhone}

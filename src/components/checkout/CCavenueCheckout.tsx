@@ -36,7 +36,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"ccavenue" | "cash">(
-    "ccavenue"
+    "ccavenue",
   );
   const [paymentData, setPaymentData] = useState<PaymentRequest>({
     orderId,
@@ -117,7 +117,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
     const validation = paymentService.validatePaymentData(paymentData);
     if (!validation.isValid) {
       toast.error(
-        `Please fix the following errors: ${validation.errors.join(", ")}`
+        `Please fix the following errors: ${validation.errors.join(", ")}`,
       );
       return;
     }
@@ -138,13 +138,13 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
         },
         token,
       });
-
+      console.log(result);
       if (result.success && result.encRequest && result.access_code) {
         // Create and submit form to CCAvenue
         submitToCCavenue(
           result.encRequest,
           result.access_code,
-          result.paymentUrl
+          result.paymentUrl,
         );
       } else {
         throw new Error(result.error || "Payment initialization failed");
@@ -163,7 +163,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
   const submitToCCavenue = (
     encRequest: string,
     access_code: string,
-    paymentUrl: string
+    paymentUrl: string,
   ) => {
     // Create a form element
     const form = document.createElement("form");
