@@ -19,7 +19,7 @@ const BookChauffeur = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [bookingData, setBookingData] = useState<BookingWithRelations | null>(
-    null
+    null,
   );
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +39,7 @@ const BookChauffeur = () => {
   const fetchBookingByOrderId = async (orderId: string) => {
     try {
       setLoading(true);
-      const repsonse = await bookingService.getBookingById(orderId);
+      const repsonse = await bookingService.getBookingByOrderId(orderId);
       const data = repsonse.data;
       if (data) {
         // Update payment status if paymentStatus is provided in URL
@@ -107,7 +107,7 @@ const BookChauffeur = () => {
 
   const getPaymentMethodText = (
     paymentMethod?: string,
-    paymentStatus?: string
+    paymentStatus?: string,
   ) => {
     if (paymentMethod === "cash") {
       return "Cash Payment";
@@ -120,7 +120,7 @@ const BookChauffeur = () => {
 
   const getPaymentStatusText = (
     paymentStatus: string,
-    paymentMethod?: string
+    paymentMethod?: string,
   ) => {
     if (paymentMethod === "cash") {
       return "Cash Payment Pending";
@@ -224,18 +224,18 @@ const BookChauffeur = () => {
                 <span className="font-medium">
                   {getPaymentMethodText(
                     bookingData.paymentInfo.method,
-                    bookingData.paymentInfo.status
+                    bookingData.paymentInfo.status,
                   )}
                 </span>
               </div>
               <div
                 className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPaymentStatusColor(
-                  bookingData.paymentInfo.status
+                  bookingData.paymentInfo.status,
                 )}`}
               >
                 {getPaymentStatusText(
                   bookingData.paymentInfo.status,
-                  bookingData.paymentInfo.method
+                  bookingData.paymentInfo.method,
                 )}
               </div>
             </div>
@@ -302,7 +302,9 @@ const BookChauffeur = () => {
                     <p className="text-green-700 text-sm">
                       Amount due:{" "}
                       <strong>
-                        AED {parseFloat(bookingData.amount.toString()).toFixed(2) || "0.00"}
+                        AED{" "}
+                        {parseFloat(bookingData.amount.toString()).toFixed(2) ||
+                          "0.00"}
                       </strong>{" "}
                       - Please have exact change ready when your driver arrives.
                     </p>
@@ -316,7 +318,7 @@ const BookChauffeur = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Order ID</p>
-                  <p className="font-mono font-medium">{bookingData.id}</p>
+                  <p className="font-mono font-medium">{bookingData.orderId}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">
@@ -333,7 +335,9 @@ const BookChauffeur = () => {
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Total Amount</p>
                   <p className="text-2xl font-bold text-fleet-red">
-                    AED {parseFloat(bookingData.amount.toString())?.toFixed(2) || "0.00"}
+                    AED{" "}
+                    {parseFloat(bookingData.amount.toString())?.toFixed(2) ||
+                      "0.00"}
                   </p>
                 </div>
               </div>

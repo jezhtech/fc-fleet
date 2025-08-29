@@ -135,7 +135,7 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
           <div className="space-y-2">
             <div>
               <p className="font-medium text-blue-800">Order ID</p>
-              <p className="text-blue-700 font-mono">{booking.id}</p>
+              <p className="text-blue-700 font-mono">{booking.orderId}</p>
             </div>
             <div>
               <p className="font-medium text-blue-800">Service Type</p>
@@ -493,7 +493,7 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-gray-600">Order ID</p>
-            <p className="font-medium text-gray-800">{booking.id}</p>
+            <p className="font-medium text-gray-800">{booking.orderId}</p>
           </div>
           <div>
             <p className="text-gray-600">Service Type</p>
@@ -526,7 +526,7 @@ const BookingCard = ({ booking }: { booking: BookingWithRelations }) => {
   const [showTracking, setShowTracking] = useState(false);
 
   // Use the formattedId if available, otherwise generate one
-  const bookingId = booking.id;
+  const bookingId = booking.orderId;
 
   const handleInvoiceSuccess = () => {
     toast.success("Invoice downloaded successfully");

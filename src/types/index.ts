@@ -245,6 +245,7 @@ export interface PaymentInfo {
 
 export interface Booking {
   id: string;
+  orderId: string;
   bookingType: "ride" | "rent";
   driverId: string;
   userId: string;
@@ -297,6 +298,7 @@ export interface BookingWithRelations extends Booking {
 }
 
 export interface CreateBookingRequest {
+  orderId: string;
   bookingType: "ride" | "rent";
   userId: string;
   vehicleId: string;

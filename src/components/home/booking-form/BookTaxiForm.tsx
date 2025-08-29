@@ -14,6 +14,7 @@ import RouteMap from "./RouteMap";
 import DateTimePicker from "./DateTimePicker";
 import TransportTypeSelector from "./TransportTypeSelector";
 import VehicleSelector from "./VehicleSelector";
+import { generateOrderId } from "@/lib/utils";
 
 const BookTaxiForm = () => {
   const navigate = useNavigate();
@@ -393,7 +394,12 @@ const BookTaxiForm = () => {
 
       const pickupDateTime = pickupDate.setHours(hours, minutes, 0, 0);
 
+      const uniqueOrderId = generateOrderId();
+
+      setOrderId(uniqueOrderId);
+
       const bookingData = {
+        orderId: uniqueOrderId,
         bookingType: "ride" as const,
         userId: currentUser?.uid,
         vehicleId: selectedVehicle.id,
@@ -408,7 +414,6 @@ const BookTaxiForm = () => {
         setLoading({ ...loading, savingBooking: true });
         const response = await bookingService.createBooking(bookingData);
         if (response.success) {
-          setOrderId(response.data.id);
           setStep(4); // Move to payment step
         } else {
           toast.error("Failed to create booking. Please try again.");

@@ -43,6 +43,17 @@ class BookingService {
   }
 
   /**
+   * Get booking by OrderID
+   */
+  async getBookingByOrderId(
+    id: string,
+  ): Promise<ApiResponse<BookingWithRelations>> {
+    return apiClient.get<BookingWithRelations>(
+      `${API_ENDPOINTS.BOOKINGS.BASE}/orderId/${id}`,
+    );
+  }
+
+  /**
    * Create a new booking
    */
   async createBooking(

@@ -45,6 +45,7 @@ import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
 import { generateBookingId, getNextBookingCount } from "@/utils/booking";
 import { Location, Transport, Vehicle } from "@/types";
 import { bookingService, transportService, vehicleService } from "@/services";
+import { generateOrderId } from "@/lib/utils";
 
 // Emirates and their tour options
 const emiratesData = {
@@ -371,7 +372,12 @@ const RentCarForm = () => {
       // Calculate total amount
       const totalAmount = getVehicleHourPrice(selectedVehicle);
 
+      const uniqueOrderId = generateOrderId();
+
+      setOrderId(uniqueOrderId);
+
       const bookingData = {
+        orderId: uniqueOrderId,
         bookingType: "rent" as const,
         userId: currentUser?.uid,
         vehicleId: selectedVehicle.id,
@@ -385,7 +391,6 @@ const RentCarForm = () => {
         setSavingBooking(true);
         const response = await bookingService.createBooking(bookingData);
         if (response.success) {
-          setOrderId(response.data.id);
           setStep(4); // Move to payment step
         } else {
           toast.error("Failed to create booking. Please try again.");
