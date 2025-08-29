@@ -245,7 +245,9 @@ const AdminDrivers = () => {
 
     if (
       !currentDriver.firstName ||
+      !currentDriver.lastName ||
       !currentDriver.phone ||
+      !currentDriver.email ||
       !currentDriver.driverDetails?.taxiTypeId ||
       !currentDriver.driverDetails?.vehicleTypeId ||
       !currentDriver.driverDetails?.vehicleNumber
@@ -259,7 +261,6 @@ const AdminDrivers = () => {
     try {
       if (currentDriver.id) {
         await userService.updateDriver(currentDriver.id, {
-          userId: currentDriver.id,
           ...currentDriver,
         });
         setDrivers(
@@ -272,8 +273,11 @@ const AdminDrivers = () => {
         toast.success("Driver updated successfully");
       } else {
         const result = await userService.createDriver({
+          firstName: currentDriver.firstName,
+          lastName: currentDriver.lastName,
+          phone: currentDriver.phone,
+          email: currentDriver.email,
           status: "active",
-          userId: currentDriver.id,
           vehicleNumber: currentDriver.driverDetails.vehicleNumber,
           taxiTypeId: currentDriver.driverDetails.taxiTypeId,
           vehicleTypeId: currentDriver.driverDetails.vehicleTypeId,

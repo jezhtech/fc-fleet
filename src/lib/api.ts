@@ -43,7 +43,7 @@ class ApiClient {
   // Generic request method
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
@@ -60,7 +60,7 @@ class ApiClient {
 
       if (!response.ok) {
         throw new Error(
-          data.error || data.message || `HTTP ${response.status}`
+          data.error || data.message || `HTTP ${response.status}`,
         );
       }
 
@@ -73,7 +73,7 @@ class ApiClient {
 
       // Show toast for user-facing errors
       if (typeof window !== "undefined") {
-        toast.error(errorMessage);
+        console.error(error);
       }
 
       return {
@@ -87,7 +87,7 @@ class ApiClient {
   // GET request
   async get<T>(
     endpoint: string,
-    params?: Record<string, any>
+    params?: Record<string, any>,
   ): Promise<ApiResponse<T>> {
     const queryString = params
       ? `?${new URLSearchParams(params).toString()}`
@@ -128,7 +128,7 @@ class ApiClient {
   async upload<T>(
     endpoint: string,
     file: File,
-    additionalData?: Record<string, any>
+    additionalData?: Record<string, any>,
   ): Promise<ApiResponse<T>> {
     try {
       const formData = new FormData();
@@ -158,7 +158,7 @@ class ApiClient {
 
       if (!response.ok) {
         throw new Error(
-          data.error || data.message || `HTTP ${response.status}`
+          data.error || data.message || `HTTP ${response.status}`,
         );
       }
 
@@ -170,7 +170,7 @@ class ApiClient {
         error instanceof Error ? error.message : "Upload failed";
 
       if (typeof window !== "undefined") {
-        toast.error(errorMessage);
+        console.error(error);
       }
 
       return {

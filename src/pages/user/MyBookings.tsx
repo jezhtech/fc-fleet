@@ -78,13 +78,13 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
       status: currentStepIndex >= 1 ? "completed" : "upcoming",
       icon: <CreditCard className="h-5 w-5" />,
       description:
-        booking.paymentInfo.method === "cash"
+        booking.paymentInfo?.method === "cash"
           ? "Cash payment selected - Amount due at pickup"
           : "Your payment has been successfully processed",
       estimatedTime: "Immediate",
       details: currentStepIndex >= 1 && (
         <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-md">
-          {booking.paymentInfo.method === "cash" ? (
+          {booking.paymentInfo?.method === "cash" ? (
             <div className="space-y-2">
               <div>
                 <p className="font-medium text-green-800">Payment Method</p>
@@ -125,8 +125,8 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
         currentStepIndex >= 2
           ? "completed"
           : currentStepIndex === 1
-          ? "current"
-          : "upcoming",
+            ? "current"
+            : "upcoming",
       icon: <FileText className="h-5 w-5" />,
       description: "Your booking request is being processed",
       estimatedTime: "2-5 minutes",
@@ -147,7 +147,7 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
               <p className="font-medium text-blue-800">Status</p>
               <p className="text-blue-700">Processing</p>
             </div>
-            {booking.paymentInfo.method === "cash" && (
+            {booking.paymentInfo?.method === "cash" && (
               <div>
                 <p className="font-medium text-blue-800">Payment Method</p>
                 <p className="text-blue-700">
@@ -165,8 +165,8 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
         currentStepIndex >= 3
           ? "completed"
           : currentStepIndex === 2
-          ? "current"
-          : "upcoming",
+            ? "current"
+            : "upcoming",
       icon: <CheckCircle2 className="h-5 w-5" />,
       description: "Your booking has been confirmed and verified",
       estimatedTime: "5-10 minutes",
@@ -181,7 +181,7 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
               <p className="font-medium text-green-800">Next Step</p>
               <p className="text-green-700">Driver assignment in progress</p>
             </div>
-            {booking.paymentInfo.method === "cash" && (
+            {booking.paymentInfo?.method === "cash" && (
               <div>
                 <p className="font-medium text-green-800">Payment Reminder</p>
                 <p className="text-green-700">
@@ -199,8 +199,8 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
         currentStepIndex >= 4
           ? "completed"
           : currentStepIndex === 3
-          ? "current"
-          : "upcoming",
+            ? "current"
+            : "upcoming",
       icon: <User className="h-5 w-5" />,
       description: "A professional driver has been assigned to your ride",
       estimatedTime: "10-15 minutes",
@@ -247,8 +247,8 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
         currentStepIndex >= 5
           ? "completed"
           : currentStepIndex === 4
-          ? "current"
-          : "upcoming",
+            ? "current"
+            : "upcoming",
       icon: <Navigation className="h-5 w-5" />,
       description: "Your driver is on the way to pickup location",
       estimatedTime: "15-30 minutes",
@@ -268,7 +268,7 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
                 Please be ready at the pickup location 5 minutes before the
                 scheduled time.
               </p>
-              {booking.paymentInfo.method === "cash" && (
+              {booking.paymentInfo?.method === "cash" && (
                 <p className="text-yellow-700 text-xs mt-1">
                   💵 Remember to have the exact amount ready: {booking.amount}
                 </p>
@@ -284,8 +284,8 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
         currentStepIndex >= 6
           ? "completed"
           : currentStepIndex === 5
-          ? "current"
-          : "upcoming",
+            ? "current"
+            : "upcoming",
       icon: <Map className="h-5 w-5" />,
       description: "Your journey has begun",
       estimatedTime: "Based on route",
@@ -318,8 +318,8 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
         currentStepIndex >= 7
           ? "completed"
           : currentStepIndex === 6
-          ? "current"
-          : "upcoming",
+            ? "current"
+            : "upcoming",
       icon: <CheckCircle2 className="h-5 w-5" />,
       description: "You have reached your destination",
       estimatedTime: "Journey complete",
@@ -388,7 +388,7 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
         )}
 
         {/* Cash Payment Notice */}
-        {booking.paymentInfo.method === "cash" && (
+        {booking.paymentInfo?.method === "cash" && (
           <div className="mt-3 p-2 bg-white/20 rounded border border-white/30">
             <p className="text-xs text-white/90">
               💵 Cash Payment: Please have exact amount ready when driver
@@ -422,8 +422,8 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
                     step.status === "completed"
                       ? "bg-green-500"
                       : step.status === "current"
-                      ? "bg-yellow-500"
-                      : "bg-gray-200"
+                        ? "bg-yellow-500"
+                        : "bg-gray-200"
                   }`}
                 />
               )}
@@ -435,8 +435,8 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
                     step.status === "completed"
                       ? "text-green-700"
                       : step.status === "current"
-                      ? "text-yellow-600"
-                      : "text-gray-500"
+                        ? "text-yellow-600"
+                        : "text-gray-500"
                   }`}
                 >
                   {step.label}
@@ -446,8 +446,8 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
                     step.status === "completed"
                       ? "text-green-600"
                       : step.status === "current"
-                      ? "text-yellow-600"
-                      : "text-gray-400"
+                        ? "text-yellow-600"
+                        : "text-gray-400"
                   }`}
                 >
                   {step.description}
@@ -458,8 +458,8 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
                       step.status === "completed"
                         ? "text-green-500"
                         : step.status === "current"
-                        ? "text-yellow-500"
-                        : "text-gray-400"
+                          ? "text-yellow-500"
+                          : "text-gray-400"
                     }`}
                   >
                     ⏱️ {step.estimatedTime}
@@ -552,10 +552,10 @@ const BookingCard = ({ booking }: { booking: BookingWithRelations }) => {
             booking.status === "completed"
               ? "bg-green-100 text-green-800"
               : booking.status === "initiated"
-              ? "bg-blue-100 text-blue-800"
-              : booking.status === "awaiting"
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-red-100 text-red-800"
+                ? "bg-blue-100 text-blue-800"
+                : booking.status === "awaiting"
+                  ? "bg-yellow-100 text-yellow-800"
+                  : "bg-red-100 text-red-800"
           }
         `}
         >
@@ -693,10 +693,10 @@ const MyBookings = () => {
         const bookings = response.data;
         if (bookings.length > 0) {
           const pastBookingsData = bookings.filter(
-            (b) => b.status === "completed"
+            (b) => b.status === "completed",
           );
           const upcomingBookingsData = bookings.filter(
-            (b) => b.status !== "completed"
+            (b) => b.status !== "completed",
           );
           setPastBookings(pastBookingsData);
           setUpcomingBookings(upcomingBookingsData);

@@ -88,6 +88,8 @@ const AdminDashboard = () => {
       setAllUsers(fetchedUsers);
       setAllDrivers(fetchedDrivers);
 
+      console.log("Bookings: ", fetchedBookings);
+
       // Calculate dashboard statistics
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -96,7 +98,7 @@ const AdminDashboard = () => {
       // Calculate total bookings and revenue
       const totalBookings = fetchedBookings.length;
       const totalRevenue = fetchedBookings.reduce(
-        (sum, booking) => sum + (booking.paymentInfo.amount || 0),
+        (sum, booking) => sum + (booking?.paymentInfo?.amount || 0),
         0,
       );
 
@@ -111,7 +113,7 @@ const AdminDashboard = () => {
           const createdAt = new Date(booking.createdAt || new Date());
           return createdAt >= startOfMonth && createdAt <= endOfMonth;
         })
-        .reduce((sum, booking) => sum + (booking.paymentInfo.amount || 0), 0);
+        .reduce((sum, booking) => sum + (booking?.paymentInfo?.amount || 0), 0);
 
       // Get recent bookings (last 5) with user information
       const recentBookings: BookingWithRelations[] = fetchedBookings
@@ -233,7 +235,10 @@ const AdminDashboard = () => {
             const createdAt = new Date(booking.createdAt || new Date());
             return createdAt >= date && createdAt < nextDate;
           })
-          .reduce((sum, booking) => sum + (booking.paymentInfo.amount || 0), 0);
+          .reduce(
+            (sum, booking) => sum + (booking.paymentInfo?.amount || 0),
+            0,
+          );
 
         data.push({
           name: date.toLocaleDateString("en-US", {
@@ -608,16 +613,18 @@ const AdminDashboard = () => {
                             {booking.user?.email || "Unknown User"}
                           </td>
                           <td className="p-4">
-                            {booking.user?.driverDetails.vehicleNumber}
+                            {booking.bookingType === "rent"
+                              ? "Hourly"
+                              : "Chauffeur"}
                           </td>
                           <td className="p-4">
                             <span
                               className={`inline-block px-2 py-1 text-xs rounded-full ${
                                 booking.status === "completed"
                                   ? "bg-green-100 text-green-800"
-                                  : booking.paymentInfo.status === "paid"
+                                  : booking.paymentInfo?.status === "paid"
                                     ? "bg-blue-100 text-blue-800"
-                                    : booking.paymentInfo.status === "pending"
+                                    : booking.paymentInfo?.status === "pending"
                                       ? "bg-yellow-100 text-yellow-800"
                                       : "bg-red-100 text-red-800"
                               }`}
@@ -627,7 +634,7 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="p-4">
-                            {formatCurrency(booking.paymentInfo.amount || 0)}
+                            {formatCurrency(booking.paymentInfo?.amount || 0)}
                           </td>
                         </tr>
                       ))

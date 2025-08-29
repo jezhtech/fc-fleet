@@ -121,7 +121,7 @@ const RentCarForm = () => {
     const initialDate = new Date(
       fourHoursFromNow.getFullYear(),
       fourHoursFromNow.getMonth(),
-      fourHoursFromNow.getDate()
+      fourHoursFromNow.getDate(),
     );
     return initialDate;
   });
@@ -137,7 +137,7 @@ const RentCarForm = () => {
   // Firebase data states - matching BookTaxiForm pattern
   const [transportTypes, setTransportTypes] = useState<Transport[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Available transport types that have vehicles
@@ -182,7 +182,7 @@ const RentCarForm = () => {
 
     // Get the selected tour duration
     const selectedTour = emiratesData[selectedEmirate].hourlyTours.find(
-      (t) => t.id === selectedHourlyTour
+      (t) => t.id === selectedHourlyTour,
     );
 
     if (!selectedTour) return 0;
@@ -195,46 +195,45 @@ const RentCarForm = () => {
     return selectedVehicle.basePrice * hours;
   };
 
-  // Fetch transport types and vehicle types from Firebase
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    if (step === 2) {
+      fetchTransportTypes();
+    }
+  }, [step]);
 
-        // Fetch transport types (car categories) from taxiTypes collection
-        const transportTypesData = (await transportService.getAllTransports())
-          .data;
+  useEffect(() => {
+    if (step === 3) {
+      fetchVehicles(selectedCategory);
+    }
+  }, [step, selectedCategory]);
 
-        setTransportTypes(transportTypesData);
+  const fetchTransportTypes = async () => {
+    setLoading(true);
+    try {
+      const transportResponse = await transportService.getAllTransports();
+      const transportTypesData = transportResponse.data;
 
-        // Set default selected category if available
-        if (transportTypesData.length > 0 && !selectedCategory) {
-          setSelectedCategory(transportTypesData[0].id);
-        }
-
-        // Check which transport types have available vehicles
-        await checkTransportTypeAvailability(transportTypesData);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to load vehicle data. Please try again.");
-        toast.error("Failed to load vehicle data. Please try again.");
-      } finally {
-        setLoading(false);
+      if (transportTypesData.length > 0 && !selectedCategory) {
+        setSelectedCategory(transportTypesData[0].id);
       }
-    };
+      setTransportTypes(transportTypesData);
 
-    fetchData();
-  }, []);
+      // Check which transport types have available vehicles
+      await checkTransportTypeAvailability(transportTypesData);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fetch vehicles based on selected transport type
   const fetchVehicles = async (taxiTypeId: string) => {
+    setLoading(true);
     try {
-      const vehiclesRef = collection(firestore, "vehicleTypes");
-      const q = query(vehiclesRef, where("taxiTypeId", "==", taxiTypeId));
-      const snapshot = await getDocs(q);
-
-      const vehiclesData = (await vehicleService.getAllVehicles()).data;
+      const vehicleResponse =
+        await vehicleService.getVehiclesByTransport(taxiTypeId);
+      const vehiclesData = vehicleResponse.data;
 
       if (vehiclesData.length > 0) {
         setVehicles(vehiclesData);
@@ -244,12 +243,14 @@ const RentCarForm = () => {
     } catch (error) {
       console.error("Error fetching vehicles:", error);
       setVehicles([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Get filtered vehicle types for selected transport type
   const getFilteredVehicleTypes = () => {
-    return vehicles;
+    return vehicles.filter((v) => v.transportId === selectedCategory);
   };
 
   // Check which transport types have available vehicles
@@ -260,14 +261,13 @@ const RentCarForm = () => {
       // Check each transport type for available vehicles
       for (const type of types) {
         const vehicles = await vehicleService.getVehiclesByTransport(type.id);
-        console.log(vehicles);
         if (vehicles.data.length > 0) {
           availableTypeIds.push(type.id);
         }
       }
 
       setAvailableTransportTypes(
-        availableTypeIds.length > 0 ? availableTypeIds : ["economy"]
+        availableTypeIds.length > 0 ? availableTypeIds : ["economy"],
       );
 
       // If there are no available types, show a message
@@ -561,8 +561,8 @@ const RentCarForm = () => {
               {loading || savingBooking
                 ? "Loading..."
                 : !currentUser
-                ? "Login to Book Chauffeur"
-                : "Find My Chauffeur"}
+                  ? "Login to Book Chauffeur"
+                  : "Find My Chauffeur"}
             </Button>
           </>
         )}
@@ -635,7 +635,7 @@ const RentCarForm = () => {
                     className={`border rounded-lg p-4 hover:border-fleet-red cursor-pointer transition-all ${
                       selectedCarModel === vehicle.id
                         ? "border-fleet-red bg-fleet-red/5 shadow-sm"
-                        : "border-gray-200 hover:shadow-sm"
+                        : "border-gray-200 bg-white hover:shadow-sm"
                     }`}
                     onClick={() => setSelectedCarModel(vehicle.id)}
                   >
@@ -711,6 +711,7 @@ const RentCarForm = () => {
               </Button>
               <Button
                 type="submit"
+                disabled={savingBooking}
                 className="flex-1 h-8 text-xs text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
               >
                 Next: Payment

@@ -96,7 +96,10 @@ export interface DriverDetails {
 }
 
 export interface CreateDriverRequest {
-  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
   taxiTypeId: string;
   vehicleTypeId: string;
   vehicleNumber: string;
@@ -104,7 +107,10 @@ export interface CreateDriverRequest {
 }
 
 export interface UpdateDriverRequest {
-  userId: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
   taxiTypeId?: string;
   vehicleTypeId?: string;
   vehicleNumber?: string;

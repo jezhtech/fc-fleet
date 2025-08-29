@@ -19,7 +19,7 @@ import { firestore } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
 import { googleMapsService } from "@/services/googleMapsService";
-import { vehicleService } from "@/services";
+import { transportService, vehicleService } from "@/services";
 
 interface FareEstimate {
   distance: number;
@@ -55,7 +55,7 @@ const SimpleMapSection = () => {
   const pickupMarkerRef = useRef<google.maps.Marker | null>(null);
   const dropoffMarkerRef = useRef<google.maps.Marker | null>(null);
   const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(
-    null
+    null,
   );
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -104,7 +104,7 @@ const SimpleMapSection = () => {
           {
             center: { lat: 25.2048, lng: 55.2708 }, // Dubai center
             zoom: 10,
-          }
+          },
         );
 
         mapRef.current = newMap;
@@ -127,7 +127,7 @@ const SimpleMapSection = () => {
         setMapError(
           error instanceof Error
             ? error.message
-            : "Unknown map initialization error"
+            : "Unknown map initialization error",
         );
       }
     };
@@ -146,16 +146,9 @@ const SimpleMapSection = () => {
   const fetchTaxiTypes = async () => {
     try {
       setIsLoadingVehicles(true);
-      const taxiTypesRef = collection(firestore, "taxiTypes");
-      const taxiTypesSnapshot = await getDocs(taxiTypesRef);
 
-      const taxiTypesData: any[] = [];
-      taxiTypesSnapshot.forEach((doc) => {
-        taxiTypesData.push({
-          id: doc.id,
-          ...doc.data(),
-        });
-      });
+      const taxiResponse = await transportService.getAllTransports();
+      const taxiTypesData = taxiResponse.data;
 
       setTaxiTypes(taxiTypesData);
 
@@ -165,17 +158,8 @@ const SimpleMapSection = () => {
       }
     } catch (error) {
       console.error("Error fetching taxi types:", error);
-
-      // Use fallback data if Firebase fetch fails
-      const fallbackTaxiTypes = [
-        { id: "economy", name: "Economy", emoji: "🚗" },
-        { id: "comfort", name: "Comfort", emoji: "🚕" },
-        { id: "suv", name: "SUV", emoji: "🚙" },
-        { id: "premium", name: "Premium", emoji: "🏎️" },
-      ];
-
-      setTaxiTypes(fallbackTaxiTypes);
-      setSelectedVehicleType(fallbackTaxiTypes[0].id);
+      setTaxiTypes([]);
+      setSelectedVehicleType("");
     } finally {
       setIsLoadingVehicles(false);
     }
@@ -236,7 +220,7 @@ const SimpleMapSection = () => {
             anchor: new google.maps.Point(20, 20),
           },
           title: `Pickup: ${selectedPickupLocation.name}`,
-        }
+        },
       );
 
       pickupMarkerRef.current = pickupMarker;
@@ -268,7 +252,7 @@ const SimpleMapSection = () => {
             anchor: new google.maps.Point(20, 20),
           },
           title: `Dropoff: ${selectedDropoffLocation.name}`,
-        }
+        },
       );
 
       dropoffMarkerRef.current = dropoffMarker;
@@ -311,7 +295,7 @@ const SimpleMapSection = () => {
         {
           lat: selectedDropoffLocation.coordinates.latitude,
           lng: selectedDropoffLocation.coordinates.longitude,
-        }
+        },
       );
 
       if (directionsResult) {
@@ -353,7 +337,7 @@ const SimpleMapSection = () => {
   const getAveragePricingForTaxiType = (taxiTypeId: string) => {
     // Filter vehicles by the selected taxi type
     const vehiclesForTaxiType = vehicles.filter(
-      (v) => v.transportId === taxiTypeId
+      (v) => v.transportId === taxiTypeId,
     );
 
     if (vehiclesForTaxiType.length === 0) {
@@ -368,15 +352,15 @@ const SimpleMapSection = () => {
     // Calculate average pricing
     const totalBasePrice = vehiclesForTaxiType.reduce(
       (sum, v) => sum + (v.basePrice || 0),
-      0
+      0,
     );
     const totalPerKmPrice = vehiclesForTaxiType.reduce(
       (sum, v) => sum + (v.perKmPrice || 0),
-      0
+      0,
     );
     const totalPerMinutePrice = vehiclesForTaxiType.reduce(
       (sum, v) => sum + (v.perMinPrice || 0),
-      0
+      0,
     );
 
     return {
@@ -424,7 +408,7 @@ const SimpleMapSection = () => {
         {
           lat: selectedDropoffLocation.coordinates.latitude,
           lng: selectedDropoffLocation.coordinates.longitude,
-        }
+        },
       );
 
       if (
@@ -447,13 +431,13 @@ const SimpleMapSection = () => {
 
         // Convert to numeric values for calculations
         const distanceKm = parseFloat(
-          distanceText.replace(" km", "").replace(",", "")
+          distanceText.replace(" km", "").replace(",", ""),
         );
         const durationMinutes = parseInt(
           durationText
             .replace(" min", "")
             .replace(" hour", "60")
-            .replace(" hours", "60")
+            .replace(" hours", "60"),
         );
 
         setRouteDetails({

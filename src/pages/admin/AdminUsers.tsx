@@ -362,11 +362,9 @@ const AdminUsers = () => {
                       <tr key={user.id} className="border-b">
                         <td className="p-4 font-medium">
                           {user.firstName} {user.lastName}
-                          {user.role === "admin" && (
-                            <Badge className="ml-2 bg-purple-100 text-purple-800">
-                              Admin
-                            </Badge>
-                          )}
+                          <Badge className="ml-2 bg-purple-100 text-purple-800 capitalize hover:bg-purple-100">
+                            {user.role}
+                          </Badge>
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-1">

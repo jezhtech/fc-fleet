@@ -37,7 +37,7 @@ const TransportTypeSelector: React.FC<TransportTypeSelectorProps> = ({
       <RadioGroup
         // value={selectedTaxiType}
         // onValueChange={onSelect}
-        className="grid grid-cols-2 gap-3"
+        className="grid sm:grid-cols-2 gap-3"
       >
         {transportTypes.map((type) => {
           const isAvailable = isTypeAvailable(type.id);
