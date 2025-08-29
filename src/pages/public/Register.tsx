@@ -34,7 +34,6 @@ type UserData = {
 const Register = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, refreshUserData } = useAuth();
 
   // State for user data
   const [userData, setUserData] = useState<UserData>({
@@ -77,13 +76,6 @@ const Register = () => {
       }));
     }
   }, [location.state]);
-
-  // If user is already logged in, redirect to home page
-  useEffect(() => {
-    if (currentUser) {
-      navigate("/");
-    }
-  }, [currentUser, navigate]);
 
   useEffect(() => {
     window.recaptchaVerifier = null;
@@ -251,18 +243,13 @@ const Register = () => {
           throw new Error(response.error || "Failed to create user account");
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        // Refresh user data to ensure we have the latest
-        await refreshUserData();
+        toast.success("Account created successfully! Redirecting...");
         // Navigate to home page
-        navigate("/");
+        window.location.href = "/";
       } catch (apiError: any) {
         console.error("Error creating user in backend:", apiError);
-
-        // If backend creation fails, still allow the user to proceed
-        // The user is authenticated with Firebase, so they can use the app
         toast.success("Account created successfully! Redirecting...");
-        navigate("/");
+        window.location.href = "/";
       }
     } catch (error: any) {
       console.error("Error verifying OTP:", error);
@@ -284,11 +271,6 @@ const Register = () => {
       setVerifying(false);
     }
   };
-
-  // If user is already logged in, don't render the form
-  if (currentUser) {
-    return null;
-  }
 
   return (
     <Layout>

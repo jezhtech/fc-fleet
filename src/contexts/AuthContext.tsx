@@ -83,56 +83,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   // Fetch user data from backend API
-  const fetchUserData = useCallback(
-    async (user: User) => {
-      try {
-        // Get the Firebase ID token
-        const authToken = localStorage.getItem("authToken")
-        if(authToken){
-          // fallback to firebase if authToken not found
-          const idToken = await user.getIdToken();
-          
-          // Store token in localStorage for API calls
-          localStorage.setItem("firebaseToken", idToken);
-          localStorage.setItem("authToken", idToken);
-        }
+  const fetchUserData = useCallback(async (user: User) => {
+    try {
+      // Get the Firebase ID token
+      const authToken = localStorage.getItem("authToken");
 
-        // Fetch user profile from backend
-        const response = await authService.getCurrentUser();
-        
-        if (response.success && response.data) {
-          const data = response.data as UserData;
-          
-          // Determine user role
-          const role = data.role || "customer";
-          const isDriverUser = role === "driver";
-          const isAdminUser = role === "admin";
+      if (authToken) {
+        // fallback to firebase if authToken not found
+        const idToken = await user.getIdToken();
 
-          setUserData(data);
-          setUserRole(role);
-          setIsDriver(isDriverUser);
-          setIsAdmin(isAdminUser);
-          setNeedsRegistration(false);
-        } else {
-          // User exists in Auth but not in backend - they need to complete registration
-          setUserData(null);
-          setUserRole(null);
-          setIsDriver(false);
-          setIsAdmin(false);
-          setNeedsRegistration(true);
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        // Don't sign out on error, just clear user data
+        // Store token in localStorage for API calls
+        localStorage.setItem("firebaseToken", idToken);
+        localStorage.setItem("authToken", idToken);
+      }
+
+      // Fetch user profile from backend
+      const response = await authService.getCurrentUser();
+
+      if (response.success && response.data) {
+        const data = response.data as UserData;
+
+        // Determine user role
+        const role = data.role || "customer";
+        const isDriverUser = role === "driver";
+        const isAdminUser = role === "admin";
+
+        setUserData(data);
+        setUserRole(role);
+        setIsDriver(isDriverUser);
+        setIsAdmin(isAdminUser);
+        setNeedsRegistration(false);
+      } else {
+        // User exists in Auth but not in backend - they need to complete registration
         setUserData(null);
         setUserRole(null);
         setIsDriver(false);
         setIsAdmin(false);
-        setNeedsRegistration(false);
+        setNeedsRegistration(true);
       }
-    },
-    []
-  );
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      // Don't sign out on error, just clear user data
+      setUserData(null);
+      setUserRole(null);
+      setIsDriver(false);
+      setIsAdmin(false);
+      setNeedsRegistration(false);
+    }
+  }, []);
 
   // Function to refresh user data
   const refreshUserData = useCallback(async () => {
@@ -202,7 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       isAdmin,
       needsRegistration,
       logout,
-    ]
+    ],
   );
 
   return (
