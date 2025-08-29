@@ -647,7 +647,7 @@ const RentCarForm = () => {
                     <div className="flex items-center gap-4">
                       {/* Vehicle Image */}
                       <div className="flex-shrink-0">
-                        <div className="w-fit h-20 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                        <div className="w-28 h-20 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                           {vehicle.imageUrl ? (
                             <img
                               src={vehicle.imageUrl}
