@@ -456,7 +456,9 @@ const AdminBookings = () => {
                               {booking.orderId}
                             </td>
                             <td className="p-3 capitalize">
-                              {booking.bookingType}
+                              {booking.bookingType === "rent"
+                                ? "Hourly"
+                                : "Chauffeur"}
                             </td>
                             <td className="p-3">
                               <div className="flex items-center gap-2">
@@ -480,7 +482,7 @@ const AdminBookings = () => {
                               )}
                             </td>
                             <td className="p-3 font-medium">
-                              {formatCurrency(booking.paymentInfo?.amount || 0)}
+                              {formatCurrency(booking.amount || 0)}
                             </td>
                             <td className="p-3">
                               <Badge

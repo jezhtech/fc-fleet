@@ -689,7 +689,9 @@ const MyBookings = () => {
       }
 
       try {
-        const response = await bookingService.getAllBookings();
+        const response = await bookingService.getBookingsByUserId(
+          currentUser.uid,
+        );
         const bookings = response.data;
         if (bookings.length > 0) {
           const pastBookingsData = bookings.filter(
