@@ -793,7 +793,7 @@ const AdminVehicleTypes = () => {
                       {formatCurrency(vehicle.perKmPrice)}
                     </div>
 
-                    <div>Per Minute Price:</div>
+                    <div>Per Hour Price:</div>
                     <div className="font-medium">
                       {formatCurrency(vehicle.perMinutePrice)}
                     </div>

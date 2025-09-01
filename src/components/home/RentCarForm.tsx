@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Clock, Info, AlertTriangle } from "lucide-react";
 
@@ -19,7 +19,6 @@ import {
 } from "./booking-form";
 import { useAuth } from "@/contexts/AuthContext";
 import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
-import { generateBookingId, getNextBookingCount } from "@/utils/booking";
 import { Location, Transport, Vehicle } from "@/types";
 import { bookingService, transportService, vehicleService } from "@/services";
 import { generateOrderId } from "@/lib/utils";
@@ -67,14 +66,6 @@ const emiratesData = {
     ],
   },
 };
-
-const rentalStatuses = [
-  { id: "initiated", label: "Booking Initiated", completed: true },
-  { id: "processing", label: "Processing", completed: false },
-  { id: "ready", label: "Car Ready for Pickup", completed: false },
-  { id: "picked", label: "Car Picked Up", completed: false },
-  { id: "returned", label: "Car Returned", completed: false },
-];
 
 const getInitialTime = () => {
   const now = new Date();
@@ -154,7 +145,7 @@ const RentCarForm = () => {
   };
 
   // Calculate total amount for rental
-  const getVehicleHourPrice = (vehicle: Vehicle) => {
+  const getVehicleHourPrice = (vehicle: Vehicle): number => {
     if (!vehicle) return 0;
 
     // Get the selected tour duration
@@ -168,8 +159,9 @@ const RentCarForm = () => {
     const duration = selectedTour.duration;
     const hours = duration || 5; // Default to 5 hours
 
+    console.log(vehicle.perMinPrice, hours);
     // Calculate total: base price per hour × number of hours
-    return vehicle.perMinPrice * hours;
+    return parseFloat((vehicle.perMinPrice * hours).toFixed(2));
   };
 
   useEffect(() => {
@@ -666,7 +658,7 @@ const RentCarForm = () => {
                         <p className="text-xl font-bold text-gray-900">
                           {getVehicleHourPrice(vehicle)}
                         </p>
-                        <p className="text-xs text-gray-500">per hour</p>
+                        <p className="text-xs text-gray-500">AED</p>
                       </div>
                     </div>
                   </div>
