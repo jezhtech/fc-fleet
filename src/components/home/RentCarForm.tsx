@@ -1,16 +1,7 @@
 import { toast } from "sonner";
-import { format } from "date-fns";
 import React, { useState, useEffect, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import {
-  CreditCard,
-  Check,
-  FileText,
-  Book,
-  Clock,
-  Info,
-  AlertTriangle,
-} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Clock, Info, AlertTriangle } from "lucide-react";
 
 import {
   Select,
@@ -19,27 +10,13 @@ import {
   SelectContent,
   SelectTrigger,
 } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
 import {
   DateTimePicker,
   LocationSelector,
   RouteMap,
   TransportTypeSelector,
 } from "./booking-form";
-import { getAllDocuments } from "@/lib/firestoreUtils";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  addDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { firestore } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
 import { generateBookingId, getNextBookingCount } from "@/utils/booking";
@@ -192,7 +169,7 @@ const RentCarForm = () => {
     const hours = duration || 5; // Default to 5 hours
 
     // Calculate total: base price per hour × number of hours
-    return vehicle.basePrice + vehicle.perMinPrice * hours;
+    return vehicle.perMinPrice * hours;
   };
 
   useEffect(() => {
