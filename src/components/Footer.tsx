@@ -34,19 +34,14 @@ const Footer = () => {
       address: ["Saphire Tower", "Deira 780610, UAE"],
     },
     {
-      id: "oman",
-      name: "Oman",
-      address: ["Murooj Grand Al Khuwair", "Muscat"],
+      id: "qatar",
+      name: "Qatar",
+      address: ["Building 18", "Zone 66", "Street 972", "Doha - Qatar"],
     },
     {
       id: "usa",
       name: "USA",
       address: ["13279 Bluejacket", "Street Overland Park, KS", "66213"],
-    },
-    {
-      id: "png",
-      name: "Papua New Guinea",
-      address: ["Sec 112, Lot 25, Bomana", "Sogeri Rd"],
     },
     {
       id: "india",
