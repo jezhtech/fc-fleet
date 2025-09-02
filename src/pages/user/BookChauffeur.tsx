@@ -256,9 +256,15 @@ const BookChauffeur = () => {
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-fleet-red mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-600">Dropoff Location</p>
+                    <p className="text-sm text-gray-600">
+                      {bookingData.dropoffLocation
+                        ? "Dropoff Location"
+                        : "Hourly Tour"}
+                    </p>
                     <p className="font-medium">
-                      {bookingData.dropoffLocation?.name || "N/A"}
+                      {bookingData.dropoffLocation?.name ||
+                        bookingData.hourlyTour?.name ||
+                        "N/A"}
                     </p>
                   </div>
                 </div>
@@ -435,8 +441,7 @@ const BookChauffeur = () => {
                   What happens next?
                 </h4>
                 <ul className="text-blue-700 text-sm space-y-1">
-                  <li>• We'll confirm your booking within 30 minutes</li>
-                  <li>• A driver will be assigned to your trip</li>
+                  <li>• A driver will be assigned prior to 2 hours</li>
                   <li>
                     • You'll receive driver details and vehicle information
                   </li>

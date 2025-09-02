@@ -19,20 +19,20 @@ import {
 } from "./booking-form";
 import { useAuth } from "@/contexts/AuthContext";
 import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
-import { Location, Transport, Vehicle } from "@/types";
+import { HourlyTour, Location, Transport, Vehicle } from "@/types";
 import { bookingService, transportService, vehicleService } from "@/services";
 import { generateOrderId } from "@/lib/utils";
 
 // Emirates and their tour options
-const emiratesData = {
+const emiratesData: {
+  [key: string]: {
+    name: string;
+    hourlyTours: HourlyTour[];
+  };
+} = {
   dubai: {
     name: "Dubai",
     hourlyTours: [
-      {
-        id: "dubai-half-day",
-        name: "Dubai Half Day, 5hrs City Tour",
-        duration: 5,
-      },
       {
         id: "dubai-full-day",
         name: "Dubai Full Day, 10hrs City Tour",
@@ -44,24 +44,24 @@ const emiratesData = {
     name: "Other Emirates",
     hourlyTours: [
       {
-        id: "abu-dhabi-half-day",
-        name: "Abu Dhabi Half Day, 5hrs City Tour",
-        duration: 5,
+        id: "abu-dhabi-full-day",
+        name: "Abu Dhabi Full Day, 10hrs City Tour",
+        duration: 10,
       },
       {
-        id: "sharjah-half-day",
-        name: "Sharjah Half Day, 5hrs City Tour",
-        duration: 5,
+        id: "sharjah-full-day",
+        name: "Sharjah Full Day, 10hrs City Tour",
+        duration: 10,
       },
       {
-        id: "fujairah-half-day",
-        name: "Fujairah Half Day, 5hrs City Tour",
-        duration: 5,
+        id: "fujairah-full-day",
+        name: "Fujairah Full Day, 10hrs City Tour",
+        duration: 10,
       },
       {
-        id: "al-ain-half-day",
-        name: "Al Ain Half Day, 5hrs City Tour",
-        duration: 5,
+        id: "al-ain-full-day",
+        name: "Al Ain Full Day, 10hrs City Tour",
+        duration: 10,
       },
     ],
   },
@@ -310,7 +310,7 @@ const RentCarForm = () => {
 
       const timeDifference = selectedDateTime.getTime() - now.getTime();
       const hoursDifference = timeDifference / (1000 * 60 * 60);
-      console.log(hoursDifference);
+
       if (hoursDifference < 4) {
         toast.error("Bookings must be made at least 4 hours in advance");
         return;
@@ -338,6 +338,13 @@ const RentCarForm = () => {
         return;
       }
 
+      const selectedHourlyTourData = emiratesData[
+        selectedEmirate
+      ].hourlyTours.find((tour) => tour.id === selectedHourlyTour);
+
+      const [hours, minutes] = pickupTime.split(":").map(Number);
+      const pickupDateTime = pickupDate.setHours(hours, minutes, 0, 0);
+
       // Calculate total amount
       const totalAmount = getVehicleHourPrice(selectedVehicle);
 
@@ -353,6 +360,8 @@ const RentCarForm = () => {
         status: "initiated" as const,
         pickupLocation: selectedPickupLocation,
         dropoffLocation: selectedDropoffLocation,
+        hourlyTour: selectedHourlyTourData,
+        pickupDate: pickupDateTime,
         amount: totalAmount,
       };
 

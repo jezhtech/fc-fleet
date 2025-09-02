@@ -259,6 +259,7 @@ export interface Booking {
     | "cancelled";
   pickupLocation: Location;
   dropoffLocation?: Location;
+  hourlyTour?: HourlyTour;
   pickupDate: string;
   amount: number;
   paymentInfo: PaymentInfo;
@@ -279,8 +280,15 @@ export interface BookingForm {
     | "cancelled";
   pickupLocation: Location;
   dropoffLocation?: Location;
+  hourlyTour?: HourlyTour;
   pickupDate?: number;
   paymentInfo?: PaymentInfo;
+}
+
+export interface HourlyTour {
+  id: string;
+  name: string;
+  duration: number;
 }
 
 export interface BookingWithRelations extends Booking {
@@ -304,6 +312,7 @@ export interface CreateBookingRequest {
   vehicleId: string;
   pickupLocation: Location;
   dropoffLocation?: Location;
+  hourlyTour?: HourlyTour;
   pickupDate?: number;
   paymentInfo?: PaymentInfo;
   amount: number;
