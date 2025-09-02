@@ -14,11 +14,11 @@ class VehicleService {
    * Get all vehicles with optional filtering
    */
   async getAllVehicles(
-    filters?: VehicleFilters
+    filters?: VehicleFilters,
   ): Promise<ApiResponse<VehicleWithTransport[]>> {
     return apiClient.get<VehicleWithTransport[]>(
       `${API_ENDPOINTS.VEHICLES.BASE}/all`,
-      filters
+      filters,
     );
   }
 
@@ -27,7 +27,7 @@ class VehicleService {
    */
   async getVehicleById(id: string): Promise<ApiResponse<VehicleWithTransport>> {
     return apiClient.get<VehicleWithTransport>(
-      `${API_ENDPOINTS.VEHICLES.BASE}/${id}`
+      `${API_ENDPOINTS.VEHICLES.BASE}/${id}`,
     );
   }
 
@@ -35,7 +35,7 @@ class VehicleService {
    * Create a new vehicle
    */
   async createVehicle(
-    data: CreateVehicleRequest
+    data: CreateVehicleRequest,
   ): Promise<ApiResponse<Vehicle>> {
     return apiClient.post<Vehicle>(API_ENDPOINTS.VEHICLES.BASE, data);
   }
@@ -45,7 +45,7 @@ class VehicleService {
    */
   async updateVehicle(
     id: string,
-    data: UpdateVehicleRequest
+    data: UpdateVehicleRequest,
   ): Promise<ApiResponse<Vehicle>> {
     return apiClient.put<Vehicle>(`${API_ENDPOINTS.VEHICLES.BASE}/${id}`, data);
   }
@@ -55,7 +55,7 @@ class VehicleService {
    */
   async deleteVehicle(id: string): Promise<ApiResponse<{ message: string }>> {
     return apiClient.delete<{ message: string }>(
-      `${API_ENDPOINTS.VEHICLES.BASE}/${id}`
+      `${API_ENDPOINTS.VEHICLES.BASE}/${id}`,
     );
   }
 
@@ -63,10 +63,10 @@ class VehicleService {
    * Get vehicles by transport ID
    */
   async getVehiclesByTransport(
-    transportId: string
+    transportId: string,
   ): Promise<ApiResponse<Vehicle[]>> {
     return apiClient.get<Vehicle[]>(
-      `${API_ENDPOINTS.VEHICLES.BY_TRANSPORT}/${transportId}`
+      `${API_ENDPOINTS.VEHICLES.BY_TRANSPORT}/${transportId}`,
     );
   }
 
@@ -74,7 +74,7 @@ class VehicleService {
    * Get available vehicles
    */
   async getAvailableVehicles(
-    filters?: VehicleFilters
+    filters?: VehicleFilters,
   ): Promise<ApiResponse<Vehicle[]>> {
     return apiClient.get<Vehicle[]>(API_ENDPOINTS.VEHICLES.AVAILABLE, filters);
   }
@@ -99,11 +99,11 @@ class VehicleService {
   calculateFare(
     vehicle: Vehicle,
     distanceKm: number,
-    durationMinutes: number
+    durationMinutes: number,
   ): number {
     const baseFare = vehicle.basePrice;
     const distanceFare = vehicle.perKmPrice * distanceKm;
-    const timeFare = vehicle.perMinPrice * durationMinutes;
+    const timeFare = vehicle.perHourPrice * durationMinutes;
 
     return baseFare + distanceFare + timeFare;
   }
@@ -113,12 +113,12 @@ class VehicleService {
    */
   async searchVehicles(
     query: string,
-    filters?: VehicleFilters
+    filters?: VehicleFilters,
   ): Promise<ApiResponse<VehicleWithTransport[]>> {
     const searchFilters = { ...filters, search: query };
     return apiClient.get<VehicleWithTransport[]>(
       API_ENDPOINTS.VEHICLES.BASE,
-      searchFilters
+      searchFilters,
     );
   }
 
@@ -128,12 +128,12 @@ class VehicleService {
   async getVehiclesByPriceRange(
     minPrice: number,
     maxPrice: number,
-    filters?: VehicleFilters
+    filters?: VehicleFilters,
   ): Promise<ApiResponse<VehicleWithTransport[]>> {
     const priceFilters = { ...filters, minPrice, maxPrice };
     return apiClient.get<VehicleWithTransport[]>(
       API_ENDPOINTS.VEHICLES.BASE,
-      priceFilters
+      priceFilters,
     );
   }
 
@@ -143,12 +143,12 @@ class VehicleService {
   async getVehiclesByCapacity(
     minCapacity: number,
     maxCapacity: number,
-    filters?: VehicleFilters
+    filters?: VehicleFilters,
   ): Promise<ApiResponse<VehicleWithTransport[]>> {
     const capacityFilters = { ...filters, minCapacity, maxCapacity };
     return apiClient.get<VehicleWithTransport[]>(
       API_ENDPOINTS.VEHICLES.BASE,
-      capacityFilters
+      capacityFilters,
     );
   }
 }

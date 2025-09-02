@@ -50,7 +50,7 @@ interface VehicleTypeDisplay extends Vehicle {
   taxiTypeId: string; // Add taxiTypeId for display purposes
   taxiTypeName?: string; // For display purposes
   images: string[]; // Convert imageUrl to images array for display
-  perMinutePrice: number; // Add perMinutePrice for display purposes
+  perHourPrice: number; // Add perHourPrice for display purposes
 }
 
 const AdminVehicleTypes = () => {
@@ -107,7 +107,7 @@ const AdminVehicleTypes = () => {
                 taxiTypeId: vehicle.transportId || "",
                 taxiTypeName: taxiType?.name || "Unknown",
                 images: vehicle.imageUrl ? [vehicle.imageUrl] : [], // Convert single imageUrl to images array
-                perMinutePrice: vehicle.perMinPrice, // Map perMinPrice to perMinutePrice for display
+                perHourPrice: vehicle.perHourPrice, // Map perHourPrice to perHourPrice for display
               };
             });
 
@@ -147,11 +147,11 @@ const AdminVehicleTypes = () => {
         description: "",
         basePrice: 0,
         perKmPrice: 0,
-        perMinutePrice: 0,
+        perHourPrice: 0,
         capacity: 4,
         images: [],
         imageUrl: "",
-        perMinPrice: 0,
+        perHourPrice: 0,
         createdAt: "",
         updatedAt: "",
       },
@@ -283,7 +283,7 @@ const AdminVehicleTypes = () => {
         description: currentVehicle.description,
         basePrice: currentVehicle.basePrice,
         perKmPrice: currentVehicle.perKmPrice,
-        perMinPrice: currentVehicle.perMinutePrice, // Map back to perMinPrice
+        perHourPrice: currentVehicle.perHourPrice, // Map back to perHourPrice
         capacity: currentVehicle.capacity,
         imageUrl: imageUrls[0] || "", // Use first image as imageUrl for backend
         transportId: currentVehicle.taxiTypeId,
@@ -310,7 +310,7 @@ const AdminVehicleTypes = () => {
             taxiTypeId: currentVehicle.taxiTypeId,
             taxiTypeName: taxiType?.name || "Unknown",
             images: imageUrls,
-            perMinutePrice: response.data!.perMinPrice, // Map perMinPrice to perMinutePrice for display
+            perHourPrice: response.data!.perHourPrice, // Map perHourPrice to perHourPrice for display
           };
 
           setVehicleTypes(
@@ -341,7 +341,7 @@ const AdminVehicleTypes = () => {
             taxiTypeId: currentVehicle.taxiTypeId,
             taxiTypeName: taxiType?.name || "Unknown",
             images: imageUrls,
-            perMinutePrice: response.data!.perMinPrice, // Map perMinPrice to perMinutePrice for display
+            perHourPrice: response.data!.perHourPrice, // Map perHourPrice to perHourPrice for display
           };
 
           setVehicleTypes([...vehicleTypes, savedVehicle]);
@@ -567,19 +567,19 @@ const AdminVehicleTypes = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="perMinutePrice">Per Hour Price (AED)</Label>
+                  <Label htmlFor="perHourPrice">Per Hour Price (AED)</Label>
                   <Input
-                    id="perMinutePrice"
+                    id="perHourPrice"
                     type="number"
                     step="0.01"
                     min="0"
-                    value={currentVehicle?.perMinutePrice || 0}
+                    value={currentVehicle?.perHourPrice || 0}
                     onChange={(e) =>
                       setCurrentVehicle((curr) =>
                         curr
                           ? {
                               ...curr,
-                              perMinutePrice: parseFloat(e.target.value),
+                              perHourPrice: parseFloat(e.target.value),
                             }
                           : null,
                       )
@@ -795,7 +795,7 @@ const AdminVehicleTypes = () => {
 
                     <div>Per Hour Price:</div>
                     <div className="font-medium">
-                      {formatCurrency(vehicle.perMinutePrice)}
+                      {formatCurrency(vehicle.perHourPrice)}
                     </div>
 
                     <div>Capacity:</div>

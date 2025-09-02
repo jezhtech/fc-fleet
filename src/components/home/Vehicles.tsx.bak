@@ -22,7 +22,7 @@ interface Vehicle {
   capacity: number;
   basePrice: number;
   perKmPrice: number;
-  perMinutePrice: number;
+  perHourPrice: number;
   images: string[];
 }
 
@@ -73,9 +73,9 @@ const Vehicles = () => {
   const [activeImageIndex, setActiveImageIndex] = useState<{[key: string]: number}>({});
 
   useEffect(() => {
-    
+
     fetchTaxiTypes();
-    
+
     // Set number of visible items based on window width
     const handleResize = () => {
       if (window.innerWidth < 768) {
@@ -86,10 +86,10 @@ const Vehicles = () => {
         setVisibleCount(3);
       }
     };
-    
+
     handleResize();
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       window.removeEventListener('resize', handleResize);
     };
@@ -100,23 +100,23 @@ const Vehicles = () => {
     try {
       const taxiTypesRef = collection(firestore, 'taxiTypes');
       const taxiTypesSnapshot = await getDocs(taxiTypesRef);
-      
+
       const taxiTypesData: Record<string, string> = {};
       taxiTypesSnapshot.forEach((doc) => {
         const data = doc.data();
         taxiTypesData[doc.id] = data.name || 'Unknown';
       });
-      
+
       // If we got taxi types from database, use them
       if (Object.keys(taxiTypesData).length > 0) {
         setTaxiTypes(taxiTypesData);
-        
+
       } else {
         // Otherwise, use fallback
         setTaxiTypes(taxiTypeNames);
         console.warn('Using fallback taxi types');
       }
-      
+
       // After getting taxi types, fetch vehicles
       fetchVehicles(taxiTypesData);
     } catch (error) {
@@ -133,12 +133,12 @@ const Vehicles = () => {
     if (existingMappings[taxiTypeId]) {
       return existingMappings[taxiTypeId];
     }
-    
+
     // If not found, try to fetch it directly
     try {
       const taxiTypeRef = doc(firestore, 'taxiTypes', taxiTypeId);
       const taxiTypeSnap = await getDoc(taxiTypeRef);
-      
+
       if (taxiTypeSnap.exists()) {
         const data = taxiTypeSnap.data();
         return data.name || 'Unknown';
@@ -146,7 +146,7 @@ const Vehicles = () => {
     } catch (error) {
       console.error(`Error fetching taxi type ${taxiTypeId}:`, error);
     }
-    
+
     // Return a default if all else fails
     return 'Standard';
   };
@@ -157,29 +157,29 @@ const Vehicles = () => {
       // Fetch from 'vehicleTypes' collection
       const vehiclesRef = collection(firestore, 'vehicleTypes');
       const vehiclesSnapshot = await getDocs(vehiclesRef);
-      
+
       // Create an array to hold promises for taxi type name resolution
       const vehiclePromises = vehiclesSnapshot.docs.map(async (docSnapshot) => {
         const data = docSnapshot.data();
         const taxiTypeId = data.taxiTypeId || '';
-        
+
         // Determine vehicle category for features (simplified categories)
         let vehicleCategory = 'economy';
-        if (data.name?.toLowerCase().includes('premium') || 
+        if (data.name?.toLowerCase().includes('premium') ||
             data.description?.toLowerCase().includes('premium')) {
           vehicleCategory = 'premium';
-        } else if (data.name?.toLowerCase().includes('suv') || 
+        } else if (data.name?.toLowerCase().includes('suv') ||
                   data.description?.toLowerCase().includes('suv') ||
                   data.capacity >= 6) {
           vehicleCategory = 'suv';
         }
-        
+
         // Get the taxi type name, either from our mapping or by fetching it
         let taxiTypeName = vehicleCategory.charAt(0).toUpperCase() + vehicleCategory.slice(1);
         if (taxiTypeId) {
           taxiTypeName = await getTaxiTypeName(taxiTypeId, taxiTypeMapping);
         }
-        
+
         // Create feature list with appropriate icons
         const featuresList = [
           {
@@ -195,7 +195,7 @@ const Vehicles = () => {
             text: `${Math.floor((data.capacity || 4) / 2)} Luggage`
           }
         ];
-        
+
         // Add vehicle category specific feature
         if (vehicleCategory === 'premium') {
           featuresList.push({
@@ -213,33 +213,33 @@ const Vehicles = () => {
             text: 'Fuel Efficient'
           });
         }
-        
+
         // Return the vehicle data
         return {
           id: docSnapshot.id,
           name: data.name || 'Unnamed Vehicle',
           description: data.description || 'No description available',
           image: data.images && data.images.length > 0 ? data.images[0] : '/placeholder.svg',
-          price: data.perMinutePrice ? Math.round(data.perMinutePrice * 60) : 0,
+          price: data.perHourPrice ? Math.round(data.perHourPrice * 60) : 0,
           features: featuresList,
           taxiTypeId: taxiTypeId,
           taxiTypeName: taxiTypeName,
           capacity: data.capacity || 4,
           basePrice: data.basePrice || 0,
           perKmPrice: data.perKmPrice || 0,
-          perMinutePrice: data.perMinutePrice || 0,
+          perHourPrice: data.perHourPrice || 0,
           images: Array.isArray(data.images) && data.images.length > 0 ? data.images : ['/placeholder.svg']
         };
       });
-      
+
       // Wait for all promises to resolve
       const vehicleData = await Promise.all(vehiclePromises);
-      
+
       if (vehicleData.length > 0) {
         // Log image data for debugging
-        
+
         setVehicles(vehicleData);
-        
+
       } else {
         console.warn('No vehicles found in database');
         setVehicles([]);
@@ -269,7 +269,7 @@ const Vehicles = () => {
         nextSlide();
       }
     }, 5000);
-    
+
     return () => clearInterval(interval);
   }, [vehicles.length, visibleCount, currentIndex]);
 
@@ -285,7 +285,7 @@ const Vehicles = () => {
       [vehicleId]: (prev[vehicleId] + 1) % imagesLength
     }));
   };
-  
+
   // Function to handle previous image in a vehicle's image carousel
   const handlePrevImage = (vehicleId: string, imagesLength: number) => {
     setActiveImageIndex(prev => ({
@@ -293,7 +293,7 @@ const Vehicles = () => {
       [vehicleId]: (prev[vehicleId] - 1 + imagesLength) % imagesLength
     }));
   };
-  
+
   // Initialize active image indices when vehicles are loaded
   useEffect(() => {
     const initialIndices: {[key: string]: number} = {};
@@ -301,10 +301,10 @@ const Vehicles = () => {
       initialIndices[vehicle.id] = 0;
     });
     setActiveImageIndex(initialIndices);
-    
+
     // Set up automatic image rotation for each vehicle
     const timers: NodeJS.Timeout[] = [];
-    
+
     vehicles.forEach(vehicle => {
       if (vehicle.images && vehicle.images.length > 1) {
         const timer = setInterval(() => {
@@ -313,7 +313,7 @@ const Vehicles = () => {
         timers.push(timer);
       }
     });
-    
+
     return () => {
       timers.forEach(timer => clearInterval(timer));
     };
@@ -322,7 +322,7 @@ const Vehicles = () => {
   return (
     <section className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -334,7 +334,7 @@ const Vehicles = () => {
             Explore our variety of vehicles for all your transportation needs. From economy to premium options, we have the perfect ride for every occasion.
           </p>
         </motion.div>
-        
+
         {isLoading ? (
           <div className="flex flex-col justify-center items-center min-h-[300px]">
             <Loader2 className="h-10 w-10 text-fleet-red animate-spin mb-4" />
@@ -352,15 +352,15 @@ const Vehicles = () => {
             {/* Carousel Navigation Buttons */}
             {vehicles.length > visibleCount && (
               <>
-                <button 
-                  onClick={prevSlide} 
+                <button
+                  onClick={prevSlide}
                   className="absolute left-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white text-fleet-red rounded-full p-2 shadow-md"
                   aria-label="Previous vehicle"
                 >
                   <ChevronLeft className="h-6 w-6" />
                 </button>
-                <button 
-                  onClick={nextSlide} 
+                <button
+                  onClick={nextSlide}
                   className="absolute right-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white text-fleet-red rounded-full p-2 shadow-md"
                   aria-label="Next vehicle"
                 >
@@ -368,20 +368,20 @@ const Vehicles = () => {
                 </button>
               </>
             )}
-            
+
             {/* Carousel Container */}
             <div className="overflow-hidden">
-              <div 
+              <div
                 ref={carouselRef}
                 className="flex transition-all duration-500 ease-in-out"
-                style={{ 
+                style={{
                   transform: `translateX(-${currentIndex * (100 / visibleCount)}%)`,
                   width: `${(vehicles.length / visibleCount) * 100}%`
                 }}
               >
                 {vehicles.map((vehicle) => (
-                  <div 
-                    key={vehicle.id} 
+                  <div
+                    key={vehicle.id}
                     className="px-3"
                     style={{ width: `${100 / vehicles.length * visibleCount}%` }}
                   >
@@ -390,11 +390,11 @@ const Vehicles = () => {
                         onTouchStart={(e) => {
                           const touchStart = e.touches[0].clientX;
                           const element = e.currentTarget;
-                          
+
                           element.ontouchend = (endEvent) => {
                             const touchEnd = endEvent.changedTouches[0].clientX;
                             const diff = touchStart - touchEnd;
-                            
+
                             // If swipe distance is significant
                             if (Math.abs(diff) > 30) {
                               if (diff > 0) {
@@ -409,7 +409,7 @@ const Vehicles = () => {
                                 }
                               }
                             }
-                            
+
                             element.ontouchend = null;
                           };
                         }}
@@ -418,19 +418,19 @@ const Vehicles = () => {
                         <div className="absolute top-2 left-2 z-10 bg-gradient-to-r from-fleet-red to-fleet-accent text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
                           {vehicle.taxiTypeName}
                         </div>
-                        
+
                         {/* Image Carousel */}
                         {vehicle.images && vehicle.images.length > 0 ? (
                           <>
                             <div className="relative w-full h-full overflow-hidden">
                               <AnimatePresence mode="wait">
-                                <motion.img 
+                                <motion.img
                                   key={activeImageIndex[vehicle.id] || 0}
                                   initial={{ opacity: 0 }}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.3 }}
-                                  src={vehicle.images[activeImageIndex[vehicle.id] || 0]} 
+                                  src={vehicle.images[activeImageIndex[vehicle.id] || 0]}
                                   alt={vehicle.name}
                                   className="w-full h-full object-cover object-center"
                                   onError={(e) => {
@@ -438,12 +438,12 @@ const Vehicles = () => {
                                   }}
                                 />
                               </AnimatePresence>
-                              
+
                               {/* Image Navigation Controls - Only show if multiple images */}
                               {vehicle.images.length > 1 && (
                                 <>
                                   {/* Previous Button */}
-                                  <button 
+                                  <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handlePrevImage(vehicle.id, vehicle.images.length);
@@ -453,9 +453,9 @@ const Vehicles = () => {
                                   >
                                     <ChevronLeft className="h-4 w-4" />
                                   </button>
-                                  
+
                                   {/* Next Button */}
-                                  <button 
+                                  <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleNextImage(vehicle.id, vehicle.images.length);
@@ -465,7 +465,7 @@ const Vehicles = () => {
                                   >
                                     <ChevronRight className="h-4 w-4" />
                                   </button>
-                                  
+
                                   {/* Image Indicators/Dots */}
                                   <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1.5">
                                     {vehicle.images.map((_, idx) => (

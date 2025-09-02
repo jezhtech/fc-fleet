@@ -1,181 +1,174 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { Zone } from "@/lib/firebaseModels";
-import { createTestZone } from "@/lib/mapUtils";
-import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
+import { googleMapsService } from "@/services/googleMapsService";
 
-interface SimpleZoneRendererProps {
-  zones: Zone[];
-  onSelectZone?: (zoneId: string) => void;
-  onCreateZone?: () => void;
-  onEditZone?: (zoneId: string) => void;
-  onDeleteZone?: (zoneId: string) => void;
-  selectedZoneId?: string;
+interface ZoneMapEditorProps {
+  zoneData: Zone | null;
+  onPolygonComplete: (polygon: GeoJSON.Feature<GeoJSON.Polygon>) => void;
+  isDrawing: boolean;
 }
 
-const SimpleZoneRenderer: React.FC<SimpleZoneRendererProps> = ({
-  zones,
-  onSelectZone,
-  onCreateZone,
-  onEditZone,
-  onDeleteZone,
-  selectedZoneId,
+const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
+  zoneData,
+  onPolygonComplete,
+  isDrawing,
 }) => {
-  const [availableZones, setAvailableZones] = useState<Zone[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<google.maps.Map | null>(null);
+  const drawingManager = useRef<google.maps.drawing.DrawingManager | null>(
+    null,
+  );
+  const polygons = useRef<google.maps.Polygon[]>([]);
+
+  const { token, isInitialized, error: tokenError } = useGoogleMapsToken();
 
   useEffect(() => {
-    // Ensure we have at least the test zone if no zones are provided
-    if (zones.length === 0) {
-      setAvailableZones([createTestZone()]);
-    } else {
-      setAvailableZones(zones);
+    if (tokenError) {
+      setError(`Google Maps token error: ${tokenError}`);
     }
-  }, [zones]);
+  }, [tokenError]);
 
-  // Create a simplified SVG map representation
-  const renderSvgMap = () => {
-    const svgWidth = 600;
-    const svgHeight = 400;
+  const initializeMap = async () => {
+    if (!mapContainer.current || !token || !isInitialized) return;
 
-    // Generate random positions for zones if no real coordinates
-    const zoneElements = availableZones.map((zone, index) => {
-      // Calculate a position in the SVG (this is just a visual representation)
-      const x = 50 + (index % 3) * 200;
-      const y = 50 + Math.floor(index / 3) * 100;
-      const width = 150;
-      const height = 80;
+    try {
+      await googleMapsService.initialize({
+        apiKey: token,
+        libraries: ["drawing"],
+      });
 
-      // Polygon points for a simple rectangle
-      const points = `${x},${y} ${x + width},${y} ${x + width},${
-        y + height
-      } ${x},${y + height}`;
+      const newMap = await googleMapsService.createMap(mapContainer.current!, {
+        center: { lat: 25.2048, lng: 55.2708 }, // Dubai center
+        zoom: 10,
+        mapTypeId: "roadmap",
+      });
+      map.current = newMap;
 
-      // Set color based on selection or use the zone's color if available
-      const fillColor =
-        selectedZoneId === zone.id ? "#3b82f6" : zone.color || "#ff385c";
+      drawingManager.current = new google.maps.drawing.DrawingManager({
+        drawingMode: isDrawing ? google.maps.drawing.OverlayType.POLYGON : null,
+        drawingControl: isDrawing,
+        drawingControlOptions: {
+          position: google.maps.ControlPosition.TOP_CENTER,
+          drawingModes: [google.maps.drawing.OverlayType.POLYGON],
+        },
+        polygonOptions: {
+          fillColor: "#ff385c",
+          fillOpacity: 0.3,
+          strokeWeight: 2,
+          strokeColor: "#ff385c",
+          clickable: false,
+          editable: true,
+          zIndex: 1,
+        },
+      });
 
-      return (
-        <g key={zone.id} onClick={() => onSelectZone && onSelectZone(zone.id)}>
-          <polygon
-            points={points}
-            fill={fillColor}
-            fillOpacity="0.2"
-            stroke={fillColor}
-            strokeWidth="2"
-            className="cursor-pointer hover:fill-opacity-40 transition-all"
-          />
-          <text
-            x={x + width / 2}
-            y={y + height / 2}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#000"
-            fontSize="12"
-            fontWeight={selectedZoneId === zone.id ? "bold" : "normal"}
-          >
-            {zone.name || "Unnamed Zone"}
-          </text>
-        </g>
+      drawingManager.current.setMap(map.current);
+
+      google.maps.event.addListener(
+        drawingManager.current,
+        "overlaycomplete",
+        (event: google.maps.drawing.OverlayCompleteEvent) => {
+          if (
+            event.type === google.maps.drawing.OverlayType.POLYGON &&
+            event.overlay
+          ) {
+            const newPolygon = event.overlay as google.maps.Polygon;
+            const path = newPolygon
+              .getPath()
+              .getArray()
+              .map((p) => [p.lng(), p.lat()]);
+
+            if (
+              path.length > 0 &&
+              (path[0][0] !== path[path.length - 1][0] ||
+                path[0][1] !== path[path.length - 1][1])
+            ) {
+              path.push(path[0]);
+            }
+
+            const geoJsonFeature: GeoJSON.Feature<GeoJSON.Polygon> = {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "Polygon",
+                coordinates: [path],
+              },
+            };
+            onPolygonComplete(geoJsonFeature);
+
+            drawingManager.current?.setDrawingMode(null);
+            newPolygon.setMap(null);
+          }
+        },
       );
-    });
 
-    return (
-      <svg width={svgWidth} height={svgHeight} className="border rounded-md">
-        <rect x="0" y="0" width={svgWidth} height={svgHeight} fill="#f8f9fa" />
-        {zoneElements}
-        <text x="10" y="20" fontSize="12" fill="#666">
-          Simple Zone Visualization (Google Maps Alternative)
-        </text>
-      </svg>
-    );
+      setLoading(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load map");
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-500">
-          Using simplified zone visualization due to map loading issues
-        </p>
-        <Button
-          className="bg-fleet-red text-white hover:bg-fleet-red/90"
-          onClick={onCreateZone}
-        >
-          <Plus className="h-4 w-4 mr-2" /> Add Zone
-        </Button>
-      </div>
+  useEffect(() => {
+    initializeMap();
+  }, [token, isInitialized]);
 
-      <div className="flex justify-center">{renderSvgMap()}</div>
+  useEffect(() => {
+    if (drawingManager.current) {
+      drawingManager.current.setDrawingMode(
+        isDrawing ? google.maps.drawing.OverlayType.POLYGON : null,
+      );
+    }
+  }, [isDrawing]);
 
-      <div className="bg-gray-50 p-4 rounded-md">
-        <h3 className="font-medium mb-2">Available Zones</h3>
-        <div className="space-y-2">
-          {availableZones.length === 0 ? (
-            <p className="text-gray-500">
-              No zones available. Create a new zone to get started.
-            </p>
-          ) : (
-            availableZones.map((zone) => (
-              <div
-                key={zone.id}
-                className={`flex justify-between items-center p-3 rounded-md border ${
-                  selectedZoneId === zone.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200"
-                }`}
-                onClick={() => onSelectZone && onSelectZone(zone.id)}
-              >
-                <div>
-                  <span
-                    className="inline-block w-3 h-3 rounded-full mr-2"
-                    style={{ backgroundColor: zone.color || "#ff385c" }}
-                  />
-                  <span className="font-medium">
-                    {zone.name || "Unnamed Zone"}
-                  </span>
-                  {zone.isActive && (
-                    <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                      Active
-                    </span>
-                  )}
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditZone && onEditZone(zone.id);
-                    }}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteZone && onDeleteZone(zone.id);
-                    }}
-                    className="text-red-500 border-red-200 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
+  useEffect(() => {
+    polygons.current.forEach((p) => p.setMap(null));
+    polygons.current = [];
+
+    if (map.current) {
+      const bounds = new google.maps.LatLngBounds();
+
+      if (zoneData.coordinates && zoneData.coordinates.coordinates.length > 0) {
+        const paths = zoneData.coordinates.coordinates[0].map((p) => ({
+          lat: p[1],
+          lng: p[0],
+        }));
+        paths.forEach((p) => bounds.extend(p));
+
+        const polygon = new google.maps.Polygon({
+          paths: paths,
+          strokeColor: zoneData.color || "#FF0000",
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: zoneData.color || "#FF0000",
+          fillOpacity: 0.35,
+          map: map.current,
+        });
+        polygons.current.push(polygon);
+      }
+
+      if (!bounds.isEmpty()) {
+        map.current.fitBounds(bounds);
+      }
+    }
+  }, [zoneData, map.current]);
+
+  if (error) {
+    return (
+      <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-600">{error}</p>
         </div>
       </div>
+    );
+  }
 
-      <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
-        <p className="text-sm text-yellow-800">
-          <strong>Note:</strong> This is a simplified visualization for zone
-          management. The actual zone coordinates will still be saved correctly
-          even though they're displayed as simple shapes here.
-        </p>
-      </div>
-    </div>
-  );
+  return <div ref={mapContainer} className="w-full h-full rounded-lg" />;
 };
 
-export default SimpleZoneRenderer;
+export default ZoneMapEditor;

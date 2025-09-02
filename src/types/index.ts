@@ -126,7 +126,7 @@ export interface Vehicle {
   description: string;
   basePrice: number;
   perKmPrice: number;
-  perMinPrice: number;
+  perHourPrice: number;
   capacity: number;
   createdAt: string;
   updatedAt: string;
@@ -148,7 +148,7 @@ export interface CreateVehicleRequest {
   description: string;
   basePrice: number;
   perKmPrice: number;
-  perMinPrice: number;
+  perHourPrice: number;
   capacity: number;
 }
 
@@ -159,7 +159,7 @@ export interface UpdateVehicleRequest {
   description?: string;
   basePrice?: number;
   perKmPrice?: number;
-  perMinPrice?: number;
+  perHourPrice?: number;
   capacity?: number;
 }
 
@@ -190,7 +190,7 @@ export interface TransportWithVehicles extends Transport {
     description: string;
     basePrice: number;
     perKmPrice: number;
-    perMinPrice: number;
+    perHourPrice: number;
     capacity: number;
   }>;
   vehicleCount: number;
@@ -300,7 +300,7 @@ export interface BookingWithRelations extends Booking {
     description: string;
     basePrice: number;
     perKmPrice: number;
-    perMinPrice: number;
+    perHourPrice: number;
     capacity: number;
   };
 }
@@ -516,7 +516,7 @@ export interface VehicleDisplay {
   capacity: number;
   basePrice: number;
   perKmPrice: number;
-  perMinutePrice: number;
+  perHourPrice: number;
   images: string[];
 }
 

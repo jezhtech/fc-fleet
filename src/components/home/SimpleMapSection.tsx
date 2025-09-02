@@ -345,7 +345,7 @@ const SimpleMapSection = () => {
       return {
         basePrice: 20,
         perKmPrice: 2.0,
-        perMinutePrice: 0.3,
+        perHourPrice: 0.3,
       };
     }
 
@@ -358,15 +358,15 @@ const SimpleMapSection = () => {
       (sum, v) => sum + (v.perKmPrice || 0),
       0,
     );
-    const totalPerMinutePrice = vehiclesForTaxiType.reduce(
-      (sum, v) => sum + (v.perMinPrice || 0),
+    const totalperHourPrice = vehiclesForTaxiType.reduce(
+      (sum, v) => sum + (v.perHourPrice || 0),
       0,
     );
 
     return {
       basePrice: totalBasePrice / vehiclesForTaxiType.length,
       perKmPrice: totalPerKmPrice / vehiclesForTaxiType.length,
-      perMinutePrice: totalPerMinutePrice / vehiclesForTaxiType.length,
+      perHourPrice: totalperHourPrice / vehiclesForTaxiType.length,
     };
   };
 
@@ -450,10 +450,10 @@ const SimpleMapSection = () => {
           getAveragePricingForTaxiType(selectedVehicleType);
 
         // Calculate base fare
-        let baseFare = averagePricing.basePrice;
+        const baseFare = averagePricing.basePrice;
 
         // Calculate distance fare
-        let distanceFare = distanceKm * averagePricing.perKmPrice;
+        const distanceFare = distanceKm * averagePricing.perKmPrice;
 
         // Calculate total fare (base + distance only)
         let totalFare = baseFare + distanceFare;

@@ -159,9 +159,9 @@ const RentCarForm = () => {
     const duration = selectedTour.duration;
     const hours = duration || 5; // Default to 5 hours
 
-    console.log(vehicle.perMinPrice, hours);
+    console.log(vehicle.perHourPrice, hours);
     // Calculate total: base price per hour × number of hours
-    return parseFloat((vehicle.perMinPrice * hours).toFixed(2));
+    return parseFloat((vehicle.perHourPrice * hours).toFixed(2));
   };
 
   useEffect(() => {
@@ -205,7 +205,7 @@ const RentCarForm = () => {
       const vehiclesData = vehicleResponse.data.map((v) => ({
         ...v,
         basePrice: parseFloat(v.basePrice.toString()),
-        perMinPrice: parseFloat(v.perMinPrice.toString()),
+        perHourPrice: parseFloat(v.perHourPrice.toString()),
       }));
 
       if (vehiclesData.length > 0) {

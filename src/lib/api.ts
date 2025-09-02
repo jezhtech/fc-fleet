@@ -229,6 +229,16 @@ export const API_ENDPOINTS = {
     STATS: "/transport/stats",
   },
 
+  // Fare Rules
+  FARE_RULES: {
+    BASE: "/fare-rule",
+  },
+
+  // Zones
+  ZONES: {
+    BASE: "/zone",
+  },
+
   // Bookings
   BOOKINGS: {
     BASE: "/booking",

@@ -1,9 +1,9 @@
-import { FareRule, Zone } from './firebaseModels';
-import * as turf from '@turf/turf';
+import { FareRule, Zone } from "./firebaseModels";
+import * as turf from "@turf/turf";
 
 /**
  * Calculate the fare for a ride based on distance, duration, zones, and applicable fare rules
- * 
+ *
  * @param distanceKm - Distance of the ride in kilometers
  * @param durationMinutes - Duration of the ride in minutes
  * @param pickupCoordinates - Coordinates of the pickup location [longitude, latitude]
@@ -24,54 +24,54 @@ export const calculateFare = (
   fareRules: FareRule[],
   zones: Zone[],
   isNightTime = false,
-  isPeakHour = false
+  isPeakHour = false,
 ) => {
   // Create GeoJSON Point for pickup and dropoff
   const pickupPoint = turf.point(pickupCoordinates);
   const dropoffPoint = turf.point(dropoffCoordinates);
-  
+
   // Find the zones containing pickup and dropoff points
   const pickupZone = findZoneForPoint(pickupPoint, zones);
   const dropoffZone = findZoneForPoint(dropoffPoint, zones);
-  
+
   // Find applicable fare rule
   const applicableFareRule = findApplicableFareRule(
     taxiTypeId,
     pickupZone?.id,
     dropoffZone?.id,
-    fareRules
+    fareRules,
   );
-  
+
   if (!applicableFareRule) {
-    throw new Error('No applicable fare rule found for this ride');
+    throw new Error("No applicable fare rule found for this ride");
   }
-  
+
   // Calculate base fare
   let totalFare = applicableFareRule.basePrice;
-  
+
   // Add distance-based fare
   const distanceFare = distanceKm * applicableFareRule.perKmPrice;
   totalFare += distanceFare;
-  
+
   // Add time-based fare
-  const timeFare = durationMinutes * applicableFareRule.perMinutePrice;
+  const timeFare = durationMinutes * applicableFareRule.perHourPrice;
   totalFare += timeFare;
-  
+
   // Apply surge multiplier if peak hour
   let appliedMultiplier = 1;
   if (isPeakHour) {
     appliedMultiplier = applicableFareRule.surgeMultiplier;
     totalFare *= appliedMultiplier;
   }
-  
+
   // Ensure minimum fare
   if (totalFare < applicableFareRule.minFare) {
     totalFare = applicableFareRule.minFare;
   }
-  
+
   // Round to 2 decimal places
   totalFare = Math.round(totalFare * 100) / 100;
-  
+
   return {
     totalFare,
     breakdown: {
@@ -81,9 +81,9 @@ export const calculateFare = (
       surgeMultiplier: appliedMultiplier,
       minimumFare: applicableFareRule.minFare,
       appliedRule: applicableFareRule.name,
-      pickupZone: pickupZone?.name || 'Unknown',
-      dropoffZone: dropoffZone?.name || 'Unknown',
-    }
+      pickupZone: pickupZone?.name || "Unknown",
+      dropoffZone: dropoffZone?.name || "Unknown",
+    },
   };
 };
 
@@ -92,7 +92,7 @@ export const calculateFare = (
  */
 export const findZoneForPoint = (
   point: GeoJSON.Feature<GeoJSON.Point>,
-  zones: Zone[]
+  zones: Zone[],
 ): Zone | null => {
   for (const zone of zones) {
     if (zone.isActive && zone.coordinates) {
@@ -102,7 +102,7 @@ export const findZoneForPoint = (
       }
     }
   }
-  
+
   return null;
 };
 
@@ -113,37 +113,39 @@ export const findApplicableFareRule = (
   taxiTypeId: string,
   pickupZoneId: string | undefined,
   dropoffZoneId: string | undefined,
-  fareRules: FareRule[]
+  fareRules: FareRule[],
 ): FareRule | null => {
   // First, try to find a rule that matches both taxi type and both zones
   if (pickupZoneId && dropoffZoneId) {
-    const specificRule = fareRules.find(rule => 
-      rule.taxiTypeIds.includes(taxiTypeId) &&
-      rule.applicableZoneIds.includes(pickupZoneId) &&
-      rule.applicableZoneIds.includes(dropoffZoneId)
+    const specificRule = fareRules.find(
+      (rule) =>
+        rule.taxiTypeIds.includes(taxiTypeId) &&
+        rule.applicableZoneIds.includes(pickupZoneId) &&
+        rule.applicableZoneIds.includes(dropoffZoneId),
     );
-    
+
     if (specificRule) return specificRule;
   }
-  
+
   // Next, try to find a rule for this taxi type with at least one matching zone
   if (pickupZoneId || dropoffZoneId) {
     const zoneId = pickupZoneId || dropoffZoneId;
-    const zoneRule = fareRules.find(rule => 
-      rule.taxiTypeIds.includes(taxiTypeId) &&
-      rule.applicableZoneIds.includes(zoneId!)
+    const zoneRule = fareRules.find(
+      (rule) =>
+        rule.taxiTypeIds.includes(taxiTypeId) &&
+        rule.applicableZoneIds.includes(zoneId!),
     );
-    
+
     if (zoneRule) return zoneRule;
   }
-  
+
   // Finally, fall back to a default rule for this taxi type
-  const defaultRule = fareRules.find(rule => 
-    rule.taxiTypeIds.includes(taxiTypeId) && rule.isDefault
+  const defaultRule = fareRules.find(
+    (rule) => rule.taxiTypeIds.includes(taxiTypeId) && rule.isDefault,
   );
-  
+
   if (defaultRule) return defaultRule;
-  
+
   // If all else fails, return any default rule
-  return fareRules.find(rule => rule.isDefault) || null;
-}; 
+  return fareRules.find((rule) => rule.isDefault) || null;
+};

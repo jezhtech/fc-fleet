@@ -7,7 +7,7 @@ export interface FareRule {
   description: string;
   basePrice: number;
   perKmPrice: number;
-  perMinutePrice: number;
+  perHourPrice: number;
   minFare: number;
   isDefault: boolean;
   surgeMultiplier: number;
@@ -38,14 +38,10 @@ export interface Zone {
   name: string;
   description: string;
   coordinates: GeoJSON.Polygon;
-  coordinatesData?: string; // Stringified GeoJSON for more reliable storage
-  coordinatesJSON?: string; // Backup stringified GeoJSON
-  coordinatesFirestore?: any; // Object-based format for Firestore
   color: string;
-  fareRuleId: string; // Reference to which fare rule applies
   isActive: boolean;
-  createdAt: number;
-  updatedAt: number;
+  createdAt: string;
+  updatedAt: string;
   areaKm2?: number; // Area in square kilometers
 }
 
@@ -65,7 +61,7 @@ export const fromFirestore = <T>(id: string, data: any): T => {
   return { id, ...data } as T;
 };
 
-export const toFirestore = <T>(data: T): Omit<T, 'id'> => {
+export const toFirestore = <T>(data: T): Omit<T, "id"> => {
   const { id, ...rest } = data as any;
   return rest;
-}; 
+};
