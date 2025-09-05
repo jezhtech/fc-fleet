@@ -1,9 +1,9 @@
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
-import type { ApiResponse } from "@/types";
-import type { FareRule } from "@/lib/firebaseModels";
+import type { ApiResponse, FareRuleWithRelations } from "@/types";
+import type { FareRule } from "@/types";
 
 class FareRulesService {
-  async list(): Promise<ApiResponse<FareRule[]>> {
+  async list(): Promise<ApiResponse<FareRuleWithRelations[]>> {
     return apiClient.get(API_ENDPOINTS.FARE_RULES.BASE);
   }
 
@@ -15,7 +15,10 @@ class FareRulesService {
     return apiClient.post(API_ENDPOINTS.FARE_RULES.BASE, data);
   }
 
-  async update(id: string, data: Partial<FareRule>): Promise<ApiResponse<FareRule>> {
+  async update(
+    id: string,
+    data: Partial<FareRule>,
+  ): Promise<ApiResponse<FareRule>> {
     return apiClient.put(`${API_ENDPOINTS.FARE_RULES.BASE}/${id}`, data);
   }
 
@@ -25,5 +28,3 @@ class FareRulesService {
 }
 
 export const fareRulesService = new FareRulesService();
-
-

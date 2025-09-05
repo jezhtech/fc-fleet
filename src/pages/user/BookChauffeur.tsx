@@ -160,7 +160,7 @@ const BookChauffeur = () => {
         <div className="container mx-auto px-4 py-12">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-fleet-red mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-gray-600">Loading booking details...</p>
             </div>
           </div>
@@ -175,7 +175,7 @@ const BookChauffeur = () => {
         <div className="container mx-auto px-4 py-12">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-fleet-red mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-gray-600">Loading booking details...</p>
             </div>
           </div>
@@ -186,7 +186,7 @@ const BookChauffeur = () => {
 
   return (
     <Layout>
-      <div className="bg-gradient-to-r from-fleet-red to-fleet-accent py-20">
+      <div className="bg-gradient-to-r from-primary to-fleet-accent py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             {bookingData.paymentInfo.method === "cash"
@@ -244,7 +244,7 @@ const BookChauffeur = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-fleet-red mt-0.5" />
+                  <MapPin className="h-5 w-5 text-primary mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-600">Pickup Location</p>
                     <p className="font-medium">
@@ -254,7 +254,7 @@ const BookChauffeur = () => {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-fleet-red mt-0.5" />
+                  <MapPin className="h-5 w-5 text-primary mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-600">
                       {bookingData.dropoffLocation
@@ -272,7 +272,7 @@ const BookChauffeur = () => {
 
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-fleet-red" />
+                  <Calendar className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm text-gray-600">Date & Time</p>
                     <p className="font-medium">
@@ -283,7 +283,7 @@ const BookChauffeur = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Car className="h-5 w-5 text-fleet-red" />
+                  <Car className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm text-gray-600">Vehicle</p>
                     <p className="font-medium">
@@ -340,7 +340,7 @@ const BookChauffeur = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Total Amount</p>
-                  <p className="text-2xl font-bold text-fleet-red">
+                  <p className="text-2xl font-bold text-primary">
                     AED{" "}
                     {parseFloat(bookingData.amount.toString())?.toFixed(2) ||
                       "0.00"}
@@ -388,7 +388,7 @@ const BookChauffeur = () => {
                           Your booking is pending payment. Please complete the
                           payment to confirm your booking.
                         </p>
-                        <Button className="mt-3 bg-fleet-red hover:bg-fleet-red/90">
+                        <Button className="mt-3 bg-primary hover:bg-primary/90">
                           Proceed to Payment
                         </Button>
                       </div>
@@ -428,7 +428,7 @@ const BookChauffeur = () => {
                         Your payment could not be processed. Please try again or
                         contact support.
                       </p>
-                      <Button className="mt-3 bg-fleet-red hover:bg-fleet-red/90">
+                      <Button className="mt-3 bg-primary hover:bg-primary/90">
                         Retry Payment
                       </Button>
                     </div>
@@ -460,7 +460,7 @@ const BookChauffeur = () => {
           <div className="flex gap-4">
             <Button
               onClick={() => navigate("/user/my-bookings")}
-              className="bg-fleet-red hover:bg-fleet-red/90"
+              className="bg-primary hover:bg-primary/90"
             >
               View All Bookings
             </Button>

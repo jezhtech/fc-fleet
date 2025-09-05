@@ -328,7 +328,7 @@ const AdminBookings = () => {
                   >
                     <Filter className="h-4 w-4" />
                     {statusFilter !== "all" || dateFilter ? (
-                      <span className="text-fleet-red font-medium">
+                      <span className="text-primary font-medium">
                         Filters Active
                       </span>
                     ) : (

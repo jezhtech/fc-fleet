@@ -303,7 +303,7 @@ const AdminDrivers = () => {
         <Dialog>
           <DialogTrigger asChild>
             <Button
-              className="bg-fleet-red hover:bg-fleet-red/90"
+              className="bg-primary hover:bg-primary/90"
               onClick={() => handleAddEdit(null)}
             >
               <UserPlus className="mr-2 h-4 w-4" />
@@ -420,7 +420,7 @@ const AdminDrivers = () => {
                           className="h-24 text-center text-gray-500"
                         >
                           <div className="flex justify-center items-center">
-                            <Loader2 className="h-8 w-8 text-fleet-red animate-spin mr-2" />
+                            <Loader2 className="h-8 w-8 text-primary animate-spin mr-2" />
                             <p>Loading drivers...</p>
                           </div>
                         </td>
@@ -714,7 +714,7 @@ const AdminDrivers = () => {
               </Button>
               <Button
                 type="submit"
-                className="bg-fleet-red text-white hover:bg-fleet-red/90"
+                className="bg-primary text-white hover:bg-primary/90"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (

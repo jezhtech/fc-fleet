@@ -1,6 +1,6 @@
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import type { ApiResponse } from "@/types";
-import type { Zone } from "@/lib/firebaseModels";
+import type { Zone } from "@/types";
 
 class ZonesService {
   async list(): Promise<ApiResponse<Zone[]>> {

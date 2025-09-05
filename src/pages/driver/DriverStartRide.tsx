@@ -82,7 +82,7 @@ const DriverStartRide = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(
-    null
+    null,
   );
   const driverMarkerRef = useRef<google.maps.Marker | null>(null);
   const pickupMarkerRef = useRef<google.maps.Marker | null>(null);
@@ -289,7 +289,7 @@ const DriverStartRide = () => {
         {
           lat: rideDetails.dropoffLocation.lat,
           lng: rideDetails.dropoffLocation.lng,
-        }
+        },
       );
 
       if (directionsResult) {
@@ -348,7 +348,7 @@ const DriverStartRide = () => {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 60000,
-      }
+      },
     );
   };
 
@@ -387,7 +387,7 @@ const DriverStartRide = () => {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 30000,
-      }
+      },
     );
 
     // Check location proximity every 10 seconds
@@ -417,14 +417,14 @@ const DriverStartRide = () => {
       driverLocation.lat,
       driverLocation.lng,
       rideDetails.pickupLocation.lat,
-      rideDetails.pickupLocation.lng
+      rideDetails.pickupLocation.lng,
     );
 
     const dropoffDistance = calculateDistance(
       driverLocation.lat,
       driverLocation.lng,
       rideDetails.dropoffLocation.lat,
-      rideDetails.dropoffLocation.lng
+      rideDetails.dropoffLocation.lng,
     );
 
     // Check if at pickup location (within 100 meters)
@@ -449,7 +449,7 @@ const DriverStartRide = () => {
       atPickup,
       atDropoff,
       driverLocation: `${driverLocation.lat.toFixed(
-        6
+        6,
       )}, ${driverLocation.lng.toFixed(6)}`,
     });
   };
@@ -476,7 +476,7 @@ const DriverStartRide = () => {
     lat1: number,
     lon1: number,
     lat2: number,
-    lon2: number
+    lon2: number,
   ): number => {
     const R = 6371; // Earth's radius in km
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -501,7 +501,7 @@ const DriverStartRide = () => {
       // Check driver location before starting
       if (!driverLocation) {
         toast.error(
-          "Unable to get your location. Please check location permissions."
+          "Unable to get your location. Please check location permissions.",
         );
         setRideStatus("pending");
         return;
@@ -541,7 +541,7 @@ const DriverStartRide = () => {
       // Check driver location before ending
       if (!driverLocation) {
         toast.error(
-          "Unable to get your location. Please check location permissions."
+          "Unable to get your location. Please check location permissions.",
         );
         return;
       }
@@ -595,7 +595,7 @@ const DriverStartRide = () => {
     return (
       <DashboardLayout userType="driver">
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-fleet-red" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <span className="ml-2">Loading ride details...</span>
         </div>
       </DashboardLayout>
@@ -676,7 +676,7 @@ const DriverStartRide = () => {
                       driverLocation.lat,
                       driverLocation.lng,
                       rideDetails.pickupLocation.lat,
-                      rideDetails.pickupLocation.lng
+                      rideDetails.pickupLocation.lng,
                     ).toFixed(3)}{" "}
                     km
                   </p>
@@ -705,7 +705,7 @@ const DriverStartRide = () => {
                       driverLocation.lat,
                       driverLocation.lng,
                       rideDetails.dropoffLocation.lat,
-                      rideDetails.dropoffLocation.lng
+                      rideDetails.dropoffLocation.lng,
                     ).toFixed(3)}{" "}
                     km
                   </p>
@@ -891,7 +891,7 @@ const DriverStartRide = () => {
                 </div>
                 <div className="pt-2 border-t">
                   <p className="text-sm text-gray-500">Fare</p>
-                  <p className="text-xl font-bold text-fleet-red">
+                  <p className="text-xl font-bold text-primary">
                     AED {rideDetails.fare}
                   </p>
                 </div>

@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button";
 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { BookingForm, Location, Transport, Vehicle } from "@/types";
+import {
+  BookingForm,
+  FareRule,
+  FareRuleWithRelations,
+  Location,
+  Transport,
+  Vehicle,
+} from "@/types";
 import { transportService, vehicleService, bookingService } from "@/services";
 import { generateBookingId, getNextBookingCount } from "@/utils/booking";
 import { Clock, AlertTriangle } from "lucide-react";
@@ -15,6 +22,8 @@ import DateTimePicker from "./DateTimePicker";
 import TransportTypeSelector from "./TransportTypeSelector";
 import VehicleSelector from "./VehicleSelector";
 import { generateOrderId } from "@/lib/utils";
+import { fareRulesService } from "@/services/fareRulesService";
+import { isPointInPolygon } from "@/lib/mapUtils";
 
 const BookTaxiForm = () => {
   const navigate = useNavigate();
@@ -99,6 +108,20 @@ const BookTaxiForm = () => {
     }
   }, [step, selectedTaxiType]);
 
+  const fetchFareRules = async () => {
+    setLoading((prev) => ({ ...prev, fareRules: true }));
+    try {
+      const fareRulesResponse = await fareRulesService.list();
+      const fareRulesData = fareRulesResponse.data;
+      console.log(fareRulesData);
+      setFareRules(fareRulesData);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    } finally {
+      setLoading((prev) => ({ ...prev, fareRules: false }));
+    }
+  };
+
   const fetchTransportTypes = async () => {
     setLoading((prev) => ({ ...prev, transportTypes: true }));
     try {
@@ -122,6 +145,33 @@ const BookTaxiForm = () => {
   // Fetch vehicles based on selected transport type
   const fetchVehicles = async (taxiTypeId: string) => {
     setLoading((prev) => ({ ...prev, vehicles: true }));
+
+    let fareRules: FareRuleWithRelations[] = [];
+
+    try {
+      const response = await fareRulesService.list();
+      fareRules = response.data;
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    }
+
+    let extraFare: FareRule | undefined;
+
+    for (const rule of fareRules) {
+      const applicableZones = rule.zones;
+      for (const zone of applicableZones) {
+        const isInside = isPointInPolygon(zone.coordinates, {
+          lat: selectedPickupLocation.coordinates.latitude,
+          lng: selectedPickupLocation.coordinates.longitude,
+        });
+
+        if (isInside && rule.taxiTypes.some((type) => type.id === taxiTypeId)) {
+          extraFare = rule;
+          break;
+        }
+      }
+    }
+
     try {
       const vehicleResponse =
         await vehicleService.getVehiclesByTransport(taxiTypeId);
@@ -131,6 +181,12 @@ const BookTaxiForm = () => {
         perKmPrice: parseFloat(v.perKmPrice.toString()),
       }));
       if (vehiclesData.length > 0) {
+        if (extraFare) {
+          vehiclesData.forEach((vehicle) => {
+            vehicle.basePrice += extraFare.basePrice;
+            vehicle.perKmPrice += extraFare.perKmPrice;
+          });
+        }
         setVehicles(vehiclesData);
       } else {
         setVehicles([]);
@@ -506,7 +562,7 @@ const BookTaxiForm = () => {
 
           <Button
             type="submit"
-            className="w-full h-9 text-white text-sm font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all rounded-md mt-2"
+            className="w-full h-9 text-white text-sm font-medium bg-gradient-to-r from-primary to-fleet-accent hover:opacity-90 hover:shadow-md transition-all rounded-md mt-2"
           >
             {loading.transportTypes || loading.checkingAvailability
               ? "Loading..."
@@ -546,7 +602,7 @@ const BookTaxiForm = () => {
             </Button>
             <Button
               type="submit"
-              className="h-8 text-xs text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
+              className="h-8 text-xs text-white font-medium bg-gradient-to-r from-primary to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
               disabled={
                 loading.transportTypes ||
                 loading.checkingAvailability ||
@@ -581,7 +637,7 @@ const BookTaxiForm = () => {
             </Button>
             <Button
               type="submit"
-              className="h-8 text-xs text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
+              className="h-8 text-xs text-white font-medium bg-gradient-to-r from-primary to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
               disabled={!selectedCarModel || loading.savingBooking}
               onClick={() =>
                 handleSubmit({} as React.FormEvent<HTMLFormElement>)

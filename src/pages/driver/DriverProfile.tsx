@@ -117,7 +117,7 @@ const DriverProfile = () => {
     return (
       <DashboardLayout userType="driver">
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fleet-red"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       </DashboardLayout>
     );
@@ -170,7 +170,7 @@ const DriverProfile = () => {
 
                 <div className="mt-6 w-full">
                   <Button
-                    className="w-full bg-fleet-red hover:bg-fleet-red/90"
+                    className="w-full bg-primary hover:bg-primary/90"
                     onClick={() => toast.success("Profile photo updated")}
                   >
                     Update Photo
@@ -380,7 +380,7 @@ const DriverProfile = () => {
                       </Button>
                       <Button
                         type="button"
-                        className="bg-fleet-red hover:bg-fleet-red/90"
+                        className="bg-primary hover:bg-primary/90"
                         onClick={handleSave}
                       >
                         Save Changes
@@ -499,7 +499,7 @@ const DriverProfile = () => {
 
                     <Button
                       type="button"
-                      className="bg-fleet-red hover:bg-fleet-red/90"
+                      className="bg-primary hover:bg-primary/90"
                       onClick={handleSave}
                     >
                       Save Changes
@@ -619,7 +619,7 @@ const DriverProfile = () => {
                     </div>
 
                     <Button
-                      className="bg-fleet-red hover:bg-fleet-red/90"
+                      className="bg-primary hover:bg-primary/90"
                       onClick={() =>
                         toast.success("All documents are up to date")
                       }

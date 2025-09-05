@@ -172,7 +172,7 @@ export const NavProfile = ({
           }`}
           aria-label="User menu"
         >
-          <div className="w-9 h-9 shrink-0 rounded-md md:rounded-full bg-red-100 text-red-800 flex items-center justify-center font-medium">
+          <div className="w-9 h-9 shrink-0 rounded-md md:rounded-full bg-primary/20 text-primary flex items-center justify-center font-medium">
             {getUserInitials()}
           </div>
           <span
@@ -204,7 +204,7 @@ export const NavProfile = ({
               <Link
                 key={link.to}
                 to={link.to}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-red-500 hover:text-white"
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-primary hover:text-white"
                 onClick={() => setProfileMenuOpen(false)}
               >
                 {link.icon}
@@ -214,7 +214,7 @@ export const NavProfile = ({
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 w-full text-left px-4 py-2 text-red-600 hover:bg-red-500 hover:text-white"
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-primar hover:bg-primary/90 hover:text-white"
             >
               <LogOut className="h-4 w-4" />
               {translate("nav.logout")}
@@ -245,7 +245,7 @@ export const NavProfile = ({
         </Button>
       </Link>
       <Link to="/register">
-        <Button className="bg-fleet-red text-white hover:bg-fleet-red/90 font-medium">
+        <Button className="bg-primary text-white hover:bg-primary/90 font-medium">
           {translate("nav.register")}
         </Button>
       </Link>

@@ -393,7 +393,7 @@ const RentCarForm = () => {
     return (
       <div className="flex justify-center py-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-fleet-red mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-600">Loading vehicle options...</p>
         </div>
       </div>
@@ -410,7 +410,7 @@ const RentCarForm = () => {
         </div>
         <Button
           onClick={() => window.location.reload()}
-          className="bg-fleet-red hover:bg-fleet-red/90"
+          className="bg-primary hover:bg-primary/90"
         >
           Try Again
         </Button>
@@ -446,7 +446,7 @@ const RentCarForm = () => {
                 onClick={() => setSelectedEmirate("dubai")}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                   selectedEmirate === "dubai"
-                    ? "bg-gradient-to-r from-fleet-red to-fleet-accent text-white"
+                    ? "bg-gradient-to-r from-primary to-fleet-accent text-white"
                     : "text-black hover:bg-gray-200"
                 }`}
               >
@@ -457,7 +457,7 @@ const RentCarForm = () => {
                 onClick={() => setSelectedEmirate("otherEmirates")}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                   selectedEmirate === "otherEmirates"
-                    ? "bg-gradient-to-r from-fleet-red to-fleet-accent text-white"
+                    ? "bg-gradient-to-r from-primary to-fleet-accent text-white"
                     : "text-black hover:bg-gray-200"
                 }`}
               >
@@ -541,7 +541,7 @@ const RentCarForm = () => {
 
             <Button
               type="submit"
-              className="w-full h-9 text-white text-sm font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all rounded-md"
+              className="w-full h-9 text-white text-sm font-medium bg-gradient-to-r from-primary to-fleet-accent hover:opacity-90 hover:shadow-md transition-all rounded-md"
               disabled={loading || savingBooking}
             >
               {loading || savingBooking
@@ -584,7 +584,7 @@ const RentCarForm = () => {
               </Button>
               <Button
                 type="button"
-                className="h-8 text-xs text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
+                className="h-8 text-xs text-white font-medium bg-gradient-to-r from-primary to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
                 disabled={
                   loading ||
                   !selectedCategory ||
@@ -613,9 +613,9 @@ const RentCarForm = () => {
               {getFilteredVehicleTypes().map((vehicle) => (
                 <div
                   key={vehicle.id}
-                  className={`border rounded-lg p-4 hover:border-fleet-red cursor-pointer transition-all ${
+                  className={`border rounded-lg p-4 hover:border-primary cursor-pointer transition-all ${
                     selectedCarModel === vehicle.id
-                      ? "border-fleet-red bg-fleet-red/5 shadow-sm"
+                      ? "border-primary bg-primary/5 shadow-sm"
                       : "border-gray-200 bg-white hover:shadow-sm"
                   }`}
                   onClick={() => setSelectedCarModel(vehicle.id)}
@@ -687,7 +687,7 @@ const RentCarForm = () => {
               <Button
                 type="submit"
                 disabled={savingBooking}
-                className="flex-1 h-8 text-xs text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
+                className="flex-1 h-8 text-xs text-white font-medium bg-gradient-to-r from-primary to-fleet-accent hover:opacity-90 hover:shadow-md transition-all"
               >
                 Next: Payment
               </Button>

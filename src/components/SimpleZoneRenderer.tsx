@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, AlertTriangle } from "lucide-react";
-import { Zone } from "@/lib/firebaseModels";
+import { AlertTriangle } from "lucide-react";
+import { Zone } from "@/types";
 import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
 import { googleMapsService } from "@/services/googleMapsService";
 
@@ -161,8 +161,8 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
     return (
       <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
         <div className="text-center">
-          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-          <p className="text-red-600">{error}</p>
+          <AlertTriangle className="h-8 w-8 text-primary mx-auto mb-2" />
+          <p className="text-primary">{error}</p>
         </div>
       </div>
     );

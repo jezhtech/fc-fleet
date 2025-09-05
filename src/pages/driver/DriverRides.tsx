@@ -1,96 +1,101 @@
-
-import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Calendar, Clock, User, MapPin, FileText } from 'lucide-react';
-import { format } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase';
-import { useState, useEffect } from 'react';
+import DashboardLayout from "@/components/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Calendar, Clock, User, MapPin, FileText } from "lucide-react";
+import { format } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { firestore } from "@/lib/firebase";
+import { useState, useEffect } from "react";
 
 // Sample ride data
 const rides = [
   {
-    id: 'RIDE-1001',
-    user: 'John Doe',
-    pickup: '123 Main St, New York',
-    dropoff: 'JFK Airport, Terminal 4',
+    id: "RIDE-1001",
+    user: "John Doe",
+    pickup: "123 Main St, New York",
+    dropoff: "JFK Airport, Terminal 4",
     date: new Date(2025, 5, 15, 9, 30),
-    status: 'completed',
-    amount: '$78.50',
+    status: "completed",
+    amount: "$78.50",
     rating: 5,
   },
   {
-    id: 'RIDE-1002',
-    user: 'Jane Smith',
-    pickup: '456 Park Ave, New York',
-    dropoff: 'Grand Central Terminal',
+    id: "RIDE-1002",
+    user: "Jane Smith",
+    pickup: "456 Park Ave, New York",
+    dropoff: "Grand Central Terminal",
     date: new Date(2025, 5, 15, 11, 45),
-    status: 'completed',
-    amount: '$45.75',
+    status: "completed",
+    amount: "$45.75",
     rating: 4,
   },
   {
-    id: 'RIDE-1003',
-    user: 'Robert Brown',
-    pickup: '789 Broadway, New York',
-    dropoff: 'Newark Airport, Terminal C',
+    id: "RIDE-1003",
+    user: "Robert Brown",
+    pickup: "789 Broadway, New York",
+    dropoff: "Newark Airport, Terminal C",
     date: new Date(2025, 5, 16, 14, 15),
-    status: 'in_progress',
-    amount: '$92.75',
+    status: "in_progress",
+    amount: "$92.75",
     rating: null,
   },
   {
-    id: 'RIDE-1004',
-    user: 'Emily Davis',
-    pickup: '555 5th Ave, New York',
-    dropoff: 'LaGuardia Airport, Terminal B',
+    id: "RIDE-1004",
+    user: "Emily Davis",
+    pickup: "555 5th Ave, New York",
+    dropoff: "LaGuardia Airport, Terminal B",
     date: new Date(2025, 5, 18, 11, 45),
-    status: 'scheduled',
-    amount: '$65.25',
+    status: "scheduled",
+    amount: "$65.25",
     rating: null,
   },
   {
-    id: 'RIDE-1005',
-    user: 'Sarah Taylor',
-    pickup: '888 Broadway, New York',
-    dropoff: 'JFK Airport, Terminal 8',
+    id: "RIDE-1005",
+    user: "Sarah Taylor",
+    pickup: "888 Broadway, New York",
+    dropoff: "JFK Airport, Terminal 8",
     date: new Date(2025, 5, 17, 16, 30),
-    status: 'cancelled',
-    amount: '$0.00',
+    status: "cancelled",
+    amount: "$0.00",
     rating: null,
   },
 ];
 
 const DriverRides = () => {
   const { currentUser } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [rides, setRides] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRides = async () => {
       if (!currentUser?.uid) return;
-      
+
       try {
         setLoading(true);
-        const bookingsRef = collection(firestore, 'bookings');
-        const q = query(bookingsRef, where('driverId', '==', currentUser.uid));
+        const bookingsRef = collection(firestore, "bookings");
+        const q = query(bookingsRef, where("driverId", "==", currentUser.uid));
         const querySnapshot = await getDocs(q);
-        
-        const fetchedRides = querySnapshot.docs.map(doc => ({
+
+        const fetchedRides = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         }));
-        
+
         setRides(fetchedRides);
       } catch (error) {
-        console.error('Error fetching rides:', error);
+        console.error("Error fetching rides:", error);
       } finally {
         setLoading(false);
       }
@@ -98,35 +103,49 @@ const DriverRides = () => {
 
     fetchRides();
   }, [currentUser?.uid]);
-  
-  const filteredRides = rides.filter(ride =>
-    ride.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (ride.customerInfo?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (ride.pickupLocation?.name || ride.pickup || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (ride.dropoffLocation?.name || ride.dropoff || '').toLowerCase().includes(searchTerm.toLowerCase())
+
+  const filteredRides = rides.filter(
+    (ride) =>
+      ride.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ride.customerInfo?.name || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (ride.pickupLocation?.name || ride.pickup || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (ride.dropoffLocation?.name || ride.dropoff || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()),
   );
-  
+
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'scheduled': return 'bg-purple-100 text-purple-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "in_progress":
+        return "bg-blue-100 text-blue-800";
+      case "scheduled":
+        return "bg-purple-100 text-purple-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
-  
+
   const formatStatus = (status: string) => {
-    return status.replace('_', ' ').split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+    return status
+      .replace("_", " ")
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
-  
+
   if (loading) {
     return (
       <DashboardLayout userType="driver">
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fleet-red"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       </DashboardLayout>
     );
@@ -137,7 +156,7 @@ const DriverRides = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">My Rides</h1>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
@@ -147,15 +166,19 @@ const DriverRides = () => {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{rides.filter(r => r.status === 'completed').length}</div>
+            <div className="text-2xl font-bold">
+              {rides.filter((r) => r.status === "completed").length}
+            </div>
             <p className="text-sm text-gray-500">Completed</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">
-              {rides.filter(r => r.rating).reduce((acc, ride) => acc + (ride.rating || 0), 0) / 
-              rides.filter(r => r.rating).length || 0}
+              {rides
+                .filter((r) => r.rating)
+                .reduce((acc, ride) => acc + (ride.rating || 0), 0) /
+                rides.filter((r) => r.rating).length || 0}
             </div>
             <p className="text-sm text-gray-500">Average Rating</p>
           </CardContent>
@@ -163,18 +186,20 @@ const DriverRides = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">
-              ${rides
-                .filter(r => r.status === 'completed')
+              $
+              {rides
+                .filter((r) => r.status === "completed")
                 .reduce((total, ride) => {
-                  const amount = parseFloat(ride.amount.replace('$', ''));
+                  const amount = parseFloat(ride.amount.replace("$", ""));
                   return total + (isNaN(amount) ? 0 : amount);
-                }, 0).toFixed(2)}
+                }, 0)
+                .toFixed(2)}
             </div>
             <p className="text-sm text-gray-500">Total Earnings</p>
           </CardContent>
         </Card>
       </div>
-      
+
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -197,19 +222,31 @@ const DriverRides = () => {
               <TabsTrigger value="completed">Completed</TabsTrigger>
               <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="all">
               <div className="rounded-md border">
                 <div className="relative w-full overflow-auto">
                   <table className="w-full caption-bottom text-sm">
                     <thead>
                       <tr className="border-b bg-gray-50">
-                        <th className="h-12 px-4 text-left font-medium text-gray-500">Ride ID</th>
-                        <th className="h-12 px-4 text-left font-medium text-gray-500">User</th>
-                        <th className="h-12 px-4 text-left font-medium text-gray-500">Date & Time</th>
-                        <th className="h-12 px-4 text-left font-medium text-gray-500">Amount</th>
-                        <th className="h-12 px-4 text-left font-medium text-gray-500">Status</th>
-                        <th className="h-12 px-4 text-right font-medium text-gray-500">Actions</th>
+                        <th className="h-12 px-4 text-left font-medium text-gray-500">
+                          Ride ID
+                        </th>
+                        <th className="h-12 px-4 text-left font-medium text-gray-500">
+                          User
+                        </th>
+                        <th className="h-12 px-4 text-left font-medium text-gray-500">
+                          Date & Time
+                        </th>
+                        <th className="h-12 px-4 text-left font-medium text-gray-500">
+                          Amount
+                        </th>
+                        <th className="h-12 px-4 text-left font-medium text-gray-500">
+                          Status
+                        </th>
+                        <th className="h-12 px-4 text-right font-medium text-gray-500">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -220,7 +257,9 @@ const DriverRides = () => {
                             <td className="p-4">
                               <div className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-gray-500" />
-                                <span>{ride.customerInfo?.name || 'Customer'}</span>
+                                <span>
+                                  {ride.customerInfo?.name || "Customer"}
+                                </span>
                               </div>
                             </td>
                             <td className="p-4">
@@ -228,20 +267,34 @@ const DriverRides = () => {
                                 <div className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3 text-gray-500" />
                                   <span className="text-sm">
-                                    {ride.pickupDateTime ? format(ride.pickupDateTime.toDate(), 'MMM d, yyyy') : 'N/A'}
+                                    {ride.pickupDateTime
+                                      ? format(
+                                          ride.pickupDateTime.toDate(),
+                                          "MMM d, yyyy",
+                                        )
+                                      : "N/A"}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1 mt-1">
                                   <Clock className="h-3 w-3 text-gray-500" />
                                   <span className="text-sm">
-                                    {ride.pickupDateTime ? format(ride.pickupDateTime.toDate(), 'h:mm a') : 'N/A'}
+                                    {ride.pickupDateTime
+                                      ? format(
+                                          ride.pickupDateTime.toDate(),
+                                          "h:mm a",
+                                        )
+                                      : "N/A"}
                                   </span>
                                 </div>
                               </div>
                             </td>
-                            <td className="p-4 font-medium">AED {ride.amount || '0.00'}</td>
+                            <td className="p-4 font-medium">
+                              AED {ride.amount || "0.00"}
+                            </td>
                             <td className="p-4">
-                              <Badge className={getStatusBadgeColor(ride.status)}>
+                              <Badge
+                                className={getStatusBadgeColor(ride.status)}
+                              >
                                 {formatStatus(ride.status)}
                               </Badge>
                             </td>
@@ -255,11 +308,17 @@ const DriverRides = () => {
                                 </DialogTrigger>
                                 <DialogContent className="max-w-md">
                                   <DialogHeader>
-                                    <DialogTitle>Ride Details - {ride.id}</DialogTitle>
+                                    <DialogTitle>
+                                      Ride Details - {ride.id}
+                                    </DialogTitle>
                                   </DialogHeader>
                                   <div className="space-y-4 pt-4">
                                     <div className="flex items-center justify-between">
-                                      <Badge className={getStatusBadgeColor(ride.status)}>
+                                      <Badge
+                                        className={getStatusBadgeColor(
+                                          ride.status,
+                                        )}
+                                      >
                                         {formatStatus(ride.status)}
                                       </Badge>
                                       {ride.rating && (
@@ -269,55 +328,86 @@ const DriverRides = () => {
                                         </div>
                                       )}
                                     </div>
-                                    
+
                                     <div>
-                                      <p className="text-sm text-gray-500">User</p>
+                                      <p className="text-sm text-gray-500">
+                                        User
+                                      </p>
                                       <div className="flex items-center gap-2">
                                         <User className="h-4 w-4 text-gray-500" />
-                                        <p className="font-medium">{ride.customerInfo?.name || 'Customer'}</p>
+                                        <p className="font-medium">
+                                          {ride.customerInfo?.name ||
+                                            "Customer"}
+                                        </p>
                                       </div>
                                     </div>
-                                    
+
                                     <div>
-                                      <p className="text-sm text-gray-500">Date & Time</p>
+                                      <p className="text-sm text-gray-500">
+                                        Date & Time
+                                      </p>
                                       <p className="font-medium">
-                                        {ride.pickupDateTime ? 
-                                          `${format(ride.pickupDateTime.toDate(), 'MMMM d, yyyy')} at ${format(ride.pickupDateTime.toDate(), 'h:mm a')}` : 
-                                          'N/A'
-                                        }
+                                        {ride.pickupDateTime
+                                          ? `${format(ride.pickupDateTime.toDate(), "MMMM d, yyyy")} at ${format(ride.pickupDateTime.toDate(), "h:mm a")}`
+                                          : "N/A"}
                                       </p>
                                     </div>
-                                    
+
                                     <div>
-                                      <p className="text-sm text-gray-500">Pickup Location</p>
+                                      <p className="text-sm text-gray-500">
+                                        Pickup Location
+                                      </p>
                                       <div className="flex items-start gap-2">
                                         <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                                        <p className="font-medium">{ride.pickupLocation?.name || ride.pickup || 'N/A'}</p>
+                                        <p className="font-medium">
+                                          {ride.pickupLocation?.name ||
+                                            ride.pickup ||
+                                            "N/A"}
+                                        </p>
                                       </div>
                                     </div>
-                                    
+
                                     <div>
-                                      <p className="text-sm text-gray-500">Dropoff Location</p>
+                                      <p className="text-sm text-gray-500">
+                                        Dropoff Location
+                                      </p>
                                       <div className="flex items-start gap-2">
                                         <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                                        <p className="font-medium">{ride.dropoffLocation?.name || ride.dropoff || 'N/A'}</p>
+                                        <p className="font-medium">
+                                          {ride.dropoffLocation?.name ||
+                                            ride.dropoff ||
+                                            "N/A"}
+                                        </p>
                                       </div>
                                     </div>
-                                    
+
                                     <div>
-                                      <p className="text-sm text-gray-500">Amount</p>
-                                      <p className="text-xl font-bold">AED {ride.amount || '0.00'}</p>
+                                      <p className="text-sm text-gray-500">
+                                        Amount
+                                      </p>
+                                      <p className="text-xl font-bold">
+                                        AED {ride.amount || "0.00"}
+                                      </p>
                                     </div>
-                                    
-                                    {ride.status === 'scheduled' && (
+
+                                    {ride.status === "scheduled" && (
                                       <div className="flex gap-2 pt-2">
-                                        <Button variant="outline" className="flex-1">Cancel Ride</Button>
-                                        <Button className="flex-1 bg-fleet-red hover:bg-fleet-red/90">Start Ride</Button>
+                                        <Button
+                                          variant="outline"
+                                          className="flex-1"
+                                        >
+                                          Cancel Ride
+                                        </Button>
+                                        <Button className="flex-1 bg-primary hover:bg-primary/90">
+                                          Start Ride
+                                        </Button>
                                       </div>
                                     )}
-                                    
-                                    {ride.status === 'in_progress' && (
-                                      <Button className="w-full bg-fleet-red hover:bg-fleet-red/90">Complete Ride</Button>
+
+                                    {ride.status === "in_progress" && (
+                                      <Button className="w-full bg-primary hover:bg-primary/90">
+                                        Complete Ride
+                                      </Button>
                                     )}
                                   </div>
                                 </DialogContent>
@@ -327,7 +417,10 @@ const DriverRides = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={6} className="h-24 text-center text-gray-500">
+                          <td
+                            colSpan={6}
+                            className="h-24 text-center text-gray-500"
+                          >
                             No rides found
                           </td>
                         </tr>
@@ -337,11 +430,11 @@ const DriverRides = () => {
                 </div>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="completed">
               {/* Same table structure with rides filtered by completed status */}
             </TabsContent>
-            
+
             <TabsContent value="upcoming">
               {/* Same table structure with rides filtered by scheduled status */}
             </TabsContent>

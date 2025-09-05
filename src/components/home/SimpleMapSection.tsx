@@ -499,7 +499,7 @@ const SimpleMapSection = () => {
           className="text-center mb-8"
         >
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            <span className="text-fleet-red">Fare</span> Estimator
+            <span className="text-primary">Fare</span> Estimator
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Get an instant estimate for your premium chauffeur ride with
@@ -537,8 +537,8 @@ const SimpleMapSection = () => {
             <Card className="p-6 bg-white border border-gray-200 text-gray-800 shadow-lg">
               <div className="mb-4">
                 <h3 className="text-xl font-bold flex items-center">
-                  <span className="bg-fleet-red/10 w-8 h-8 rounded-full flex items-center justify-center mr-3">
-                    <MapPin className="h-4 w-4 text-fleet-red" />
+                  <span className="bg-primary/10 w-8 h-8 rounded-full flex items-center justify-center mr-3">
+                    <MapPin className="h-4 w-4 text-primary" />
                   </span>
                   Plan Your Journey
                 </h3>
@@ -599,7 +599,7 @@ const SimpleMapSection = () => {
                               htmlFor={`vehicle-${taxiType.id}`}
                               className={`flex flex-col items-center p-3 rounded-lg cursor-pointer transition-all border ${
                                 selectedVehicleType === taxiType.id
-                                  ? "bg-fleet-red/10 border-fleet-red text-gray-800"
+                                  ? "bg-primary/10 border-primary text-gray-800"
                                   : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-700"
                               }`}
                             >
@@ -639,7 +639,7 @@ const SimpleMapSection = () => {
                 <Button
                   onClick={calculateRoute}
                   disabled={isCalculating || !pickup || !dropoff}
-                  className="w-full bg-fleet-red hover:bg-red-600 text-white border-none h-12 rounded-lg mt-4"
+                  className="w-full bg-primary hover:bg-red-600 text-white border-none h-12 rounded-lg mt-4"
                 >
                   {isCalculating ? (
                     <>
@@ -661,7 +661,7 @@ const SimpleMapSection = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-6 rounded-xl overflow-hidden shadow-lg"
               >
-                <div className="bg-fleet-red p-4 text-center text-white">
+                <div className="bg-primary p-4 text-center text-white">
                   <h4 className="font-bold text-lg">Estimated Fare</h4>
                   <div className="text-3xl font-bold mt-1">
                     {fareEstimate.currency} {fareEstimate.price.toFixed(2)}
@@ -671,7 +671,7 @@ const SimpleMapSection = () => {
                 <div className="bg-white p-5 border border-gray-200 max-h-[400px] overflow-y-auto">
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center">
-                      <Car className="h-4 w-4 text-fleet-red mr-2" />
+                      <Car className="h-4 w-4 text-primary mr-2" />
                       <div>
                         <div className="text-xs text-gray-500">Distance</div>
                         <div className="font-medium text-gray-800">
@@ -721,7 +721,7 @@ const SimpleMapSection = () => {
                   </div>
 
                   <div className="flex justify-center mt-4">
-                    <Button className="bg-fleet-red text-white hover:bg-fleet-red/90 w-full flex items-center justify-center">
+                    <Button className="bg-primary text-white hover:bg-primary/90 w-full flex items-center justify-center">
                       <CreditCard className="mr-2 h-4 w-4" />
                       Book Now
                     </Button>

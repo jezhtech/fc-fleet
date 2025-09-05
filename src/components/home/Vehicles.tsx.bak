@@ -337,7 +337,7 @@ const Vehicles = () => {
 
         {isLoading ? (
           <div className="flex flex-col justify-center items-center min-h-[300px]">
-            <Loader2 className="h-10 w-10 text-fleet-red animate-spin mb-4" />
+            <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
             <span className="text-gray-600 text-center">
               Loading vehicles from our fleet...<br/>
               <span className="text-sm text-gray-500">This may take a moment</span>
@@ -354,14 +354,14 @@ const Vehicles = () => {
               <>
                 <button
                   onClick={prevSlide}
-                  className="absolute left-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white text-fleet-red rounded-full p-2 shadow-md"
+                  className="absolute left-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white text-primary rounded-full p-2 shadow-md"
                   aria-label="Previous vehicle"
                 >
                   <ChevronLeft className="h-6 w-6" />
                 </button>
                 <button
                   onClick={nextSlide}
-                  className="absolute right-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white text-fleet-red rounded-full p-2 shadow-md"
+                  className="absolute right-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white text-primary rounded-full p-2 shadow-md"
                   aria-label="Next vehicle"
                 >
                   <ChevronRight className="h-6 w-6" />
@@ -415,7 +415,7 @@ const Vehicles = () => {
                         }}
                       >
                         {/* Taxi Type Tag */}
-                        <div className="absolute top-2 left-2 z-10 bg-gradient-to-r from-fleet-red to-fleet-accent text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
+                        <div className="absolute top-2 left-2 z-10 bg-gradient-to-r from-primary to-fleet-accent text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
                           {vehicle.taxiTypeName}
                         </div>
 
@@ -480,6 +480,6 @@ const Vehicles = () => {
                                         }}
                                         className={`w-2 h-2 rounded-full transition-all ${
                                           idx === (activeImageIndex[vehicle.id] || 0)
-                                            ? 'bg-fleet-red scale-125 shadow-sm'
+                                            ? 'bg-primary scale-125 shadow-sm'
                                             : 'bg-gray-300 hover:bg-gray-400'
                                         }`

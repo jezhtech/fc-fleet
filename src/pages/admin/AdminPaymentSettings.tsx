@@ -84,7 +84,7 @@ const AdminPaymentSettings = () => {
     }));
 
     toast.success(
-      `${method} payment has been ${enabled ? "enabled" : "disabled"}`
+      `${method} payment has been ${enabled ? "enabled" : "disabled"}`,
     );
   };
 
@@ -101,7 +101,7 @@ const AdminPaymentSettings = () => {
       } else {
         toast.error(
           response.error ||
-            "CCAvenue connection test failed. Please check your credentials."
+            "CCAvenue connection test failed. Please check your credentials.",
         );
       }
     } catch (error) {
@@ -121,7 +121,7 @@ const AdminPaymentSettings = () => {
       } else {
         toast.error(
           response.error ||
-            "Failed to save CCAvenue settings. Please try again."
+            "Failed to save CCAvenue settings. Please try again.",
         );
       }
     } catch (error) {
@@ -509,7 +509,7 @@ const AdminPaymentSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 border rounded-lg p-4 border-fleet-red bg-fleet-red/10">
+              <div className="flex items-center gap-2 border rounded-lg p-4 border-primary bg-primary/10">
                 <div className="bg-gradient-to-r from-green-500 to-green-600 p-2 rounded-md">
                   <CreditCard className="h-4 w-4 text-white" />
                 </div>
@@ -519,7 +519,7 @@ const AdminPaymentSettings = () => {
                     Accept over 200 payment methods in India
                   </p>
                 </div>
-                <CheckCircle className="h-4 w-4 ml-auto text-fleet-red" />
+                <CheckCircle className="h-4 w-4 ml-auto text-primary" />
               </div>
             </CardContent>
           </Card>
@@ -628,7 +628,7 @@ const AdminPaymentSettings = () => {
 
                   <Button
                     onClick={handleSaveIntegrationSettings}
-                    className="bg-fleet-red text-white hover:bg-fleet-red/90"
+                    className="bg-primary text-white hover:bg-primary/90"
                     disabled={isSaving}
                   >
                     {isSaving ? (

@@ -105,7 +105,7 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-fleet-red" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <span className="ml-2">Loading vehicles...</span>
       </div>
     );
@@ -125,9 +125,9 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
       {vehicles.map((car) => (
         <div
           key={car.id}
-          className={`border rounded-lg p-4 hover:border-fleet-red cursor-pointer transition-all ${
+          className={`border rounded-lg p-4 hover:border-primary cursor-pointer transition-all ${
             selectedCarModel === car.id
-              ? "border-fleet-red bg-fleet-red/5 shadow-sm"
+              ? "border-primary bg-primary/5 shadow-sm"
               : "border-gray-200 bg-white hover:shadow-sm"
           }`}
           onClick={() => onSelect(car.id)}

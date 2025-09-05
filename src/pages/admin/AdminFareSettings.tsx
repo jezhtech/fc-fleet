@@ -8,7 +8,7 @@ import { zonesService } from "@/services/zonesService";
 import { transportService } from "@/services/transportService";
 import FareRulesManager from "@/components/FareRulesManager";
 import ZonesManager from "@/components/ZonesManager";
-import { FareRule, Zone } from "@/lib/firebaseModels";
+import { FareRule, Zone } from "@/types";
 import { useSearchParams } from "react-router-dom";
 
 interface TaxiType {
@@ -86,7 +86,7 @@ const AdminFareSettings = () => {
     return (
       <DashboardLayout userType="admin">
         <div className="flex flex-col items-center justify-center min-h-[500px]">
-          <Loader2 className="h-12 w-12 text-fleet-red animate-spin mb-4" />
+          <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
           <p className="text-xl text-gray-500">Loading fare settings...</p>
         </div>
       </DashboardLayout>

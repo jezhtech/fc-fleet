@@ -21,7 +21,7 @@ const TransportTypeSelector: React.FC<TransportTypeSelectorProps> = ({
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-fleet-red" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <span className="ml-2">Loading transport types...</span>
       </div>
     );
@@ -46,11 +46,11 @@ const TransportTypeSelector: React.FC<TransportTypeSelectorProps> = ({
               key={type.id}
               className={`relative border rounded-md p-3 transition-colors ${
                 selectedTaxiType === type.id
-                  ? "border-fleet-red bg-fleet-red/10"
+                  ? "border-primary bg-primary/10"
                   : "bg-white"
               } ${
                 isAvailable
-                  ? "hover:border-fleet-red cursor-pointer"
+                  ? "hover:border-primary cursor-pointer"
                   : "opacity-65 cursor-default bg-gray-50"
               }`}
               onClick={() => {

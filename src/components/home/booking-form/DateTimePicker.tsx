@@ -131,8 +131,8 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
         setTimeError(
           `Bookings must be at least 4 hours in advance. Earliest time: ${format(
             minBookingTime,
-            "h:mm a"
-          )}`
+            "h:mm a",
+          )}`,
         );
 
         // Auto-adjust to the minimum booking time
@@ -160,8 +160,8 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
         toast.warning(
           `Booking time adjusted to ${format(
             adjustedTime,
-            "h:mm a"
-          )} (4 hours in advance)`
+            "h:mm a",
+          )} (4 hours in advance)`,
         );
       }
     } else if (date < now) {
@@ -245,7 +245,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
   const updateTimeValue = (
     newHours: number,
     newMinutes: number,
-    newPeriod: "AM" | "PM"
+    newPeriod: "AM" | "PM",
   ) => {
     // Convert to 24-hour format
     let hours24 = newHours;
@@ -359,7 +359,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
     // Find all dialog, modal, or popover elements
     const findHighestZIndex = () => {
       const elements = document.querySelectorAll(
-        'div[role="dialog"], .modal, .popover, [class*="z-"]'
+        'div[role="dialog"], .modal, .popover, [class*="z-"]',
       );
       let highest = 9999; // Default high z-index
 
@@ -406,7 +406,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-gray-100 hover:text-fleet-red rounded-full"
+                className="h-6 w-6 p-0 hover:bg-gray-100 hover:text-primary rounded-full"
                 onClick={incrementHours}
                 type="button"
               >
@@ -418,7 +418,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-gray-100 hover:text-fleet-red rounded-full"
+                className="h-6 w-6 p-0 hover:bg-gray-100 hover:text-primary rounded-full"
                 onClick={decrementHours}
                 type="button"
               >
@@ -434,7 +434,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-gray-100 hover:text-fleet-red rounded-full"
+                className="h-6 w-6 p-0 hover:bg-gray-100 hover:text-primary rounded-full"
                 onClick={incrementMinutes}
                 type="button"
               >
@@ -446,7 +446,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-gray-100 hover:text-fleet-red rounded-full"
+                className="h-6 w-6 p-0 hover:bg-gray-100 hover:text-primary rounded-full"
                 onClick={decrementMinutes}
                 type="button"
               >
@@ -462,7 +462,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
                   size="sm"
                   className={`w-1/2 h-6 text-xs ${
                     period === "AM"
-                      ? "bg-white shadow-sm text-fleet-red font-medium"
+                      ? "bg-white shadow-sm text-primary font-medium"
                       : "hover:bg-gray-50"
                   }`}
                   onClick={(e) => togglePeriod("AM", e)}
@@ -475,7 +475,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
                   size="sm"
                   className={`w-1/2 h-6 text-xs ${
                     period === "PM"
-                      ? "bg-white shadow-sm text-fleet-red font-medium"
+                      ? "bg-white shadow-sm text-primary font-medium"
                       : "hover:bg-gray-50"
                   }`}
                   onClick={(e) => togglePeriod("PM", e)}
@@ -489,7 +489,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
             {/* Done button */}
             <div className="col-span-3 mt-2">
               <Button
-                className="w-full h-7 bg-fleet-red hover:bg-fleet-red/90 transition-colors shadow-md text-xs"
+                className="w-full h-7 bg-primary hover:bg-primary/90 transition-colors shadow-md text-xs"
                 onClick={handleDoneClick}
                 type="button"
               >
@@ -499,7 +499,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
           </div>
         </div>
       </>,
-      document.body
+      document.body,
     );
   };
 
@@ -511,10 +511,10 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
-              className="w-full h-9 justify-start text-left text-sm font-normal py-1 border-gray-300 hover:border-fleet-red/30 transition-colors group"
+              className="w-full h-9 justify-start text-left text-sm font-normal py-1 border-gray-300 hover:border-primary/30 transition-colors group"
               type="button" // Explicitly set to button type
             >
-              <CalendarIcon className="mr-1.5 h-3.5 w-3.5 text-gray-500 group-hover:text-fleet-red" />
+              <CalendarIcon className="mr-1.5 h-3.5 w-3.5 text-gray-500 group-hover:text-primary" />
               {date ? (
                 <span className="text-gray-700">{format(date, "PPP")}</span>
               ) : (
@@ -533,7 +533,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
                 const today = new Date(
                   now.getFullYear(),
                   now.getMonth(),
-                  now.getDate()
+                  now.getDate(),
                 );
                 return date < today;
               }}
@@ -548,7 +548,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
             type="button" // Explicitly set to button type
             variant="outline"
             onClick={handleTimeButtonClick}
-            className={`h-9 w-full sm:w-36 text-left font-normal justify-start pl-7 text-sm border-gray-300 hover:border-fleet-red/30 transition-colors overflow-hidden group ${
+            className={`h-9 w-full sm:w-36 text-left font-normal justify-start pl-7 text-sm border-gray-300 hover:border-primary/30 transition-colors overflow-hidden group ${
               timeError ? "border-red-300 bg-red-50" : ""
             }`}
           >
@@ -556,7 +556,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
               className={`absolute left-2 top-2.5 h-3.5 w-3.5 ${
                 timeError
                   ? "text-red-500"
-                  : "text-gray-500 group-hover:text-fleet-red"
+                  : "text-gray-500 group-hover:text-primary"
               } pointer-events-none`}
             />
             <span className={timeError ? "text-red-600" : "text-gray-700"}>

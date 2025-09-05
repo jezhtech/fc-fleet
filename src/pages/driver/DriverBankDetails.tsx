@@ -72,7 +72,7 @@ const DriverBankDetails = () => {
     return (
       <DashboardLayout userType="driver">
         <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-fleet-red" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </DashboardLayout>
     );

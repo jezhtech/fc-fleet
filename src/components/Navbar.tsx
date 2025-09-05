@@ -47,7 +47,7 @@ const Navbar = ({ position = "sticky" }: NavbarProps) => {
         scrolled
           ? "bg-black/20 shadow-md backdrop-blur-md"
           : "bg-transparent backdrop-blur-sm",
-        position
+        position,
       )}
     >
       <div className="container mx-auto px-4 py-3">
@@ -157,10 +157,10 @@ const NavLinks = ({
   scrolled?: boolean;
 }) => {
   const baseClass = mobile
-    ? "px-2 py-1 text-fleet-dark hover:text-fleet-red transition-colors"
+    ? "px-2 py-1 text-fleet-dark hover:text-primary transition-colors"
     : scrolled
-    ? "text-white hover:text-fleet-red transition-colors font-medium"
-    : "text-white hover:text-fleet-red transition-colors font-medium";
+      ? "text-white hover:text-primary transition-colors font-medium"
+      : "text-white hover:text-primary transition-colors font-medium";
 
   const { translate } = useTranslation();
 
@@ -170,7 +170,7 @@ const NavLinks = ({
         to="/"
         className={cn(
           baseClass,
-          position === "sticky" && "text-fleet-dark hover:text-fleet-red"
+          position === "sticky" && "text-fleet-dark hover:text-primary",
         )}
       >
         {translate("nav.home")}
@@ -179,7 +179,7 @@ const NavLinks = ({
         to="/about"
         className={cn(
           baseClass,
-          position === "sticky" && "text-fleet-dark hover:text-fleet-red"
+          position === "sticky" && "text-fleet-dark hover:text-primary",
         )}
       >
         {translate("nav.about")}
@@ -188,7 +188,7 @@ const NavLinks = ({
         to="/contact"
         className={cn(
           baseClass,
-          position === "sticky" && "text-fleet-dark hover:text-fleet-red"
+          position === "sticky" && "text-fleet-dark hover:text-primary",
         )}
       >
         {translate("nav.contact")}
@@ -197,7 +197,7 @@ const NavLinks = ({
         to="/faq"
         className={cn(
           baseClass,
-          position === "sticky" && "text-fleet-dark hover:text-fleet-red"
+          position === "sticky" && "text-fleet-dark hover:text-primary",
         )}
       >
         {translate("nav.faq")}

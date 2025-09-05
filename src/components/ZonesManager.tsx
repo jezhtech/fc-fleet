@@ -22,7 +22,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Zone, FareRule } from "@/lib/firebaseModels";
+import { Zone, FareRule } from "@/types";
 import { zonesService } from "@/services/zonesService";
 import * as turf from "@turf/turf";
 import ZoneMapEditor from "./SimpleZoneRenderer";
@@ -216,7 +216,7 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Zones & Geofencing</h2>
         <Button
-          className="bg-fleet-red text-white hover:bg-fleet-red/90"
+          className="bg-primary text-white hover:bg-primary/90"
           onClick={() => handleAddEdit(null)}
         >
           <PlusCircle className="mr-2 h-4 w-4" /> Add New Zone
@@ -225,7 +225,7 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
 
       {isLoading ? (
         <div className="flex justify-center items-center min-h-[200px]">
-          <Loader2 className="h-8 w-8 text-fleet-red animate-spin mr-2" />
+          <Loader2 className="h-8 w-8 text-primary animate-spin mr-2" />
           <p>Loading zones...</p>
         </div>
       ) : (
@@ -370,7 +370,7 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
               </Button>
               <Button
                 type="submit"
-                className="bg-fleet-red text-white hover:bg-fleet-red/90"
+                className="bg-primary text-white hover:bg-primary/90"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (

@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import config from "@/config";
 
 const Footer = () => {
   const { translate } = useTranslation();
@@ -56,38 +57,33 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <Logo />
-            <p className="mt-4">
-              First Class Fleet provides premium chauffeur services across
-              Dubai, Abu Dhabi, and the entire UAE. We specialize in airport
-              transfers, corporate transportation, intercity travel, and hourly
-              chauffeur hire.
-            </p>
+            <p className="mt-4">{config.description}</p>
             <div className="flex space-x-4 mt-4">
               <a
                 href="https://facebook.com/firstclassfleet"
                 aria-label="Facebook"
-                className="text-fleet-red hover:text-fleet-accent"
+                className="text-primary hover:text-fleet-accent"
               >
                 <Facebook className="h-5 w-5" />
               </a>
               <a
                 href="https://instagram.com/firstclassfleet"
                 aria-label="Instagram"
-                className="text-fleet-red hover:text-fleet-accent"
+                className="text-primary hover:text-fleet-accent"
               >
                 <Instagram className="h-5 w-5" />
               </a>
               <a
                 href="https://twitter.com/firstclassfleet"
                 aria-label="Twitter"
-                className="text-fleet-red hover:text-fleet-accent"
+                className="text-primary hover:text-fleet-accent"
               >
                 <Twitter className="h-5 w-5" />
               </a>
               <a
                 href="https://linkedin.com/company/firstclassfleet"
                 aria-label="LinkedIn"
-                className="text-fleet-red hover:text-fleet-accent"
+                className="text-primary hover:text-fleet-accent"
               >
                 <Linkedin className="h-5 w-5" />
               </a>
@@ -98,32 +94,32 @@ const Footer = () => {
             <h5 className="text-lg font-bold mb-4">Our Services</h5>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="hover:text-fleet-red">
+                <Link to="/" className="hover:text-primary">
                   Dubai Chauffeur Service
                 </Link>
               </li>
               <li>
-                <Link to="/book-chauffeur" className="hover:text-fleet-red">
+                <Link to="/book-chauffeur" className="hover:text-primary">
                   Airport Transfers
                 </Link>
               </li>
               <li>
-                <Link to="/book-chauffeur" className="hover:text-fleet-red">
+                <Link to="/book-chauffeur" className="hover:text-primary">
                   Corporate Transportation
                 </Link>
               </li>
               <li>
-                <Link to="/book-chauffeur" className="hover:text-fleet-red">
+                <Link to="/book-chauffeur" className="hover:text-primary">
                   Intercity Travel UAE
                 </Link>
               </li>
               <li>
-                <Link to="/book-chauffeur" className="hover:text-fleet-red">
+                <Link to="/book-chauffeur" className="hover:text-primary">
                   Hourly Chauffeur Hire
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="hover:text-fleet-red">
+                <Link to="/about" className="hover:text-primary">
                   About Our Fleet
                 </Link>
               </li>
@@ -134,32 +130,32 @@ const Footer = () => {
             <h5 className="text-lg font-bold mb-4">Service Areas</h5>
             <ul className="space-y-2">
               <li>
-                <Link to="/book-chauffeur" className="hover:text-fleet-red">
+                <Link to="/book-chauffeur" className="hover:text-primary">
                   Dubai Chauffeur Services
                 </Link>
               </li>
               <li>
-                <Link to="/book-chauffeur" className="hover:text-fleet-red">
+                <Link to="/book-chauffeur" className="hover:text-primary">
                   Abu Dhabi Transportation
                 </Link>
               </li>
               <li>
-                <Link to="/book-chauffeur" className="hover:text-fleet-red">
+                <Link to="/book-chauffeur" className="hover:text-primary">
                   Sharjah Chauffeur Hire
                 </Link>
               </li>
               <li>
-                <Link to="/book-chauffeur" className="hover:text-fleet-red">
+                <Link to="/book-chauffeur" className="hover:text-primary">
                   Ajman Car Services
                 </Link>
               </li>
               <li>
-                <Link to="/book-chauffeur" className="hover:text-fleet-red">
+                <Link to="/book-chauffeur" className="hover:text-primary">
                   Ras Al Khaimah Transfers
                 </Link>
               </li>
               <li>
-                <Link to="/faq" className="hover:text-fleet-red">
+                <Link to="/faq" className="hover:text-primary">
                   Frequently Asked Questions
                 </Link>
               </li>
@@ -170,7 +166,7 @@ const Footer = () => {
             <h5 className="text-lg font-bold mb-4">Contact Us</h5>
             <address className="not-italic space-y-3">
               <div className="flex items-start">
-                <MapPin className="h-5 w-5 text-fleet-red mr-2 mt-1 flex-shrink-0" />
+                <MapPin className="h-5 w-5 text-primary mr-2 mt-1 flex-shrink-0" />
                 <p
                   itemProp="address"
                   itemScope
@@ -183,24 +179,24 @@ const Footer = () => {
                 </p>
               </div>
               <div className="flex items-center">
-                <Phone className="h-5 w-5 text-fleet-red mr-2 flex-shrink-0" />
+                <Phone className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
                 <p>
                   <a
                     href="tel:+971568693458"
                     itemProp="telephone"
-                    className="hover:text-fleet-red"
+                    className="hover:text-primary"
                   >
                     +971 56 869 3458
                   </a>
                 </p>
               </div>
               <div className="flex items-center">
-                <Mail className="h-5 w-5 text-fleet-red mr-2 flex-shrink-0" />
+                <Mail className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
                 <p>
                   <a
                     href="mailto:booking@fcfleets.com"
                     itemProp="email"
-                    className="hover:text-fleet-red"
+                    className="hover:text-primary"
                   >
                     booking@fcfleets.com
                   </a>
@@ -218,7 +214,7 @@ const Footer = () => {
               </div>
               <meta
                 itemProp="name"
-                content="First Class Fleet - Dubai Chauffeur Service"
+                content={`${config.title} - ${config.city} Chauffeur Service`}
               />
               <meta itemProp="image" content="/logo.png" />
               <meta itemProp="url" content="https://firstclassfleet.com" />
@@ -241,9 +237,9 @@ const Footer = () => {
                 >
                   {location.name}
                   {expandedLocation === location.id ? (
-                    <ChevronUp className="h-4 w-4 text-fleet-red" />
+                    <ChevronUp className="h-4 w-4 text-primary" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-fleet-red" />
+                    <ChevronDown className="h-4 w-4 text-primary" />
                   )}
                 </button>
                 <div
@@ -266,13 +262,13 @@ const Footer = () => {
 
         <div className="border-t border-gray-200 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center text-gray-600 text-sm">
           <p>
-            &copy; {currentYear} First Class Fleet LLC. All rights reserved.
+            &copy; {currentYear} {config.title} LLC. All rights reserved.
             Developed by{" "}
             <a
               href="https://www.jezx.in"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-fleet-red hover:underline"
+              className="text-primary hover:underline"
             >
               JezX
             </a>
@@ -281,19 +277,19 @@ const Footer = () => {
               href="https://enyard.in"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-fleet-red hover:underline"
+              className="text-primary hover:underline"
             >
               ENYARD
             </a>
           </p>
           <div className="flex space-x-4 mt-4 md:mt-0">
-            <Link to="/terms" className="hover:text-fleet-red">
+            <Link to="/terms" className="hover:text-primary">
               Terms & Conditions
             </Link>
-            <Link to="/privacy" className="hover:text-fleet-red">
+            <Link to="/privacy" className="hover:text-primary">
               Privacy Policy
             </Link>
-            <Link to="/contact" className="hover:text-fleet-red">
+            <Link to="/contact" className="hover:text-primary">
               Contact Us
             </Link>
           </div>

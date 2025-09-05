@@ -16,7 +16,7 @@ const Contact = () => {
 
   return (
     <Layout>
-      <div className="bg-gradient-to-r from-fleet-red to-fleet-accent py-20">
+      <div className="bg-gradient-to-r from-primary to-fleet-accent py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Contact Us
@@ -108,7 +108,7 @@ const Contact = () => {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-fleet-red to-fleet-accent text-white hover:opacity-90"
+                className="w-full bg-gradient-to-r from-primary to-fleet-accent text-white hover:opacity-90"
               >
                 Send Message
               </Button>
@@ -127,7 +127,7 @@ const Contact = () => {
             <div className="space-y-6">
               <Card className="p-4">
                 <div className="flex items-start">
-                  <MapPin className="h-5 w-5 text-fleet-red mt-1 mr-4" />
+                  <MapPin className="h-5 w-5 text-primary mt-1 mr-4" />
                   <div>
                     <h3 className="font-semibold mb-1">Our Location</h3>
                     <p className="text-gray-600">
@@ -139,7 +139,7 @@ const Contact = () => {
 
               <Card className="p-4">
                 <div className="flex items-start">
-                  <Phone className="h-5 w-5 text-fleet-red mt-1 mr-4" />
+                  <Phone className="h-5 w-5 text-primary mt-1 mr-4" />
                   <div>
                     <h3 className="font-semibold mb-1">Phone Number</h3>
                     <p className="text-gray-600">+971 56 869 3458</p>
@@ -149,7 +149,7 @@ const Contact = () => {
 
               <Card className="p-4">
                 <div className="flex items-start">
-                  <Mail className="h-5 w-5 text-fleet-red mt-1 mr-4" />
+                  <Mail className="h-5 w-5 text-primary mt-1 mr-4" />
                   <div>
                     <h3 className="font-semibold mb-1">Email Address</h3>
                     <p className="text-gray-600">booking@fcfleets.com</p>
@@ -159,7 +159,7 @@ const Contact = () => {
 
               <Card className="p-4">
                 <div className="flex items-start">
-                  <Clock className="h-5 w-5 text-fleet-red mt-1 mr-4" />
+                  <Clock className="h-5 w-5 text-primary mt-1 mr-4" />
                   <div>
                     <h3 className="font-semibold mb-1">Business Hours</h3>
                     <p className="text-gray-600">Available 24/7 for bookings</p>
@@ -176,25 +176,25 @@ const Contact = () => {
               <div className="flex space-x-4">
                 <a
                   href="#"
-                  className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-fleet-red hover:text-white transition-colors"
+                  className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
                 >
                   <span>FB</span>
                 </a>
                 <a
                   href="#"
-                  className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-fleet-red hover:text-white transition-colors"
+                  className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
                 >
                   <span>TW</span>
                 </a>
                 <a
                   href="#"
-                  className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-fleet-red hover:text-white transition-colors"
+                  className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
                 >
                   <span>IG</span>
                 </a>
                 <a
                   href="#"
-                  className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-fleet-red hover:text-white transition-colors"
+                  className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
                 >
                   <span>LI</span>
                 </a>

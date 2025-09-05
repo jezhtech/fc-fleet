@@ -375,7 +375,7 @@ const TrackingDialog = ({ booking }: { booking: BookingWithRelations }) => {
   return (
     <div className="py-4">
       {/* Header with current status */}
-      <div className="mb-6 p-4 bg-gradient-to-r from-fleet-red to-fleet-accent rounded-lg text-white">
+      <div className="mb-6 p-4 bg-gradient-to-r from-primary to-fleet-accent rounded-lg text-white">
         <h3 className="text-lg font-semibold mb-2">Current Status</h3>
         <p className="text-sm opacity-90">
           {steps[currentStepIndex]?.label} -{" "}
@@ -642,7 +642,7 @@ const BookingCard = ({ booking }: { booking: BookingWithRelations }) => {
                 <DialogTrigger asChild>
                   <Button
                     size="sm"
-                    className="bg-fleet-red hover:bg-fleet-red/90 flex items-center gap-1"
+                    className="bg-primary hover:bg-primary/90 flex items-center gap-1"
                   >
                     <Clock className="h-4 w-4" />
                     <span className="hidden sm:inline">Track</span>
@@ -651,7 +651,7 @@ const BookingCard = ({ booking }: { booking: BookingWithRelations }) => {
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-fleet-red" />
+                      <Clock className="h-5 w-5 text-primary" />
                       Track Booking: {bookingId}
                     </DialogTitle>
                     <p className="text-sm text-gray-600 mt-1">
@@ -724,7 +724,7 @@ const MyBookings = () => {
 
   return (
     <Layout>
-      <div className="bg-gradient-to-r from-fleet-red to-fleet-accent py-12">
+      <div className="bg-gradient-to-r from-primary to-fleet-accent py-12">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl md:text-4xl font-bold text-white">
             My Bookings
@@ -736,7 +736,7 @@ const MyBookings = () => {
       <div className="container mx-auto px-4 py-8">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-12 w-12 text-fleet-red animate-spin mb-4" />
+            <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
             <p className="text-gray-600">Loading your bookings...</p>
           </div>
         ) : error ? (

@@ -203,7 +203,7 @@ const Vehicles = () => {
   const nextSlide = () => {
     if (vehicles.length <= visibleCount) return;
     setCurrentIndex(
-      (prevIndex) => (prevIndex + 1) % (vehicles.length - visibleCount + 1),
+      (prevIndex) => (prevIndex + 1) % (vehicles.length / visibleCount),
     );
   };
 
@@ -293,7 +293,7 @@ const Vehicles = () => {
 
         {isLoading ? (
           <div className="flex flex-col justify-center items-center min-h-[300px]">
-            <Loader2 className="h-10 w-10 text-fleet-red animate-spin mb-4" />
+            <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
             <span className="text-gray-600 text-center">
               Loading vehicles from our fleet...
               <br />
@@ -313,14 +313,14 @@ const Vehicles = () => {
               <>
                 <button
                   onClick={prevSlide}
-                  className="absolute left-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white text-fleet-red rounded-full p-2 shadow-md"
+                  className="absolute left-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white text-primary rounded-full p-2 shadow-md"
                   aria-label="Previous vehicle"
                 >
                   <ChevronLeft className="h-6 w-6" />
                 </button>
                 <button
                   onClick={nextSlide}
-                  className="absolute right-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white text-fleet-red rounded-full p-2 shadow-md"
+                  className="absolute right-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 hover:bg-white text-primary rounded-full p-2 shadow-md"
                   aria-label="Next vehicle"
                 >
                   <ChevronRight className="h-6 w-6" />
@@ -383,7 +383,7 @@ const Vehicles = () => {
                         }}
                       >
                         {/* Taxi Type Tag */}
-                        <div className="absolute top-2 left-2 z-10 bg-gradient-to-r from-fleet-red to-fleet-accent text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
+                        <div className="absolute top-2 left-2 z-10 bg-gradient-to-r from-primary to-fleet-accent text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
                           {vehicle.taxiTypeName}
                         </div>
 
@@ -404,7 +404,7 @@ const Vehicles = () => {
                                     ]
                                   }
                                   alt={vehicle.name}
-                                  className="w-full h-full object-cover object-center"
+                                  className="w-full h-full object-contain object-center"
                                   onError={(e) => {
                                     e.currentTarget.src = "/placeholder.svg";
                                   }}
@@ -459,7 +459,7 @@ const Vehicles = () => {
                                         className={`w-2 h-2 rounded-full transition-all ${
                                           idx ===
                                           (activeImageIndex[vehicle.id] || 0)
-                                            ? "bg-fleet-red scale-125 shadow-sm"
+                                            ? "bg-primary scale-125 shadow-sm"
                                             : "bg-gray-300 hover:bg-gray-400"
                                         }`}
                                         aria-label={`Go to image ${idx + 1}`}
@@ -483,8 +483,8 @@ const Vehicles = () => {
                       <CardContent className="p-4 md:p-6">
                         <div className="flex flex-row justify-between items-center mb-3">
                           <h3 className="text-xl font-bold">{vehicle.name}</h3>
-                          <div className="text-lg font-bold text-fleet-red">
-                            AED {vehicle.price}/hr
+                          <div className="text-lg font-bold text-primary">
+                            AED {Number(vehicle.price).toFixed(0)}/hr
                           </div>
                         </div>
                         <p className="text-gray-600 text-sm md:text-base mb-3 line-clamp-2">
@@ -496,14 +496,14 @@ const Vehicles = () => {
                               key={index}
                               className="text-sm text-gray-500 flex items-center"
                             >
-                              <span className="mr-1.5 text-fleet-red">
+                              <span className="mr-1.5 text-primary">
                                 {feature.icon}
                               </span>
                               {feature.text}
                             </div>
                           ))}
                         </div>
-                        <Button className="w-full bg-gradient-to-r from-fleet-red to-fleet-accent text-white hover:opacity-90">
+                        <Button className="w-full bg-gradient-to-r from-primary to-fleet-accent text-white hover:opacity-90">
                           Book Now
                         </Button>
                       </CardContent>
@@ -516,14 +516,14 @@ const Vehicles = () => {
             {/* Pagination Dots */}
             {vehicles.length > visibleCount && (
               <div className="flex justify-center mt-6 space-x-2">
-                {Array.from({ length: vehicles.length - visibleCount + 1 }).map(
+                {Array.from({ length: vehicles.length / visibleCount }).map(
                   (_, index) => (
                     <button
                       key={index}
                       onClick={() => goToSlide(index)}
                       className={`w-3 h-3 rounded-full transition-all ${
                         currentIndex === index
-                          ? "bg-fleet-red scale-110"
+                          ? "bg-primary scale-110"
                           : "bg-gray-300 hover:bg-gray-400"
                       }`}
                       aria-label={`Go to slide ${index + 1}`}

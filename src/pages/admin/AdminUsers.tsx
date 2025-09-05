@@ -209,7 +209,7 @@ const AdminUsers = () => {
           </Button>
           <Dialog>
             <DialogTrigger asChild>
-              <Button className="bg-fleet-red hover:bg-fleet-red/90">
+              <Button className="bg-primary hover:bg-primary/90">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Add User
               </Button>
@@ -290,7 +290,7 @@ const AdminUsers = () => {
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-fleet-red hover:bg-fleet-red/90"
+                  className="w-full bg-primary hover:bg-primary/90"
                 >
                   Add User
                 </Button>

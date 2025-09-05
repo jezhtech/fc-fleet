@@ -185,7 +185,7 @@ const AdminTaxiTypes = () => {
           <DialogTrigger asChild>
             <Button
               onClick={() => handleAddEdit(null)}
-              className="bg-fleet-red text-white hover:bg-fleet-red/90"
+              className="bg-primary text-white hover:bg-primary/90"
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Add New Taxi Type
             </Button>
@@ -265,7 +265,7 @@ const AdminTaxiTypes = () => {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-fleet-red text-white hover:bg-fleet-red/90"
+                  className="bg-primary text-white hover:bg-primary/90"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -321,7 +321,7 @@ const AdminTaxiTypes = () => {
 
       {loading ? (
         <div className="flex justify-center items-center min-h-[300px]">
-          <Loader2 className="h-8 w-8 text-fleet-red animate-spin mr-2" />
+          <Loader2 className="h-8 w-8 text-primary animate-spin mr-2" />
           <p>Loading taxi types...</p>
         </div>
       ) : (

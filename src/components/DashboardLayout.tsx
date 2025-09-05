@@ -61,12 +61,12 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
   const getUserInitials = () => {
     if (!userData) return userType === "admin" ? "A" : "D";
 
-    if (userData.name) {
-      const nameParts = userData.name.split(" ");
+    if (userData.firstName) {
+      const nameParts = userData.firstName.split(" ");
       if (nameParts.length >= 2) {
         return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
       }
-      return userData.name.substring(0, 2).toUpperCase();
+      return userData.firstName.substring(0, 2).toUpperCase();
     }
 
     const firstInitial = userData.firstName ? userData.firstName.charAt(0) : "";
@@ -79,8 +79,8 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
   const getUserDisplayName = () => {
     if (!userData) return "";
 
-    if (userData.name) {
-      return userData.name;
+    if (userData.firstName) {
+      return userData.firstName;
     }
 
     return `${userData.firstName || ""} ${userData.lastName || ""}`.trim();
@@ -136,7 +136,7 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
   ) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fleet-red mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
         <p>Loading...</p>
       </div>
     );
@@ -146,7 +146,7 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
   if (!userData && !loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <AlertCircle className="text-fleet-red h-12 w-12 mb-4" />
+        <AlertCircle className="text-primary h-12 w-12 mb-4" />
         <h2 className="text-xl font-bold mb-2">Access Denied</h2>
         <p className="mb-4">Please log in to access this page</p>
         <Button onClick={() => navigate("/login")}>Go to Login</Button>
@@ -160,15 +160,12 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
       <aside
         className={cn(
           "bg-white fixed inset-y-0 left-0 z-20 w-64 transform transition-transform duration-300 ease-in-out border-r",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         )}
       >
         <div className="h-full flex flex-col">
-          <div className="px-4 py-6 border-b">
+          <div className="px-4 py-1 border-b">
             <Logo />
-            <p className="mt-2 text-sm text-gray-500 capitalize">
-              {userType} Dashboard
-            </p>
           </div>
 
           <nav className="flex-1 px-2 py-4 space-y-1">
@@ -179,16 +176,16 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
                 className={cn(
                   "flex items-center px-4 py-3 text-sm font-medium rounded-md group transition-colors",
                   location.pathname === item.href
-                    ? "bg-fleet-red/20 text-fleet-red"
-                    : "text-gray-600 hover:bg-gray-100"
+                    ? "bg-primary/20 text-primary"
+                    : "text-gray-600 hover:bg-gray-100",
                 )}
               >
                 <item.icon
                   className={cn(
                     "mr-3 h-5 w-5",
                     location.pathname === item.href
-                      ? "text-fleet-red"
-                      : "text-gray-500"
+                      ? "text-primary"
+                      : "text-gray-500",
                   )}
                 />
                 {item.name}

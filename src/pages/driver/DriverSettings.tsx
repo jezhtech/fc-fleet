@@ -1,121 +1,151 @@
-
-import React from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
+import React from "react";
+import DashboardLayout from "@/components/DashboardLayout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 const DriverSettings = () => {
   const handleSave = (section: string) => {
     toast.success(`${section} settings saved successfully`);
   };
-  
+
   return (
     <DashboardLayout userType="driver">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Settings</h1>
       </div>
-      
+
       <Tabs defaultValue="account">
         <div className="flex flex-col md:flex-row gap-6">
           <div className="md:w-64">
             <TabsList className="flex flex-col w-full rounded-md bg-muted p-1 h-auto">
-              <TabsTrigger 
-                value="account" 
+              <TabsTrigger
+                value="account"
                 className="justify-start px-4 py-3 data-[state=active]:bg-white"
               >
                 Account Settings
               </TabsTrigger>
-              <TabsTrigger 
-                value="preferences" 
+              <TabsTrigger
+                value="preferences"
                 className="justify-start px-4 py-3 data-[state=active]:bg-white"
               >
                 Ride Preferences
               </TabsTrigger>
-              <TabsTrigger 
-                value="notifications" 
+              <TabsTrigger
+                value="notifications"
                 className="justify-start px-4 py-3 data-[state=active]:bg-white"
               >
                 Notifications
               </TabsTrigger>
-              <TabsTrigger 
-                value="security" 
+              <TabsTrigger
+                value="security"
                 className="justify-start px-4 py-3 data-[state=active]:bg-white"
               >
                 Security
               </TabsTrigger>
             </TabsList>
           </div>
-          
+
           <div className="flex-1">
             <TabsContent value="account" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Password</CardTitle>
-                  <CardDescription>
-                    Change your password
-                  </CardDescription>
+                  <CardDescription>Change your password</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form className="space-y-4">
                     <div className="space-y-2">
-                      <label htmlFor="currentPassword" className="text-sm font-medium">Current Password</label>
+                      <label
+                        htmlFor="currentPassword"
+                        className="text-sm font-medium"
+                      >
+                        Current Password
+                      </label>
                       <Input id="currentPassword" type="password" />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="newPassword" className="text-sm font-medium">New Password</label>
+                      <label
+                        htmlFor="newPassword"
+                        className="text-sm font-medium"
+                      >
+                        New Password
+                      </label>
                       <Input id="newPassword" type="password" />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="confirmPassword" className="text-sm font-medium">Confirm New Password</label>
+                      <label
+                        htmlFor="confirmPassword"
+                        className="text-sm font-medium"
+                      >
+                        Confirm New Password
+                      </label>
                       <Input id="confirmPassword" type="password" />
                     </div>
-                    <Button 
-                      type="button" 
-                      className="bg-fleet-red hover:bg-fleet-red/90"
-                      onClick={() => handleSave('Password')}
+                    <Button
+                      type="button"
+                      className="bg-primary hover:bg-primary/90"
+                      onClick={() => handleSave("Password")}
                     >
                       Change Password
                     </Button>
                   </form>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>Email Address</CardTitle>
-                  <CardDescription>
-                    Update your email address
-                  </CardDescription>
+                  <CardDescription>Update your email address</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form className="space-y-4">
                     <div className="space-y-2">
-                      <label htmlFor="currentEmail" className="text-sm font-medium">Current Email</label>
-                      <Input id="currentEmail" type="email" defaultValue="michael@example.com" disabled />
+                      <label
+                        htmlFor="currentEmail"
+                        className="text-sm font-medium"
+                      >
+                        Current Email
+                      </label>
+                      <Input
+                        id="currentEmail"
+                        type="email"
+                        defaultValue="michael@example.com"
+                        disabled
+                      />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="newEmail" className="text-sm font-medium">New Email</label>
+                      <label htmlFor="newEmail" className="text-sm font-medium">
+                        New Email
+                      </label>
                       <Input id="newEmail" type="email" />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="password" className="text-sm font-medium">Confirm with Password</label>
+                      <label htmlFor="password" className="text-sm font-medium">
+                        Confirm with Password
+                      </label>
                       <Input id="password" type="password" />
                     </div>
-                    <Button 
-                      type="button" 
-                      className="bg-fleet-red hover:bg-fleet-red/90"
-                      onClick={() => handleSave('Email')}
+                    <Button
+                      type="button"
+                      className="bg-primary hover:bg-primary/90"
+                      onClick={() => handleSave("Email")}
                     >
                       Update Email
                     </Button>
                   </form>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>Delete Account</CardTitle>
@@ -126,11 +156,17 @@ const DriverSettings = () => {
                 <CardContent>
                   <div className="space-y-4">
                     <p className="text-sm text-gray-500">
-                      Deleting your account will remove all personal information, ride history, and earnings data. This action cannot be undone.
+                      Deleting your account will remove all personal
+                      information, ride history, and earnings data. This action
+                      cannot be undone.
                     </p>
-                    <Button 
+                    <Button
                       variant="destructive"
-                      onClick={() => toast.error('Account deletion requires additional verification. Please contact support.')}
+                      onClick={() =>
+                        toast.error(
+                          "Account deletion requires additional verification. Please contact support.",
+                        )
+                      }
                     >
                       Delete Account
                     </Button>
@@ -138,7 +174,7 @@ const DriverSettings = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="preferences" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -151,37 +187,71 @@ const DriverSettings = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">Auto-Accept Rides</label>
-                        <p className="text-sm text-gray-500">Automatically accept incoming ride requests</p>
+                        <label className="text-sm font-medium">
+                          Auto-Accept Rides
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Automatically accept incoming ride requests
+                        </p>
                       </div>
                       <Switch />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">Long Distance Rides</label>
-                        <p className="text-sm text-gray-500">Receive ride requests for trips over 30 miles</p>
+                        <label className="text-sm font-medium">
+                          Long Distance Rides
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive ride requests for trips over 30 miles
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">Airport Pickups</label>
-                        <p className="text-sm text-gray-500">Receive ride requests from airports</p>
+                        <label className="text-sm font-medium">
+                          Airport Pickups
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive ride requests from airports
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
-                    
+
                     <div className="space-y-2 pt-2">
-                      <label htmlFor="maxDistance" className="text-sm font-medium">Maximum Pickup Distance (miles)</label>
-                      <Input id="maxDistance" type="number" defaultValue="15" min="1" max="50" />
-                      <p className="text-xs text-gray-500">Maximum distance you're willing to travel for pickup</p>
+                      <label
+                        htmlFor="maxDistance"
+                        className="text-sm font-medium"
+                      >
+                        Maximum Pickup Distance (miles)
+                      </label>
+                      <Input
+                        id="maxDistance"
+                        type="number"
+                        defaultValue="15"
+                        min="1"
+                        max="50"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Maximum distance you're willing to travel for pickup
+                      </p>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <label htmlFor="preferredAreas" className="text-sm font-medium">Preferred Service Areas</label>
-                      <select id="preferredAreas" className="w-full border rounded-md p-2" multiple>
+                      <label
+                        htmlFor="preferredAreas"
+                        className="text-sm font-medium"
+                      >
+                        Preferred Service Areas
+                      </label>
+                      <select
+                        id="preferredAreas"
+                        className="w-full border rounded-md p-2"
+                        multiple
+                      >
                         <option value="manhattan">Manhattan</option>
                         <option value="brooklyn">Brooklyn</option>
                         <option value="queens">Queens</option>
@@ -189,17 +259,17 @@ const DriverSettings = () => {
                         <option value="statenIsland">Staten Island</option>
                       </select>
                     </div>
-                    
-                    <Button 
-                      className="bg-fleet-red hover:bg-fleet-red/90 mt-4"
-                      onClick={() => handleSave('Ride preferences')}
+
+                    <Button
+                      className="bg-primary hover:bg-primary/90 mt-4"
+                      onClick={() => handleSave("Ride preferences")}
                     >
                       Save Changes
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>Scheduling</CardTitle>
@@ -211,41 +281,75 @@ const DriverSettings = () => {
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h3 className="font-medium text-sm mb-2">Available Days</h3>
+                        <h3 className="font-medium text-sm mb-2">
+                          Available Days
+                        </h3>
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <input type="checkbox" id="monday" defaultChecked />
-                            <label htmlFor="monday" className="text-sm">Monday</label>
+                            <label htmlFor="monday" className="text-sm">
+                              Monday
+                            </label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <input type="checkbox" id="tuesday" defaultChecked />
-                            <label htmlFor="tuesday" className="text-sm">Tuesday</label>
+                            <input
+                              type="checkbox"
+                              id="tuesday"
+                              defaultChecked
+                            />
+                            <label htmlFor="tuesday" className="text-sm">
+                              Tuesday
+                            </label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <input type="checkbox" id="wednesday" defaultChecked />
-                            <label htmlFor="wednesday" className="text-sm">Wednesday</label>
+                            <input
+                              type="checkbox"
+                              id="wednesday"
+                              defaultChecked
+                            />
+                            <label htmlFor="wednesday" className="text-sm">
+                              Wednesday
+                            </label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <input type="checkbox" id="thursday" defaultChecked />
-                            <label htmlFor="thursday" className="text-sm">Thursday</label>
+                            <input
+                              type="checkbox"
+                              id="thursday"
+                              defaultChecked
+                            />
+                            <label htmlFor="thursday" className="text-sm">
+                              Thursday
+                            </label>
                           </div>
                           <div className="flex items-center gap-2">
                             <input type="checkbox" id="friday" defaultChecked />
-                            <label htmlFor="friday" className="text-sm">Friday</label>
+                            <label htmlFor="friday" className="text-sm">
+                              Friday
+                            </label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <input type="checkbox" id="saturday" defaultChecked />
-                            <label htmlFor="saturday" className="text-sm">Saturday</label>
+                            <input
+                              type="checkbox"
+                              id="saturday"
+                              defaultChecked
+                            />
+                            <label htmlFor="saturday" className="text-sm">
+                              Saturday
+                            </label>
                           </div>
                           <div className="flex items-center gap-2">
                             <input type="checkbox" id="sunday" />
-                            <label htmlFor="sunday" className="text-sm">Sunday</label>
+                            <label htmlFor="sunday" className="text-sm">
+                              Sunday
+                            </label>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div>
-                        <h3 className="font-medium text-sm mb-2">Available Hours</h3>
+                        <h3 className="font-medium text-sm mb-2">
+                          Available Hours
+                        </h3>
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <label className="text-sm">Start Time</label>
@@ -258,10 +362,10 @@ const DriverSettings = () => {
                         </div>
                       </div>
                     </div>
-                    
-                    <Button 
-                      className="bg-fleet-red hover:bg-fleet-red/90 mt-4"
-                      onClick={() => handleSave('Scheduling')}
+
+                    <Button
+                      className="bg-primary hover:bg-primary/90 mt-4"
+                      onClick={() => handleSave("Scheduling")}
                     >
                       Save Changes
                     </Button>
@@ -269,7 +373,7 @@ const DriverSettings = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="notifications" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -282,54 +386,76 @@ const DriverSettings = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">New Ride Requests</label>
-                        <p className="text-sm text-gray-500">Receive notifications for new ride requests</p>
+                        <label className="text-sm font-medium">
+                          New Ride Requests
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive notifications for new ride requests
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">Ride Updates</label>
-                        <p className="text-sm text-gray-500">Receive notifications for ride changes or cancellations</p>
+                        <label className="text-sm font-medium">
+                          Ride Updates
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive notifications for ride changes or
+                          cancellations
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">Payment Notifications</label>
-                        <p className="text-sm text-gray-500">Receive notifications when payments are processed</p>
+                        <label className="text-sm font-medium">
+                          Payment Notifications
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive notifications when payments are processed
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">System Announcements</label>
-                        <p className="text-sm text-gray-500">Receive important system announcements</p>
+                        <label className="text-sm font-medium">
+                          System Announcements
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive important system announcements
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">Promotions and Offers</label>
-                        <p className="text-sm text-gray-500">Receive notifications about promotions and special offers</p>
+                        <label className="text-sm font-medium">
+                          Promotions and Offers
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive notifications about promotions and special
+                          offers
+                        </p>
                       </div>
                       <Switch />
                     </div>
-                    
-                    <Button 
-                      className="bg-fleet-red hover:bg-fleet-red/90 mt-4"
-                      onClick={() => handleSave('App notification')}
+
+                    <Button
+                      className="bg-primary hover:bg-primary/90 mt-4"
+                      onClick={() => handleSave("App notification")}
                     >
                       Save Changes
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>Communication Preferences</CardTitle>
@@ -341,39 +467,55 @@ const DriverSettings = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">Email Updates</label>
-                        <p className="text-sm text-gray-500">Receive important updates via email</p>
+                        <label className="text-sm font-medium">
+                          Email Updates
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive important updates via email
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">SMS Notifications</label>
-                        <p className="text-sm text-gray-500">Receive important updates via SMS</p>
+                        <label className="text-sm font-medium">
+                          SMS Notifications
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive important updates via SMS
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">Weekly Earnings Summary</label>
-                        <p className="text-sm text-gray-500">Receive weekly summary of your earnings</p>
+                        <label className="text-sm font-medium">
+                          Weekly Earnings Summary
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive weekly summary of your earnings
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">Marketing Communications</label>
-                        <p className="text-sm text-gray-500">Receive marketing emails and promotions</p>
+                        <label className="text-sm font-medium">
+                          Marketing Communications
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Receive marketing emails and promotions
+                        </p>
                       </div>
                       <Switch />
                     </div>
-                    
-                    <Button 
-                      className="bg-fleet-red hover:bg-fleet-red/90 mt-4"
-                      onClick={() => handleSave('Communication preferences')}
+
+                    <Button
+                      className="bg-primary hover:bg-primary/90 mt-4"
+                      onClick={() => handleSave("Communication preferences")}
                     >
                       Save Changes
                     </Button>
@@ -381,7 +523,7 @@ const DriverSettings = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="security" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -394,39 +536,56 @@ const DriverSettings = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <label className="text-sm font-medium">Enable Two-Factor Authentication</label>
-                        <p className="text-sm text-gray-500">Secure your account with 2FA</p>
+                        <label className="text-sm font-medium">
+                          Enable Two-Factor Authentication
+                        </label>
+                        <p className="text-sm text-gray-500">
+                          Secure your account with 2FA
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <h3 className="text-sm font-medium">Verification Method</h3>
+                      <h3 className="text-sm font-medium">
+                        Verification Method
+                      </h3>
                       <div className="flex items-center gap-2">
-                        <input type="radio" id="sms" name="verification" defaultChecked />
-                        <label htmlFor="sms" className="text-sm">SMS</label>
+                        <input
+                          type="radio"
+                          id="sms"
+                          name="verification"
+                          defaultChecked
+                        />
+                        <label htmlFor="sms" className="text-sm">
+                          SMS
+                        </label>
                       </div>
                       <div className="flex items-center gap-2">
                         <input type="radio" id="app" name="verification" />
-                        <label htmlFor="app" className="text-sm">Authenticator App</label>
+                        <label htmlFor="app" className="text-sm">
+                          Authenticator App
+                        </label>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <label htmlFor="phone2fa" className="text-sm font-medium">Phone Number for 2FA</label>
+                      <label htmlFor="phone2fa" className="text-sm font-medium">
+                        Phone Number for 2FA
+                      </label>
                       <Input id="phone2fa" defaultValue="+1 (555) 123-4567" />
                     </div>
-                    
-                    <Button 
-                      className="bg-fleet-red hover:bg-fleet-red/90 mt-4"
-                      onClick={() => handleSave('Two-factor authentication')}
+
+                    <Button
+                      className="bg-primary hover:bg-primary/90 mt-4"
+                      onClick={() => handleSave("Two-factor authentication")}
                     >
                       Save Changes
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>Login Sessions</CardTitle>
@@ -440,28 +599,44 @@ const DriverSettings = () => {
                       <div className="flex justify-between">
                         <div>
                           <h3 className="font-medium">Current Session</h3>
-                          <p className="text-xs text-gray-500">New York, United States</p>
-                          <p className="text-xs text-gray-500">IP: 192.168.1.1</p>
+                          <p className="text-xs text-gray-500">
+                            New York, United States
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            IP: 192.168.1.1
+                          </p>
                         </div>
                         <div className="text-xs text-green-600">Active Now</div>
                       </div>
                     </div>
-                    
+
                     <div className="border rounded-md p-4">
                       <div className="flex justify-between">
                         <div>
-                          <h3 className="font-medium">Mobile App - iPhone 13</h3>
-                          <p className="text-xs text-gray-500">New York, United States</p>
-                          <p className="text-xs text-gray-500">Last active: 2 hours ago</p>
+                          <h3 className="font-medium">
+                            Mobile App - iPhone 13
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            New York, United States
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Last active: 2 hours ago
+                          </p>
                         </div>
-                        <Button variant="outline" size="sm">Log Out</Button>
+                        <Button variant="outline" size="sm">
+                          Log Out
+                        </Button>
                       </div>
                     </div>
-                    
-                    <Button 
+
+                    <Button
                       className="w-full"
                       variant="destructive"
-                      onClick={() => toast.success('Successfully logged out from all other devices')}
+                      onClick={() =>
+                        toast.success(
+                          "Successfully logged out from all other devices",
+                        )
+                      }
                     >
                       Log Out from All Other Devices
                     </Button>

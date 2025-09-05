@@ -184,7 +184,7 @@ const BookingSummary: React.FC<BookingSummaryProps> = ({
           {vehicle && (
             <div className="flex justify-between">
               <span className="text-gray-500">Total Fare</span>
-              <span className="font-bold text-fleet-red">
+              <span className="font-bold text-primary">
                 {formatCurrency(calculateEstimatedPrice())}
               </span>
             </div>
@@ -205,7 +205,7 @@ const BookingSummary: React.FC<BookingSummaryProps> = ({
 
         <Button
           type="button"
-          className="flex-1 text-white font-medium bg-gradient-to-r from-fleet-red to-fleet-accent hover:opacity-90"
+          className="flex-1 text-white font-medium bg-gradient-to-r from-primary to-fleet-accent hover:opacity-90"
           asChild
         >
           <Link to="/my-bookings">

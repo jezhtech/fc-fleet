@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PlusCircle, Edit2, Trash2, DollarSign, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { FareRule } from "@/lib/firebaseModels";
+import { FareRule } from "@/types";
 import { fareRulesService } from "@/services/fareRulesService";
 
 interface TaxiType {
@@ -219,7 +219,7 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
         <h2 className="text-xl font-semibold">Fare Rules</h2>
         <Button
           onClick={() => handleAddEdit(null)}
-          className="bg-fleet-red text-white hover:bg-fleet-red/90"
+          className="bg-primary text-white hover:bg-primary/90"
         >
           <PlusCircle className="mr-2 h-4 w-4" /> Add New Fare Rule
         </Button>
@@ -227,7 +227,7 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
 
       {isLoading ? (
         <div className="flex justify-center items-center min-h-[200px]">
-          <Loader2 className="h-8 w-8 text-fleet-red animate-spin mr-2" />
+          <Loader2 className="h-8 w-8 text-primary animate-spin mr-2" />
           <p>Loading fare rules...</p>
         </div>
       ) : (
@@ -242,7 +242,7 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
                     <CardTitle className="flex items-center">
-                      <DollarSign className="h-5 w-5 mr-2 text-fleet-red" />
+                      <DollarSign className="h-5 w-5 mr-2 text-primary" />
                       {rule.name}
                       {rule.isDefault && (
                         <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
@@ -566,7 +566,7 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
               </Button>
               <Button
                 type="submit"
-                className="bg-fleet-red text-white hover:bg-fleet-red/90"
+                className="bg-primary text-white hover:bg-primary/90"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
