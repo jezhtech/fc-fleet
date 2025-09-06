@@ -157,7 +157,6 @@ const RentCarForm = () => {
     const duration = selectedTour.duration;
     const hours = duration || 5; // Default to 5 hours
 
-    console.log(vehicle.perHourPrice, hours);
     // Calculate total: base price per hour × number of hours
     return parseFloat((vehicle.perHourPrice * hours).toFixed(2));
   };

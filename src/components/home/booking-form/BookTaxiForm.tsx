@@ -143,7 +143,6 @@ const BookTaxiForm = () => {
 
     for (const rule of fareRules) {
       const applicableZones = rule.zones;
-      console.log(applicableZones);
       for (const zone of applicableZones) {
         const isInside = isPointInPolygon(zone.coordinates, {
           lat: selectedPickupLocation.coordinates.latitude,

@@ -122,6 +122,12 @@ const Navbar = ({ position = "sticky" }: NavbarProps) => {
                 </DropdownMenuItem>
 
                 <DropdownMenuItem asChild>
+                  <Link to="/partners" className="flex items-center">
+                    {translate("nav.partners")}
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
                   <Link to="/contact" className="flex items-center">
                     {translate("nav.contact")}
                   </Link>
@@ -179,6 +185,15 @@ const NavLinks = ({
         )}
       >
         {translate("nav.about")}
+      </Link>
+      <Link
+        to="/partners"
+        className={cn(
+          baseClass,
+          position === "sticky" && "text-fleet-dark hover:text-primary",
+        )}
+      >
+        {translate("nav.partners")}
       </Link>
       <Link
         to="/contact"

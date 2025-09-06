@@ -33,6 +33,7 @@ import BookChauffeur from "./pages/user/BookChauffeur";
 import BookingStatus from "./pages/public/BookingStatus";
 import EmergencyFallback from "./pages/public/EmergencyFallback";
 import HourlyRental from "./pages/public/HourlyRental";
+import Partners from "./pages/public/Partners";
 
 import { AuthProvider } from "./contexts/AuthContext";
 import TranslationProvider from "./contexts/TranslationContext";
@@ -121,6 +122,7 @@ const App = () => {
                   <Route path="/book-chauffeur" element={<BookChauffeur />} />
                   <Route path="/booking-status" element={<BookingStatus />} />
                   <Route path="/hourly-rental" element={<HourlyRental />} />
+                  <Route path="/partners" element={<Partners />} />
 
                   {/* User Routes */}
                   <Route path="/user" element={<ProtectedRoute />}>

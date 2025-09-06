@@ -171,7 +171,7 @@ const Vehicles = () => {
 
   return (
     <section className="py-16 bg-gray-50">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -361,10 +361,10 @@ const Vehicles = () => {
             </Swiper>
 
             {/* Custom Navigation */}
-            <div className="swiper-button-prev-custom absolute left-0 top-1/2 transform -translate-y-1/2 z-20 cursor-pointer bg-white/80 hover:bg-white text-primary rounded-full p-2 shadow-md">
+            <div className="swiper-button-prev-custom absolute -left-14 top-1/2 transform -translate-y-1/2 z-20 cursor-pointer bg-white/80 hover:bg-white text-primary rounded-full p-2 shadow-md">
               <ChevronLeft className="h-6 w-6" />
             </div>
-            <div className="swiper-button-next-custom absolute right-0 top-1/2 transform -translate-y-1/2 z-20 cursor-pointer bg-white/80 hover:bg-white text-primary rounded-full p-2 shadow-md">
+            <div className="swiper-button-next-custom absolute -right-14 top-1/2 transform -translate-y-1/2 z-20 cursor-pointer bg-white/80 hover:bg-white text-primary rounded-full p-2 shadow-md">
               <ChevronRight className="h-6 w-6" />
             </div>
 

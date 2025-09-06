@@ -9,7 +9,6 @@ import React, {
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, firebaseError } from "@/lib/firebase";
 import { authService } from "@/services/authService";
-import FirebaseErrorBanner from "@/components/FirebaseErrorBanner";
 
 // Types
 export type UserData = {
@@ -205,9 +204,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider value={contextValue}>
-      {showFirebaseError && (
-        <FirebaseErrorBanner onClose={() => setShowFirebaseError(false)} />
-      )}
       {!loading ? (
         children
       ) : (
