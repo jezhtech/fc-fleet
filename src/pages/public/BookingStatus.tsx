@@ -8,7 +8,6 @@ import {
 import {
   CheckCircle,
   XCircle,
-  ArrowLeft,
   Calendar,
   Clock,
   MapPin,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatExistingBookingId } from "@/utils/booking";
+import config from "@/config";
 
 const BookingStatus = () => {
   const navigate = useNavigate();
@@ -68,13 +68,11 @@ const BookingStatus = () => {
       : null);
 
   // If no status is available, redirect to home
-  if (!status) {
-    useEffect(() => {
+  useEffect(() => {
+    if (!status) {
       navigate("/");
-    }, [navigate]);
-
-    return null;
-  }
+    }
+  }, [navigate]);
 
   const isSuccess = status === "success";
   const displayError = error || "CCAvenue settings are not properly configured";
@@ -217,7 +215,8 @@ const BookingStatus = () => {
             <div className="flex justify-between border-b pb-3">
               <span className="text-gray-600">Amount Paid</span>
               <span className="font-medium">
-                AED {displayBookingDetails?.amount?.toFixed(2) || "68.00"}
+                {displayBookingDetails?.amount?.toFixed(2) || "68.00"}{" "}
+                {config.currency}
               </span>
             </div>
 

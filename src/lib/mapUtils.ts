@@ -1,5 +1,5 @@
+import { Zone } from "@/types";
 import * as turf from "@turf/turf";
-import { Zone } from "./firebaseModels";
 
 /**
  * Validate and fix GeoJSON polygon data
@@ -89,21 +89,6 @@ export const validateAndFixPolygon = (polygon: any): GeoJSON.Polygon | null => {
 };
 
 /**
- * Log zone information for debugging
- */
-export const logZoneInfo = (zone: Zone) => {
-  if (zone.coordinates) {
-    if (zone.coordinates.coordinates) {
-      if (zone.coordinates.coordinates.length > 0) {
-        // Check a few coordinate points
-        if (zone.coordinates.coordinates[0]?.length > 0) {
-        }
-      }
-    }
-  }
-};
-
-/**
  * Create a minimal valid zone for testing
  */
 export const createTestZone = (): Zone => {
@@ -126,10 +111,9 @@ export const createTestZone = (): Zone => {
     description: "A test zone for debugging",
     coordinates,
     color: "#ff385c",
-    fareRuleId: "",
     isActive: true,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
+    createdAt: Date.now().toString(),
+    updatedAt: Date.now().toString(),
     areaKm2: 10, // Approximate
   };
 };

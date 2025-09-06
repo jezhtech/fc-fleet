@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { RecaptchaVerifier } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useState, useEffect } from "react";
+import { ConfirmationResult, RecaptchaVerifier } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export const useRecaptcha = (elementId: string) => {
   const [isReady, setIsReady] = useState(false);
@@ -13,7 +13,7 @@ export const useRecaptcha = (elementId: string) => {
         if (window.recaptchaVerifier) {
           try {
             window.recaptchaVerifier.clear();
-          } catch (e) {
+          } catch (_) {
             // Ignore
           }
           window.recaptchaVerifier = null;
@@ -21,7 +21,7 @@ export const useRecaptcha = (elementId: string) => {
 
         // Create new
         window.recaptchaVerifier = new RecaptchaVerifier(auth, elementId, {
-          size: 'invisible'
+          size: "invisible",
         });
 
         await window.recaptchaVerifier.render();
@@ -40,7 +40,7 @@ export const useRecaptcha = (elementId: string) => {
       if (window.recaptchaVerifier) {
         try {
           window.recaptchaVerifier.clear();
-        } catch (e) {
+        } catch (_) {
           // Ignore
         }
         window.recaptchaVerifier = null;
@@ -55,6 +55,6 @@ export const useRecaptcha = (elementId: string) => {
 declare global {
   interface Window {
     recaptchaVerifier: RecaptchaVerifier | null;
-    confirmationResult: any;
+    confirmationResult: ConfirmationResult;
   }
-} 
+}

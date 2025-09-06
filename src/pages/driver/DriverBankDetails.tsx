@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { CreditCard, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { userService } from "@/services/userService";
 import { useAuth } from "@/contexts/AuthContext";
 

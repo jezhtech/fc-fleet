@@ -20,7 +20,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     isAdmin: isAdminUser,
     userData,
     needsRegistration,
-    userRole,
   } = useAuth();
   const location = useLocation();
   const [roleCheckComplete, setRoleCheckComplete] = useState(false);
@@ -48,7 +47,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (userData) {
       setRoleCheckComplete(true);
     }
-  }, [currentUser, requireAdmin, requireDriver, requireCustomer, userData, needsRegistration]);
+  }, [
+    currentUser,
+    requireAdmin,
+    requireDriver,
+    requireCustomer,
+    userData,
+    needsRegistration,
+  ]);
 
   // Show loading state while checking authentication
   if (loading || !roleCheckComplete) {

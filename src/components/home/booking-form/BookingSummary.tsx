@@ -85,7 +85,7 @@ const BookingSummary: React.FC<BookingSummaryProps> = ({
     }
 
     // Ensure minimum fare
-    const minFare = 20; // Minimum fare in AED
+    const minFare = 20; // Minimum fare
     if (totalFare < minFare) {
       totalFare = minFare;
     }

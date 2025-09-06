@@ -2,24 +2,16 @@ import React, { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  MapPin,
-  ArrowRight,
-  Car,
-  Clock,
-  CreditCard,
-  Loader2,
-} from "lucide-react";
+import { MapPin, ArrowRight, Car, CreditCard } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { LocationSelector } from "@/components/home/booking-form";
 import type { Location, Vehicle } from "@/types";
-import { firestore } from "@/lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
 import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
 import { googleMapsService } from "@/services/googleMapsService";
 import { transportService, vehicleService } from "@/services";
+import config from "@/config";
 
 interface FareEstimate {
   distance: number;
@@ -100,7 +92,7 @@ const SimpleMapSection = () => {
 
         // Create map using the service
         const newMap = await googleMapsService.createMap(
-          mapContainerRef.current!,
+          mapContainerRef?.current,
           {
             center: { lat: 25.2048, lng: 55.2708 }, // Dubai center
             zoom: 10,
@@ -351,15 +343,15 @@ const SimpleMapSection = () => {
 
     // Calculate average pricing
     const totalBasePrice = vehiclesForTaxiType.reduce(
-      (sum, v) => sum + (v.basePrice || 0),
+      (sum, v) => sum + (Number(v.basePrice) || 0),
       0,
     );
     const totalPerKmPrice = vehiclesForTaxiType.reduce(
-      (sum, v) => sum + (v.perKmPrice || 0),
+      (sum, v) => sum + (Number(v.perKmPrice) || 0),
       0,
     );
     const totalperHourPrice = vehiclesForTaxiType.reduce(
-      (sum, v) => sum + (v.perHourPrice || 0),
+      (sum, v) => sum + (Number(v.perHourPrice) || 0),
       0,
     );
 
@@ -458,7 +450,7 @@ const SimpleMapSection = () => {
         // Calculate total fare (base + distance only)
         let totalFare = baseFare + distanceFare;
 
-        // Apply minimum fare if needed (assuming 20 AED minimum fare)
+        // Apply minimum fare if needed (assuming 20 minimum fare)
         const minFare = 20;
         if (totalFare < minFare) {
           totalFare = minFare;
@@ -471,7 +463,7 @@ const SimpleMapSection = () => {
           distance: distanceKm,
           duration: durationMinutes * 60, // Convert to seconds for consistency
           price: roundedFare,
-          currency: "AED",
+          currency: config.currency,
           breakdown: {
             baseFare: baseFare,
             distanceFare: distanceFare,

@@ -29,7 +29,7 @@ export const initializeRecaptcha = async (
     if (window.recaptchaVerifier) {
       try {
         window.recaptchaVerifier.clear();
-      } catch (e) {
+      } catch (_) {
         // Ignore clear errors
       }
       window.recaptchaVerifier = null;
@@ -38,7 +38,7 @@ export const initializeRecaptcha = async (
     // Create new verifier with proper configuration
     window.recaptchaVerifier = new RecaptchaVerifier(auth, elementId, {
       size: "invisible",
-      callback: (response: any) => {},
+      callback: (_response: any) => {},
       "expired-callback": () => {
         window.recaptchaVerifier = null;
       },

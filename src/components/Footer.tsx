@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
-import { useTranslation } from "@/contexts/TranslationContext";
 import {
   MapPin,
   Phone,
@@ -16,7 +15,6 @@ import {
 import config from "@/config";
 
 const Footer = () => {
-  const { translate } = useTranslation();
   const currentYear = new Date().getFullYear();
   const [expandedLocation, setExpandedLocation] = useState<string | null>(null);
 

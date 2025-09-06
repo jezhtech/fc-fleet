@@ -10,7 +10,6 @@ import {
   Bell,
   Menu,
   Home,
-  MapPin,
   DollarSign,
   Map,
   CreditCard,
@@ -32,7 +31,7 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { userData, loading, isAdmin, isDriver, userRole } = useAuth();
+  const { userData, loading, isAdmin, isDriver } = useAuth();
 
   // Function to handle logout
   const handleLogout = async () => {
@@ -56,41 +55,6 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
       navigate("/login");
     }
   }, [loading, userData, isAdmin, isDriver, userType, navigate]);
-
-  // Get user initials for avatar
-  const getUserInitials = () => {
-    if (!userData) return userType === "admin" ? "A" : "D";
-
-    if (userData.firstName) {
-      const nameParts = userData.firstName.split(" ");
-      if (nameParts.length >= 2) {
-        return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
-      }
-      return userData.firstName.substring(0, 2).toUpperCase();
-    }
-
-    const firstInitial = userData.firstName ? userData.firstName.charAt(0) : "";
-    const lastInitial = userData.lastName ? userData.lastName.charAt(0) : "";
-
-    return (firstInitial + lastInitial).toUpperCase();
-  };
-
-  // Get user display name
-  const getUserDisplayName = () => {
-    if (!userData) return "";
-
-    if (userData.firstName) {
-      return userData.firstName;
-    }
-
-    return `${userData.firstName || ""} ${userData.lastName || ""}`.trim();
-  };
-
-  // Get user email
-  const getUserEmail = () => {
-    if (!userData) return "";
-    return userData.email || "";
-  };
 
   const navigation =
     userType === "admin"

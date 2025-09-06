@@ -1,6 +1,5 @@
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import type {
-  ApiResponse,
   PaymentRequest,
   PaymentResponse,
   PaymentStatusResponse,
@@ -20,12 +19,12 @@ class PaymentService {
    * Initialize payment
    */
   async initializePayment(
-    paymentData: PaymentRequest
+    paymentData: PaymentRequest,
   ): Promise<PaymentResponse> {
     try {
       const response = await apiClient.post<PaymentResponse["data"]>(
         API_ENDPOINTS.PAYMENT.INITIATE,
-        paymentData
+        paymentData,
       );
 
       if (response.success && response.data) {
@@ -56,12 +55,12 @@ class PaymentService {
    */
   async handlePaymentResponse(
     encResp: string,
-    orderId: string
+    orderId: string,
   ): Promise<PaymentStatusResponse> {
     try {
       const response = await apiClient.post<PaymentStatusResponse["data"]>(
         API_ENDPOINTS.PAYMENT.PROCESS,
-        { encResp, orderId }
+        { encResp, orderId },
       );
 
       if (response.success && response.data) {
@@ -92,12 +91,12 @@ class PaymentService {
    */
   async handlePaymentSuccess(
     encResp: string,
-    orderId: string
+    orderId: string,
   ): Promise<PaymentStatusResponse> {
     try {
       const response = await apiClient.post<PaymentStatusResponse["data"]>(
         `${API_ENDPOINTS.PAYMENT.PROCESS}/success`,
-        { encResp, orderId }
+        { encResp, orderId },
       );
 
       if (response.success && response.data) {
@@ -128,12 +127,12 @@ class PaymentService {
    */
   async handlePaymentCancel(
     encResp: string,
-    orderId: string
+    orderId: string,
   ): Promise<PaymentStatusResponse> {
     try {
       const response = await apiClient.post<PaymentStatusResponse["data"]>(
         `${API_ENDPOINTS.PAYMENT.PROCESS}/cancel`,
-        { encResp, orderId }
+        { encResp, orderId },
       );
 
       if (response.success && response.data) {
@@ -165,7 +164,7 @@ class PaymentService {
   async getPaymentHistory(): Promise<PaymentHistoryResponse> {
     try {
       const response = await apiClient.get<PaymentHistoryResponse["data"]>(
-        API_ENDPOINTS.PAYMENT.HISTORY
+        API_ENDPOINTS.PAYMENT.HISTORY,
       );
 
       if (response.success && response.data) {
@@ -195,12 +194,12 @@ class PaymentService {
    * Process CCAvenue payment
    */
   async processCCAvenuePayment(
-    paymentData: PaymentRequest
+    paymentData: PaymentRequest,
   ): Promise<{ success: boolean; paymentUrl?: string; error?: string }> {
     try {
       const response = await apiClient.post<{ paymentUrl: string }>(
         `${API_ENDPOINTS.PAYMENT.INITIATE}/ccavenue`,
-        paymentData
+        paymentData,
       );
 
       if (response.success && response.data?.paymentUrl) {
@@ -229,12 +228,12 @@ class PaymentService {
   async processCCAvenueResponse(
     encResp: string,
     orderId: string,
-    isSuccess: boolean = true
+    isSuccess: boolean = true,
   ): Promise<PaymentStatusResponse> {
     try {
       const response = await apiClient.post<PaymentStatusResponse["data"]>(
         `${API_ENDPOINTS.PAYMENT.PROCESS}/ccavenue`,
-        { encResp, orderId, isSuccess }
+        { encResp, orderId, isSuccess },
       );
 
       if (response.success && response.data) {
@@ -310,7 +309,7 @@ class PaymentService {
     }
 
     // Validate phone format (basic validation)
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    const phoneRegex = /^\+?[1-9]\d{0,15}$/;
     if (data.customerPhone && !phoneRegex.test(data.customerPhone)) {
       errors.push("Invalid phone number format");
     }
@@ -323,10 +322,7 @@ class PaymentService {
 
   async paymentWithCash(data: { orderId: string; amount: number }) {
     try {
-      await apiClient.post<void>(
-        API_ENDPOINTS.PAYMENT.CASH,
-        data
-      );
+      await apiClient.post<void>(API_ENDPOINTS.PAYMENT.CASH, data);
     } catch (error) {
       console.error("Payment response handling error:", error);
       return {

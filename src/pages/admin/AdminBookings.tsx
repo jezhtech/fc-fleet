@@ -33,19 +33,12 @@ import {
   Search,
   Filter,
   Eye,
-  Edit,
-  Trash2,
   Calendar as CalendarIcon,
-  Clock,
   User,
   Car,
   MapPin,
   CheckCircle,
   X,
-  UserCheck,
-  Download,
-  FileText,
-  ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { bookingService } from "@/services/bookingService";
@@ -54,6 +47,7 @@ import type {
   BookingFilters,
   BookingWithRelations,
 } from "@/types";
+import config from "@/config";
 
 const AdminBookings = () => {
   const [bookings, setBookings] = useState<BookingWithRelations[]>([]);
@@ -112,13 +106,6 @@ const AdminBookings = () => {
     }));
   };
 
-  const handleFilterChange = (key: keyof BookingFilters, value: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
   const clearFilters = () => {
     setFilters({});
     setSearchQuery("");
@@ -158,7 +145,7 @@ const AdminBookings = () => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-AE", {
       style: "currency",
-      currency: "AED",
+      currency: config.currency,
     }).format(amount);
   };
 

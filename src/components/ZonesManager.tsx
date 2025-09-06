@@ -22,16 +22,12 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Zone, FareRule } from "@/types";
+import { Zone } from "@/types";
 import { zonesService } from "@/services/zonesService";
 import * as turf from "@turf/turf";
 import ZoneMapEditor from "./SimpleZoneRenderer";
 
-interface ZonesManagerProps {
-  fareRules: FareRule[];
-}
-
-const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
+const ZonesManager = () => {
   const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -164,7 +160,7 @@ const ZonesManager = ({ fareRules }: ZonesManagerProps) => {
 
       if (zoneToSave.id && zoneToSave.id !== "new") {
         const { id, ...dataToUpdate } = zoneToSave;
-        const response = await zonesService.update(id!, dataToUpdate);
+        const response = await zonesService.update(id, dataToUpdate);
         if (response.success && response.data) {
           toast.success("Zone updated successfully");
           setZones(

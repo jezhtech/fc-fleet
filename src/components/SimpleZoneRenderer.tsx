@@ -15,7 +15,6 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
   onPolygonComplete,
   isDrawing,
 }) => {
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
@@ -41,7 +40,7 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
         libraries: ["drawing"],
       });
 
-      const newMap = await googleMapsService.createMap(mapContainer.current!, {
+      const newMap = await googleMapsService.createMap(mapContainer?.current, {
         center: { lat: 25.2048, lng: 55.2708 }, // Dubai center
         zoom: 10,
         mapTypeId: "roadmap",
@@ -105,11 +104,8 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
           }
         },
       );
-
-      setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load map");
-      setLoading(false);
     }
   };
 

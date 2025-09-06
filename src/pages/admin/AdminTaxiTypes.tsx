@@ -136,7 +136,7 @@ const AdminTaxiTypes = () => {
 
         if (response.success) {
           // Update local state
-          savedTaxiType = response.data!;
+          savedTaxiType = response?.data;
           setTaxiTypes(
             taxiTypes.map((taxi) =>
               taxi.id === currentTaxiType.id ? savedTaxiType : taxi,
@@ -159,7 +159,7 @@ const AdminTaxiTypes = () => {
 
         if (response.success) {
           // Update local state with the new ID from backend
-          savedTaxiType = response.data!;
+          savedTaxiType = response?.data;
           setTaxiTypes([...taxiTypes, savedTaxiType]);
 
           toast.success("Taxi type added successfully");

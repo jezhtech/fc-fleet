@@ -31,7 +31,6 @@ const AdminUsers = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("all");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{
     id: string;
@@ -63,7 +62,7 @@ const AdminUsers = () => {
         );
 
         setUsers(usersData);
-        filterUsers(usersData, searchTerm, activeTab);
+        filterUsers(usersData, searchTerm, "all");
 
         toast.success(`Loaded ${usersData.length} users`);
       } else {
@@ -78,7 +77,7 @@ const AdminUsers = () => {
   };
 
   // Filter users based on search term and active tab
-  const filterUsers = (allUsers: User[], search: string, tab: string) => {
+  const filterUsers = (allUsers: User[], search: string, _tab: string) => {
     let filtered = allUsers;
 
     // Filter by search term
@@ -100,13 +99,7 @@ const AdminUsers = () => {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    filterUsers(users, value, activeTab);
-  };
-
-  // Handle tab change
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    filterUsers(users, searchTerm, value);
+    filterUsers(users, value, "all");
   };
 
   // Open delete confirmation dialog
@@ -358,7 +351,7 @@ const AdminUsers = () => {
                       </td>
                     </tr>
                   ) : filteredUsers.length > 0 ? (
-                    filteredUsers.map((user, index) => (
+                    filteredUsers.map((user) => (
                       <tr key={user.id} className="border-b">
                         <td className="p-4 font-medium">
                           {user.firstName} {user.lastName}

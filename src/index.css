@@ -116,3 +116,16 @@
         @apply transition-all hover:shadow-lg hover:-translate-y-1;
     }
 }
+
+.swiper-pagination-custom .swiper-pagination-bullet {
+    width: 12px;
+    height: 12px;
+    background-color: #d1d5db; /* gray-300 */
+    opacity: 1;
+    transition: all 0.2s ease-in-out;
+}
+
+.swiper-pagination-custom .swiper-pagination-bullet-active {
+    background-color: hsl(var(--primary));
+    transform: scale(1.2);
+}

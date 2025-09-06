@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { format, isSameDay, addMinutes } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +57,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
       const parsedMinutes = parseInt(minutesStr, 10);
 
       // Determine if AM or PM
-      let newPeriod: "AM" | "PM" = parsedHours >= 12 ? "PM" : "AM";
+      const newPeriod: "AM" | "PM" = parsedHours >= 12 ? "PM" : "AM";
 
       // Convert 24-hour format to 12-hour format
       if (parsedHours > 12) {

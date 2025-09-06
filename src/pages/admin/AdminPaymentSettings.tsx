@@ -11,22 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormDescription,
-  FormMessage,
-} from "@/components/ui/form";
+
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   CreditCard,
   DollarSign,
   CheckCircle,
-  AlertCircle,
   CreditCard as CCIcon,
   Loader2,
 } from "lucide-react";

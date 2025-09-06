@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from "react";
 import {
   Select,
   SelectContent,
@@ -34,41 +34,44 @@ const countryCodes: CountryCode[] = [
 
 // Auto-detect country code from phone number
 export const detectCountryCode = (phoneNumber: string): string => {
-  // Only detect country code if phone number starts with '+' 
-  if (!phoneNumber.startsWith('+')) return '+971'; // Default to UAE
-  
+  // Only detect country code if phone number starts with '+'
+  if (!phoneNumber.startsWith("+")) return "+971"; // Default to UAE
+
   // Extract the digits after the plus sign
   const numberWithoutPlus = phoneNumber.substring(1);
-  
+
   // Check for different country codes
-  if (numberWithoutPlus.startsWith('971')) return '+971';
-  if (numberWithoutPlus.startsWith('91')) return '+91';
-  if (numberWithoutPlus.startsWith('1')) return '+1';
-  if (numberWithoutPlus.startsWith('44')) return '+44';
-  if (numberWithoutPlus.startsWith('966')) return '+966';
-  if (numberWithoutPlus.startsWith('974')) return '+974';
-  if (numberWithoutPlus.startsWith('965')) return '+965';
-  if (numberWithoutPlus.startsWith('968')) return '+968';
-  if (numberWithoutPlus.startsWith('973')) return '+973';
-  
+  if (numberWithoutPlus.startsWith("971")) return "+971";
+  if (numberWithoutPlus.startsWith("91")) return "+91";
+  if (numberWithoutPlus.startsWith("1")) return "+1";
+  if (numberWithoutPlus.startsWith("44")) return "+44";
+  if (numberWithoutPlus.startsWith("966")) return "+966";
+  if (numberWithoutPlus.startsWith("974")) return "+974";
+  if (numberWithoutPlus.startsWith("965")) return "+965";
+  if (numberWithoutPlus.startsWith("968")) return "+968";
+  if (numberWithoutPlus.startsWith("973")) return "+973";
+
   // Default to UAE
-  return '+971';
+  return "+971";
 };
 
-const CountryCodeSelect: React.FC<CountryCodeSelectProps> = ({ 
-  value, 
+const CountryCodeSelect: React.FC<CountryCodeSelectProps> = ({
+  value,
   onChange,
-  onCountryChange
+  onCountryChange,
 }) => {
   // Find current country based on dial code
   const findCountryByDialCode = (dialCode: string): CountryCode => {
-    return countryCodes.find(country => country.dial_code === dialCode) || countryCodes[0];
+    return (
+      countryCodes.find((country) => country.dial_code === dialCode) ||
+      countryCodes[0]
+    );
   };
-  
+
   // Handle country change
   const handleCountryChange = (dialCode: string) => {
     onChange(dialCode);
-    
+
     if (onCountryChange) {
       onCountryChange(findCountryByDialCode(dialCode));
     }
@@ -93,4 +96,4 @@ const CountryCodeSelect: React.FC<CountryCodeSelectProps> = ({
   );
 };
 
-export default CountryCodeSelect; 
+export default CountryCodeSelect;

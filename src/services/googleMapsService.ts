@@ -115,7 +115,7 @@ class GoogleMapsService {
   }
 
   private async performInitialization(
-    options: GoogleMapsServiceOptions
+    options: GoogleMapsServiceOptions,
   ): Promise<void> {
     try {
       this.loader = new Loader({
@@ -137,7 +137,7 @@ class GoogleMapsService {
 
   public async createMap(
     container: HTMLElement,
-    options: Partial<google.maps.MapOptions> = {}
+    options: Partial<google.maps.MapOptions> = {},
   ): Promise<google.maps.Map> {
     if (!this.google) {
       throw new Error("Google Maps not initialized");
@@ -177,7 +177,7 @@ class GoogleMapsService {
       radius?: number;
       types?: string[];
       limit?: number;
-    } = {}
+    } = {},
   ): Promise<PlaceResult[]> {
     if (!this.isInitialized) {
       throw new Error("Google Maps not initialized");
@@ -209,7 +209,7 @@ class GoogleMapsService {
 
       const response = await this.makePlacesApiRequest(
         "/places:searchText",
-        searchRequest
+        searchRequest,
       );
 
       if (response.places) {
@@ -266,7 +266,7 @@ class GoogleMapsService {
       radius?: number;
       types?: string[];
       limit?: number;
-    } = {}
+    } = {},
   ): Promise<PlaceResult[]> {
     if (!this.isInitialized) {
       throw new Error("Google Maps not initialized");
@@ -293,7 +293,7 @@ class GoogleMapsService {
 
       const response = await this.makePlacesApiRequest(
         "/places:searchNearby",
-        searchRequest
+        searchRequest,
       );
 
       if (response.places) {
@@ -309,7 +309,7 @@ class GoogleMapsService {
 
   private async makePlacesApiRequest(
     endpoint: string,
-    data?: any
+    data?: any,
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: HeadersInit = {
@@ -344,7 +344,7 @@ class GoogleMapsService {
       const errorText = await response.text();
       console.error("Places API error response:", errorText);
       throw new Error(
-        `Places API error: ${response.status} ${response.statusText} - ${errorText}`
+        `Places API error: ${response.status} ${response.statusText} - ${errorText}`,
       );
     }
 
@@ -379,7 +379,7 @@ class GoogleMapsService {
 
   public createMarker(
     position: google.maps.LatLngLiteral,
-    options: Partial<google.maps.MarkerOptions> = {}
+    options: Partial<google.maps.MarkerOptions> = {},
   ): google.maps.Marker {
     if (!this.google) {
       throw new Error("Google Maps not initialized");
@@ -403,7 +403,7 @@ class GoogleMapsService {
     options: {
       mode?: google.maps.TravelMode;
       avoid?: google.maps.TravelMode[];
-    } = {}
+    } = {},
   ): Promise<google.maps.DirectionsResult | null> {
     if (!this.google) {
       throw new Error("Google Maps not initialized");
@@ -411,7 +411,7 @@ class GoogleMapsService {
 
     const directionsService = new this.google.maps.DirectionsService();
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _) => {
       const request: google.maps.DirectionsRequest = {
         origin,
         destination,
@@ -422,10 +422,10 @@ class GoogleMapsService {
 
       if (options.avoid) {
         request.avoidHighways = options.avoid.includes(
-          google.maps.TravelMode.DRIVING
+          google.maps.TravelMode.DRIVING,
         );
         request.avoidTolls = options.avoid.includes(
-          google.maps.TravelMode.DRIVING
+          google.maps.TravelMode.DRIVING,
         );
       }
 

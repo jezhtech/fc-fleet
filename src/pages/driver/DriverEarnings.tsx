@@ -19,6 +19,7 @@ import { Calendar } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { userService } from "@/services";
+import config from "@/config";
 
 // Sample earnings data
 const weeklyData = [
@@ -123,7 +124,7 @@ const DriverEarnings = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              AED {(driverData?.earnings || 0).toFixed(2)}
+              {(driverData?.earnings || 0).toFixed(2)} {config.currency}
             </div>
             <p className="text-xs text-green-600 flex items-center">
               <span>↑</span> 8% from yesterday

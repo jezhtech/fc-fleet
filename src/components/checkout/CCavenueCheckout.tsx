@@ -13,9 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PaymentRequest } from "@/types";
+import config from "@/config";
 
 interface CCavenueCheckoutProps {
   orderId: string;
@@ -38,7 +37,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<"ccavenue" | "cash">(
     "ccavenue",
   );
-  const [paymentData, setPaymentData] = useState<PaymentRequest>({
+  const paymentData = {
     orderId,
     amount,
     customerName,
@@ -57,7 +56,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
     deliveryZip: "",
     deliveryCountry: "AE", // UAE
     deliveryTel: customerPhone,
-  });
+  };
 
   // Check if user is authenticated
   useEffect(() => {
@@ -130,7 +129,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
       const result = await initiateCCavenuePayment({
         orderId: paymentData.orderId,
         amount: paymentData.amount,
-        currency: "AED", // Default to AED for UAE
+        currency: config.currency,
         customerData: {
           name: paymentData.customerName,
           email: paymentData.customerEmail,
@@ -221,7 +220,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
                 <div className="flex justify-between">
                   <span>Amount:</span>
                   <span className="font-bold text-green-600">
-                    AED {amount.toFixed(2)}
+                    {amount.toFixed(2)} {config.currency}
                   </span>
                 </div>
               </div>
@@ -348,7 +347,7 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
                     >
                       <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
                     </svg>
-                    Pay AED {amount.toFixed(2)} via CCAvenue
+                    Pay {config.currency} {amount.toFixed(2)} via CCAvenue
                   </div>
                 )}
               </Button>

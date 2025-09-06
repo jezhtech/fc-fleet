@@ -21,7 +21,6 @@ const InvoiceGenerator: React.FC<InvoiceProps> = ({
 }) => {
   const invoiceRef = React.useRef<HTMLDivElement>(null);
   const [logoLoaded, setLogoLoaded] = useState(false);
-  const [logoUrl, setLogoUrl] = useState("");
   const [generating, setGenerating] = useState(false);
 
   // Format booking ID as FC/YYYY/MM/0001
@@ -55,7 +54,6 @@ const InvoiceGenerator: React.FC<InvoiceProps> = ({
     // Create an Image object to test if the logo can be loaded
     const img = new Image();
     img.onload = () => {
-      setLogoUrl(localLogoUrl);
       setLogoLoaded(true);
     };
     img.onerror = () => {
@@ -64,14 +62,9 @@ const InvoiceGenerator: React.FC<InvoiceProps> = ({
         "/lovable-uploads/dbb328b3-31d8-4aa9-b1b1-3a081c9757d8.png";
       const fallbackImg = new Image();
       fallbackImg.onload = () => {
-        setLogoUrl(fallbackLogo);
         setLogoLoaded(true);
       };
       fallbackImg.onerror = () => {
-        // Final fallback to data URI
-        setLogoUrl(
-          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAAA8CAYAAACEhkNqAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAVvSURBVHgB7Z1fSFNfHMe/23SbuukwralRNskRlJBEKoWBD0HQH8iXIKKXeuqhHuyPENFLD/UQIz0Ehr1UIL1UUPZSD7MaREpUFJnNNVeaTjfdZm7bvWf3/u5lOvc7Z7rL9vmAeM7vnt3juN/7Pb/f73zPcTWCcuzs7KDRHH4YxvjA2XzKMdvyRD19R8+f7oeXL/BKbLdnYmP6XUPHKNDRcnCeUPr7HvbQw7qVE5L0u9VmQeeTJ0kdZFIuTLz+JLb79+9DT89FHD7chPHxccnDOvvYLXvKEg9lONmC+v3gxBl5yRsUU0dJaANF/UY6+zVbLNgkWvI4n3NdRzDx7qf0PjVJ/UZlJf78mZYeC+GK+i3XLycnB8XFxboI5XQ686qqqrJv376NS45Rgj9JQjnLSuFx+3D8bDF+fPuNoqJ8+P0BvBicQHFRPjZjT4+rqiqxTe29vT2vz+eLUXG5nE6nU3o8OztLRfS9R48eSUnFJVlEZ0nF5vEgYLeFnsbGqrKBnh7fEFJpZWFhQfWJwLlw4QK8Xi92Ub+7vr5edQNUZEcphIf6X6EvNoZ1JdEJJSemTAHbG9jY9Idtcud/v5+Q2qSTkETisTY2NvKvXbtGBYrm5mZqPtTZqT4k/ZPLQNbKZrNh36FDfJVKLGrlUoKr/r+hxaKOPT09GBkZQSLl5eWoq6tT/YSUlpYGzp07t1xTUyO56R07doyP8/LyEl+dypqamuJqbNzd3d0YGpJOKj61HnZ0LD6QTEKGkM70RZpZRAqh7e1t6O1DJgURK4hWxfNcvHix5OKHDx8Qj9PppPKDmzabjZ9rZGSEP5RisVgQwNjY2HZhYWG0zhQOh/kcq6qq+MgKBoPw+/18VKWzaxKJQUaKxHbo0CF4PB7+Bc/OzvKRJRAI8JFDVqe0tJR/6aurq/wcfr+fjyxpSIw8a8lmiMZfVCpJcrkqQaQzVLuicvr0aTx79gzj4+MJAytOmkUEZ3JyMrC+vs5HF3K5qeCJYXFycoI/JeL95HI7OzvR2tpqk8dJubm5mJ+fR01NDZqamrjLIkLhcJBbZKHJP3ToEL/X5ORkfsjCMx6LxcLtJbSVkJAYUbOvqqqiMjc3V6pZbWxsxHp7e3Hr1i3cvHkTZ86c4aUt5qQkZ1EU+dzn9/lx/8F9PqccGRlBQ0MDnjx5grGxMWmWYzb8/tB/f0tLy3/e5KKmpmb5/PnzCZn13LlzmJqakvQ7c+YMbt++jVu3bqGtrQ2XL1/G0NAQL6Wx2hZjampKnLsEpqenB9rb22G1WpPKUK2trdKVHBgYwL1793hNLWpukMc+dOiQaGJ+fp5f2YyWOQ4fPgz2fpwHDx6gubmZj3+Ly+XCw4cPeRLGxsb4qBYbOvh8vkBZWRmfQqyvr/OJNlH7JF29ejX67rKyMj4tYQmnYyqrkQxVVVW4fPkyn+h3dXXxZxAZmJmZ4SOr7dFtikbWH2aCQMUUFb29vRgdHeUJY9XrFKsWiYhVILW/oESw2qLhbN2+fZsXeZOZI7Kp0/Xr15OaZ7I6mLAo0QbEUJGYmPf09GA/KCRZQ9YKRZhvfDaR9UIRJFYUJ3IxJu2FIuIqsFRcMdVbEKFaR+JKsrTrq9ZCMbUXihBDWDFYZSLdqqkViyWhYbHCcjYLRbw6cjAlRk/V2JdWLJYwB1SrUMRLrRMTozcGZE27UARrWLDS/8uXL/n+1JCW16eEGcFmYEJihliqLgZmXC5JaLZQPDs7y2tcVB5ihVVWAVfal+wLSqj2+jd5jdD9CJmEMjdUrfVvrTDmGwzRW5kghVKhTJOhFcYYYf4HYFABbQ7Guw4AAAAASUVORK5CYII=",
-        );
         setLogoLoaded(true);
       };
       fallbackImg.src = fallbackLogo;

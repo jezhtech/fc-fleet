@@ -17,60 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { firestore } from "@/lib/firebase";
 import { useState, useEffect } from "react";
-
-// Sample ride data
-const rides = [
-  {
-    id: "RIDE-1001",
-    user: "John Doe",
-    pickup: "123 Main St, New York",
-    dropoff: "JFK Airport, Terminal 4",
-    date: new Date(2025, 5, 15, 9, 30),
-    status: "completed",
-    amount: "$78.50",
-    rating: 5,
-  },
-  {
-    id: "RIDE-1002",
-    user: "Jane Smith",
-    pickup: "456 Park Ave, New York",
-    dropoff: "Grand Central Terminal",
-    date: new Date(2025, 5, 15, 11, 45),
-    status: "completed",
-    amount: "$45.75",
-    rating: 4,
-  },
-  {
-    id: "RIDE-1003",
-    user: "Robert Brown",
-    pickup: "789 Broadway, New York",
-    dropoff: "Newark Airport, Terminal C",
-    date: new Date(2025, 5, 16, 14, 15),
-    status: "in_progress",
-    amount: "$92.75",
-    rating: null,
-  },
-  {
-    id: "RIDE-1004",
-    user: "Emily Davis",
-    pickup: "555 5th Ave, New York",
-    dropoff: "LaGuardia Airport, Terminal B",
-    date: new Date(2025, 5, 18, 11, 45),
-    status: "scheduled",
-    amount: "$65.25",
-    rating: null,
-  },
-  {
-    id: "RIDE-1005",
-    user: "Sarah Taylor",
-    pickup: "888 Broadway, New York",
-    dropoff: "JFK Airport, Terminal 8",
-    date: new Date(2025, 5, 17, 16, 30),
-    status: "cancelled",
-    amount: "$0.00",
-    rating: null,
-  },
-];
+import config from "@/config";
 
 const DriverRides = () => {
   const { currentUser } = useAuth();
@@ -289,7 +236,7 @@ const DriverRides = () => {
                               </div>
                             </td>
                             <td className="p-4 font-medium">
-                              AED {ride.amount || "0.00"}
+                              {ride.amount || "0.00"} {config.currency}
                             </td>
                             <td className="p-4">
                               <Badge
@@ -386,7 +333,8 @@ const DriverRides = () => {
                                         Amount
                                       </p>
                                       <p className="text-xl font-bold">
-                                        AED {ride.amount || "0.00"}
+                                        {ride.amount || "0.00"}{" "}
+                                        {config.currency}
                                       </p>
                                     </div>
 

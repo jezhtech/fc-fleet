@@ -1,6 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/public/Index";
 import Login from "./pages/public/Login";
@@ -35,7 +34,6 @@ import BookingStatus from "./pages/public/BookingStatus";
 import EmergencyFallback from "./pages/public/EmergencyFallback";
 import HourlyRental from "./pages/public/HourlyRental";
 
-import FirebaseExample from "./components/FirebaseExample";
 import { AuthProvider } from "./contexts/AuthContext";
 import TranslationProvider from "./contexts/TranslationContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -43,8 +41,6 @@ import React, { Component, ErrorInfo } from "react";
 import DriverStartRide from "./pages/driver/DriverStartRide";
 import { ThemeProvider } from "next-themes";
 import { APP_TYPE } from "./config";
-
-const queryClient = new QueryClient();
 
 // Error boundary component to handle application errors gracefully
 class ErrorBoundary extends Component<
@@ -99,99 +95,94 @@ class ErrorBoundary extends Component<
 const App = () => {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TranslationProvider>
-            <TooltipProvider>
-              <Toaster />
-              <ThemeProvider
-                defaultTheme={APP_TYPE}
-                themes={["fleet", "booba"]}
-                attribute="class"
-              >
-                <BrowserRouter>
-                  <Routes>
-                    {/* Fallback Route (will be shown if other components fail) */}
-                    <Route path="/fallback" element={<EmergencyFallback />} />
+      <AuthProvider>
+        <TranslationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <ThemeProvider
+              defaultTheme={APP_TYPE}
+              themes={["fleet", "booba"]}
+              attribute="class"
+            >
+              <BrowserRouter>
+                <Routes>
+                  {/* Fallback Route (will be shown if other components fail) */}
+                  <Route path="/fallback" element={<EmergencyFallback />} />
 
-                    {/* Public Routes */}
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/faq" element={<FAQ />} />
-                    <Route path="/terms" element={<TermsAndConditions />} />
-                    <Route path="/privacy" element={<PrivacyPolicy />} />
-                    <Route path="/book-chauffeur" element={<BookChauffeur />} />
-                    <Route path="/booking-status" element={<BookingStatus />} />
-                    <Route path="/hourly-rental" element={<HourlyRental />} />
+                  {/* Public Routes */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/faq" element={<FAQ />} />
+                  <Route path="/terms" element={<TermsAndConditions />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/book-chauffeur" element={<BookChauffeur />} />
+                  <Route path="/booking-status" element={<BookingStatus />} />
+                  <Route path="/hourly-rental" element={<HourlyRental />} />
 
-                    {/* User Routes */}
-                    <Route path="/user" element={<ProtectedRoute />}>
-                      <Route path="my-account" element={<MyAccount />} />
-                      <Route path="my-bookings" element={<MyBookings />} />
-                      <Route
-                        path="book-chauffeur"
-                        element={<BookChauffeur />}
-                      />
-                    </Route>
+                  {/* User Routes */}
+                  <Route path="/user" element={<ProtectedRoute />}>
+                    <Route path="my-account" element={<MyAccount />} />
+                    <Route path="my-bookings" element={<MyBookings />} />
+                    <Route path="book-chauffeur" element={<BookChauffeur />} />
+                  </Route>
 
-                    {/* Admin Routes */}
+                  {/* Admin Routes */}
+                  <Route
+                    path="/admin"
+                    element={<ProtectedRoute requireAdmin={true} />}
+                  >
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="users" element={<AdminUsers />} />
+                    <Route path="drivers" element={<AdminDrivers />} />
+                    <Route path="taxi-types" element={<AdminTaxiTypes />} />
                     <Route
-                      path="/admin"
-                      element={<ProtectedRoute requireAdmin={true} />}
-                    >
-                      <Route index element={<AdminDashboard />} />
-                      <Route path="users" element={<AdminUsers />} />
-                      <Route path="drivers" element={<AdminDrivers />} />
-                      <Route path="taxi-types" element={<AdminTaxiTypes />} />
-                      <Route
-                        path="vehicle-types"
-                        element={<AdminVehicleTypes />}
-                      />
-                      <Route
-                        path="fare-settings"
-                        element={<AdminFareSettings />}
-                      />
-                      <Route path="geofencing" element={<AdminGeofencing />} />
-                      <Route path="bookings" element={<AdminBookings />} />
-                      <Route
-                        path="payment-settings"
-                        element={<AdminPaymentSettings />}
-                      />
-                      <Route path="settings" element={<AdminSettings />} />
-                    </Route>
-
-                    {/* Driver Routes */}
+                      path="vehicle-types"
+                      element={<AdminVehicleTypes />}
+                    />
                     <Route
-                      path="/driver"
-                      element={<ProtectedRoute requireDriver={true} />}
-                    >
-                      {/* Protected Driver Routes */}
-                      <Route index element={<DriverDashboard />} />
-                      <Route path="welcome" element={<DriverWelcome />} />
-                      <Route path="profile" element={<DriverProfile />} />
-                      <Route path="rides" element={<DriverRides />} />
-                      <Route
-                        path="start-ride/:rideId"
-                        element={<DriverStartRide />}
-                      />
-                      <Route path="earnings" element={<DriverEarnings />} />
-                      <Route
-                        path="bank-details"
-                        element={<DriverBankDetails />}
-                      />
-                      <Route path="settings" element={<DriverSettings />} />
-                    </Route>
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </ThemeProvider>
-            </TooltipProvider>
-          </TranslationProvider>
-        </AuthProvider>
-      </QueryClientProvider>
+                      path="fare-settings"
+                      element={<AdminFareSettings />}
+                    />
+                    <Route path="geofencing" element={<AdminGeofencing />} />
+                    <Route path="bookings" element={<AdminBookings />} />
+                    <Route
+                      path="payment-settings"
+                      element={<AdminPaymentSettings />}
+                    />
+                    <Route path="settings" element={<AdminSettings />} />
+                  </Route>
+
+                  {/* Driver Routes */}
+                  <Route
+                    path="/driver"
+                    element={<ProtectedRoute requireDriver={true} />}
+                  >
+                    {/* Protected Driver Routes */}
+                    <Route index element={<DriverDashboard />} />
+                    <Route path="welcome" element={<DriverWelcome />} />
+                    <Route path="profile" element={<DriverProfile />} />
+                    <Route path="rides" element={<DriverRides />} />
+                    <Route
+                      path="start-ride/:rideId"
+                      element={<DriverStartRide />}
+                    />
+                    <Route path="earnings" element={<DriverEarnings />} />
+                    <Route
+                      path="bank-details"
+                      element={<DriverBankDetails />}
+                    />
+                    <Route path="settings" element={<DriverSettings />} />
+                  </Route>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </ThemeProvider>
+          </TooltipProvider>
+        </TranslationProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 };

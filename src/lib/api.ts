@@ -1,4 +1,3 @@
-import { toast } from "sonner";
 import type { ApiResponse } from "@/types";
 
 // API Configuration

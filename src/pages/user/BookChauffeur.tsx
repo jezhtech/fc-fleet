@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { bookingService, BookingWithRelations } from "@/services";
+import config from "@/config";
 
 const BookChauffeur = () => {
   const [searchParams] = useSearchParams();
@@ -308,9 +309,9 @@ const BookChauffeur = () => {
                     <p className="text-green-700 text-sm">
                       Amount due:{" "}
                       <strong>
-                        AED{" "}
                         {parseFloat(bookingData.amount.toString()).toFixed(2) ||
-                          "0.00"}
+                          "0.00"}{" "}
+                        {config.currency}
                       </strong>{" "}
                       - Please have exact change ready when your driver arrives.
                     </p>
@@ -341,9 +342,9 @@ const BookChauffeur = () => {
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Total Amount</p>
                   <p className="text-2xl font-bold text-primary">
-                    AED{" "}
                     {parseFloat(bookingData.amount.toString())?.toFixed(2) ||
-                      "0.00"}
+                      "0.00"}{" "}
+                    {config.currency}
                   </p>
                 </div>
               </div>

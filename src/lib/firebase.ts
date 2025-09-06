@@ -21,29 +21,23 @@ const firebaseConfig = {
 };
 
 // Initialize empty services to guarantee they're always defined
-let app: FirebaseApp;
-let auth: Auth;
-let firestore: Firestore;
-let database: Database;
-let storage: FirebaseStorage;
-let firebaseInitialized = false;
-let firebaseError: string | null = null;
 
-app = initializeApp(firebaseConfig);
+const firebaseError: string | null = null;
+
+const app: FirebaseApp = initializeApp(firebaseConfig);
 
 // Initialize services
-auth = getAuth(app);
-firestore = getFirestore(app);
-database = getDatabase(app);
-storage = getStorage(app);
+const auth: Auth = getAuth(app);
+const firestore: Firestore = getFirestore(app);
+const database: Database = getDatabase(app);
+const storage: FirebaseStorage = getStorage(app);
 
 // Initialize analytics in browser environment
 if (typeof window !== "undefined") {
   try {
-    const analytics = getAnalytics(app);
+    getAnalytics(app);
   } catch (analyticsError) {
     console.warn("Firebase Analytics initialization error:", analyticsError);
-    // Analytics failure shouldn't prevent the app from working
   }
 }
 

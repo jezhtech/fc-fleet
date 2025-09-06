@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import {
   Star,
   Users,
@@ -22,6 +21,7 @@ import {
   userService,
   UserWithDriverDetail,
 } from "@/services";
+import config from "@/config";
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
@@ -68,47 +68,6 @@ const DriverDashboard = () => {
             "Error fetching from API, falling back to Firestore:",
             apiError,
           );
-
-          // Fallback to direct Firestore calls
-          const driverRef = doc(firestore, "drivers", currentUser.uid);
-          const driverSnap = await getDoc(driverRef);
-
-          if (driverSnap.exists()) {
-            const driver = {
-              id: driverSnap.id,
-              ...driverSnap.data(),
-            } as DriverData;
-            setDriverData(driver);
-
-            // Update stats
-            setStats((prev) => ({
-              ...prev,
-              totalRides: driver.rides || 0,
-              rating: driver.rating || 0,
-              earnings: driver.earnings || 0,
-            }));
-
-            // Fetch vehicle type information
-            if (driver.vehicleTypeId) {
-              const vehicleTypeRef = doc(
-                firestore,
-                "vehicleTypes",
-                driver.vehicleTypeId,
-              );
-              const vehicleTypeSnap = await getDoc(vehicleTypeRef);
-              if (vehicleTypeSnap.exists()) {
-                const vehicleTypeData = vehicleTypeSnap.data();
-                setDriverData((prev) => {
-                  if (!prev) return null;
-                  return {
-                    ...prev,
-                    vehicleTypeName: vehicleTypeData.name || "Unknown Vehicle",
-                  };
-                });
-              }
-            }
-          } else {
-          }
         }
 
         // Fetch assigned rides (bookings where this driver is assigned)
@@ -161,18 +120,6 @@ const DriverDashboard = () => {
     });
   };
 
-  const [isOnline, setIsOnline] = React.useState(false);
-
-  const toggleStatus = () => {
-    const newStatus = !isOnline;
-    setIsOnline(newStatus);
-    toast.success(
-      newStatus
-        ? "You are now online and can receive ride requests!"
-        : "You are now offline.",
-    );
-  };
-
   return (
     <DashboardLayout userType="driver">
       {isLoading ? (
@@ -213,7 +160,7 @@ const DriverDashboard = () => {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">
-                  AED {stats.earnings.toFixed(2)}
+                  {stats.earnings.toFixed(2)} {config.currency}
                 </div>
                 <p className="text-sm text-gray-500">Total Earnings</p>
               </CardContent>
@@ -313,7 +260,7 @@ const DriverDashboard = () => {
                           </span>
                         </div>
                         <div className="text-sm font-medium">
-                          {ride.amount || "AED 0.00"}
+                          {ride.amount || "0.00"}
                         </div>
                       </div>
 

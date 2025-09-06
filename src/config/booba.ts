@@ -8,4 +8,5 @@ export default {
     "Booba Rider is a ride-hailing service that connects riders with drivers in India.",
   country: "India",
   city: "Kanyakumari",
+  currency: "Rs",
 };

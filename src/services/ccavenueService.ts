@@ -13,15 +13,12 @@ export const getCCavenueSettings = async (): Promise<{
   error?: string;
 }> => {
   try {
-    const response = await fetch(
-      `${config.apiUrl}/payment/ccavenue/settings`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetch(`${config.apiUrl}/payment/ccavenue/settings`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`Backend error: ${response.status}`);
@@ -64,16 +61,13 @@ export const saveCCavenueSettings = async (settings: {
   mode: string;
 }): Promise<{ success: boolean; error?: string }> => {
   try {
-    const response = await fetch(
-      `${config.apiUrl}/payment/ccavenue/settings`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(settings),
-      }
-    );
+    const response = await fetch(`${config.apiUrl}/payment/ccavenue/settings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(settings),
+    });
 
     if (!response.ok) {
       throw new Error(`Backend error: ${response.status}`);
@@ -223,7 +217,6 @@ export const initiateCCavenuePayment = async (paymentData: {
 export const processCCavenueResponse = async (
   encryptedResponse: string,
   orderId: string,
-  isSuccess: boolean = true
 ): Promise<{
   success: boolean;
   data?: {
@@ -289,7 +282,7 @@ export const processCCavenueResponse = async (
 
     if (!responseData.success) {
       throw new Error(
-        responseData.error || "Failed to process payment response"
+        responseData.error || "Failed to process payment response",
       );
     }
 

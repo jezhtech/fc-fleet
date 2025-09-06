@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  BookingForm,
   FareRule,
   FareRuleWithRelations,
   Location,
@@ -13,7 +12,6 @@ import {
   Vehicle,
 } from "@/types";
 import { transportService, vehicleService, bookingService } from "@/services";
-import { generateBookingId, getNextBookingCount } from "@/utils/booking";
 import { Clock, AlertTriangle } from "lucide-react";
 import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
 import LocationSelector from "./LocationSelector";
@@ -108,20 +106,6 @@ const BookTaxiForm = () => {
     }
   }, [step, selectedTaxiType]);
 
-  const fetchFareRules = async () => {
-    setLoading((prev) => ({ ...prev, fareRules: true }));
-    try {
-      const fareRulesResponse = await fareRulesService.list();
-      const fareRulesData = fareRulesResponse.data;
-      console.log(fareRulesData);
-      setFareRules(fareRulesData);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    } finally {
-      setLoading((prev) => ({ ...prev, fareRules: false }));
-    }
-  };
-
   const fetchTransportTypes = async () => {
     setLoading((prev) => ({ ...prev, transportTypes: true }));
     try {
@@ -159,6 +143,7 @@ const BookTaxiForm = () => {
 
     for (const rule of fareRules) {
       const applicableZones = rule.zones;
+      console.log(applicableZones);
       for (const zone of applicableZones) {
         const isInside = isPointInPolygon(zone.coordinates, {
           lat: selectedPickupLocation.coordinates.latitude,
@@ -286,7 +271,7 @@ const BookTaxiForm = () => {
       selectedVehicle.basePrice + distanceKm * selectedVehicle.perKmPrice;
 
     // Ensure minimum fare
-    const minFare = 5; // Minimum fare in AED
+    const minFare = 5; // Minimum fare
     if (totalFare < minFare) {
       totalFare = minFare;
     }

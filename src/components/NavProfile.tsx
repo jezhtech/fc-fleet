@@ -37,7 +37,7 @@ export const NavProfile = ({
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const { translate } = useTranslation();
-  const { isDriver, isAdmin, userRole } = useAuth();
+  const { isDriver, isAdmin } = useAuth();
 
   const handleLogout = async () => {
     try {

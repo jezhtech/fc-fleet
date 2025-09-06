@@ -17,6 +17,7 @@ import { PlusCircle, Edit2, Trash2, DollarSign, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { FareRule } from "@/types";
 import { fareRulesService } from "@/services/fareRulesService";
+import config from "@/config";
 
 interface TaxiType {
   id: string;
@@ -151,7 +152,7 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
         if (response.success && response.data) {
           // Update local state
           setFareRules(
-            fareRules.map((rule) => (rule.id === id ? response.data! : rule)),
+            fareRules.map((rule) => (rule.id === id ? response.data : rule)),
           );
           toast.success("Fare rule updated successfully");
         } else {
@@ -165,7 +166,7 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
 
         if (response.success && response.data) {
           // Update local state
-          setFareRules([...fareRules, response.data!]);
+          setFareRules([...fareRules, response.data]);
           toast.success("Fare rule added successfully");
         } else {
           throw new Error(response.error || "Failed to add fare rule");
@@ -277,22 +278,22 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div>Base Price:</div>
                     <div className="font-medium">
-                      ${rule.basePrice.toFixed(2)}
+                      {rule.basePrice.toFixed(2)} {config.currency}
                     </div>
 
                     <div>Per KM Price:</div>
                     <div className="font-medium">
-                      ${rule.perKmPrice.toFixed(2)}
+                      {rule.perKmPrice.toFixed(2)} {config.currency}
                     </div>
 
                     <div>Per Hour Price:</div>
                     <div className="font-medium">
-                      ${rule.perHourPrice.toFixed(2)}
+                      {rule.perHourPrice.toFixed(2)} {config.currency}
                     </div>
 
                     <div>Minimum Fare:</div>
                     <div className="font-medium">
-                      ${rule.minFare.toFixed(2)}
+                      {rule.minFare.toFixed(2)} {config.currency}
                     </div>
 
                     <div>Surge Multiplier:</div>
@@ -398,7 +399,9 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="basePrice">Base Price ($)</Label>
+                <Label htmlFor="basePrice">
+                  Base Price ({config.currency})
+                </Label>
                 <Input
                   id="basePrice"
                   type="number"
@@ -415,7 +418,9 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="perKmPrice">Per KM Price ($)</Label>
+                <Label htmlFor="perKmPrice">
+                  Per KM Price ({config.currency})
+                </Label>
                 <Input
                   id="perKmPrice"
                   type="number"
@@ -435,7 +440,9 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="perHourPrice">Per Hour Price ($)</Label>
+                <Label htmlFor="perHourPrice">
+                  Per Hour Price ({config.currency})
+                </Label>
                 <Input
                   id="perHourPrice"
                   type="number"
@@ -455,7 +462,9 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="minFare">Minimum Fare ($)</Label>
+                <Label htmlFor="minFare">
+                  Minimum Fare ({config.currency})
+                </Label>
                 <Input
                   id="minFare"
                   type="number"
@@ -518,14 +527,14 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
                   <div key={type.id} className="flex items-center space-x-2">
                     <input
                       type="checkbox"
-                      id={`taxiType-${type.id}`}
+                      id={`taxiType-{type.id}`}
                       checked={(currentFareRule?.taxiTypeIds || []).includes(
                         type.id,
                       )}
                       onChange={() => handleTaxiTypeChange(type.id)}
                       className="rounded"
                     />
-                    <label htmlFor={`taxiType-${type.id}`} className="text-sm">
+                    <label htmlFor={`taxiType-{type.id}`} className="text-sm">
                       {type.emoji} {type.name}
                     </label>
                   </div>
@@ -540,14 +549,14 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
                   <div key={zone.id} className="flex items-center space-x-2">
                     <input
                       type="checkbox"
-                      id={`zone-${zone.id}`}
+                      id={`zone-{zone.id}`}
                       checked={(
                         currentFareRule?.applicableZoneIds || []
                       ).includes(zone.id)}
                       onChange={() => handleZoneChange(zone.id)}
                       className="rounded"
                     />
-                    <label htmlFor={`zone-${zone.id}`} className="text-sm">
+                    <label htmlFor={`zone-{zone.id}`} className="text-sm">
                       {zone.name}
                     </label>
                   </div>

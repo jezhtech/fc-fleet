@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,6 @@ import CountryCodeSelect, {
   detectCountryCode,
 } from "@/components/CountryCodeSelect";
 import { sendOTP, verifyOTP } from "@/lib/authUtils";
-import { useAuth } from "@/contexts/AuthContext";
 import { RecaptchaVerifier } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
@@ -32,7 +31,6 @@ type UserData = {
 };
 
 const Register = () => {
-  const navigate = useNavigate();
   const location = useLocation();
 
   // State for user data

@@ -24,6 +24,7 @@ import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
 import { googleMapsService } from "@/services/googleMapsService";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { firestore } from "@/lib/firebase";
+import config from "@/config";
 
 // Ride status types
 type RideStatus =
@@ -132,7 +133,7 @@ const DriverStartRide = () => {
   const fetchRideDetails = async () => {
     try {
       setLoading(true);
-      const response = await getBookingDetails(rideId!);
+      const response = await getBookingDetails(rideId);
 
       if (response.success) {
         const data = response.data;
@@ -892,7 +893,7 @@ const DriverStartRide = () => {
                 <div className="pt-2 border-t">
                   <p className="text-sm text-gray-500">Fare</p>
                   <p className="text-xl font-bold text-primary">
-                    AED {rideDetails.fare}
+                    {rideDetails.fare} {config.currency}
                   </p>
                 </div>
               </CardContent>

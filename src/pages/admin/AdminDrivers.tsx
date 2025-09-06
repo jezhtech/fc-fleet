@@ -5,7 +5,6 @@ import { userService } from "@/services/userService";
 import { transportService } from "@/services/transportService";
 import { vehicleService } from "@/services/vehicleService";
 import type {
-  User,
   DriverDetails,
   Vehicle,
   Transport,
@@ -47,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import config from "@/config";
 
 const AdminDrivers = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -468,7 +468,9 @@ const AdminDrivers = () => {
                               </div>
                             </td>
                             <td className="p-4">{0}</td>
-                            <td className="p-4">AED {0}</td>
+                            <td className="p-4">
+                              {0} {config.currency}
+                            </td>
                             <td className="p-4">
                               <Badge
                                 className={`
@@ -870,7 +872,9 @@ const AdminDrivers = () => {
 
                 <div className="text-center">
                   <p className="text-sm text-gray-500">Earnings</p>
-                  <p className="font-medium mt-1">AED {0}</p>
+                  <p className="font-medium mt-1">
+                    {0} {config.currency}
+                  </p>
                 </div>
               </div>
 

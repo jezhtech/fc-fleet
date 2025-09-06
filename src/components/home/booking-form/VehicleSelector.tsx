@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import React, { useEffect } from "react";
 import { Loader2, Image as ImageIcon, Users, Briefcase } from "lucide-react";
 import { Vehicle, Location } from "@/types";
+import config from "@/config";
 
 interface VehicleSelectorProps {
   vehicles: Vehicle[];
@@ -20,18 +20,12 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
   pickupLocation,
   dropoffLocation,
 }) => {
-  // Track active image index for each vehicle
-  const [activeImageIndex, setActiveImageIndex] = useState<
-    Record<string, number>
-  >({});
-
   // Initialize active image indices when vehicles change
   useEffect(() => {
     const initialIndices: Record<string, number> = {};
     vehicles.forEach((vehicle) => {
       initialIndices[vehicle.id] = 0;
     });
-    setActiveImageIndex(initialIndices);
   }, [vehicles]);
 
   // Helper function to calculate estimated price
@@ -68,7 +62,7 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
       vehicle.perKmPrice * estimatedMinutes;
 
     // Ensure minimum fare
-    const minFare = 5; // Minimum fare in AED
+    const minFare = 5; // Minimum fare
     if (totalPrice < minFare) {
       totalPrice = minFare;
     }
@@ -179,7 +173,7 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
                 <p className="text-xl font-bold text-gray-900">
                   {getEstimatedPrice(car)}
                 </p>
-                <p className="text-xs text-gray-500">AED</p>
+                <p className="text-xs text-gray-500">{config.currency}</p>
               </div>
             </div>
           </div>

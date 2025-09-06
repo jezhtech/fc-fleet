@@ -23,8 +23,8 @@ import {
 } from "recharts";
 import { formatCurrency } from "@/utils/currency";
 import CurrencyNotice from "@/components/CurrencyNotice";
-import { adminService, bookingService, userService } from "@/services";
 import type { User, BookingWithRelations, UserWithDriverDetail } from "@/types";
+import { bookingService, userService } from "@/services";
 
 // Combined interface for recent bookings with user info
 
@@ -124,9 +124,6 @@ const AdminDashboard = () => {
         })
         .slice(0, 5);
 
-      // Calculate total users (excluding drivers)
-      const totalUsers = fetchedUsers;
-
       setStats({
         totalBookings,
         totalRevenue,
@@ -161,9 +158,8 @@ const AdminDashboard = () => {
       case "yesterday":
         start.setDate(start.getDate() - 1);
         start.setHours(0, 0, 0, 0);
-        const endYesterday = new Date(start);
-        endYesterday.setHours(23, 59, 59, 999);
-        return { start, end: endYesterday };
+        start.setHours(23, 59, 59, 999);
+        return { start, end: start };
       case "7days":
         start.setDate(start.getDate() - 7);
         start.setHours(0, 0, 0, 0);
@@ -185,7 +181,7 @@ const AdminDashboard = () => {
 
   // Prepare chart data based on selected date range - memoized to prevent unnecessary recalculations
   const chartData = useMemo(() => {
-    const { start, end } = getDateRange(dateRange);
+    const { start } = getDateRange(dateRange);
     const data = [];
 
     if (dateRange === "today" || dateRange === "yesterday") {

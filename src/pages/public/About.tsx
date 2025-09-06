@@ -1,7 +1,7 @@
 import React from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Info, Award, Clock, Shield, Users, Star } from "lucide-react";
+import { Info, Award, Clock, Users, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import Meta from "@/components/Meta";
 

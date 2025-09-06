@@ -12,7 +12,7 @@ import { useState, useEffect } from "react";
 import { userService } from "@/services";
 
 const DriverProfile = () => {
-  const { currentUser, userData } = useAuth();
+  const { currentUser } = useAuth();
   const [driverData, setDriverData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);

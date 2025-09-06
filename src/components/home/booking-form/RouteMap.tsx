@@ -20,10 +20,9 @@ const RouteMap: React.FC<RouteMapProps> = ({
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<{ [key: string]: google.maps.Marker }>({});
   const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(
-    null
+    null,
   );
   const isMapReady = useRef(false);
-  const [markersAdded, setMarkersAdded] = useState(false);
 
   // Get token from the hook
   const { token, isInitialized, error: tokenError } = useGoogleMapsToken();
@@ -46,18 +45,14 @@ const RouteMap: React.FC<RouteMapProps> = ({
 
       const directionsResult = await googleMapsService.getDirections(
         { lat: pickup.coordinates.latitude, lng: pickup.coordinates.longitude },
-        { lat: dropoff.coordinates.latitude, lng: dropoff.coordinates.longitude }
+        {
+          lat: dropoff.coordinates.latitude,
+          lng: dropoff.coordinates.longitude,
+        },
       );
 
       if (directionsResult && directionsRenderer.current) {
         directionsRenderer.current.setDirections(directionsResult);
-
-        // Get route distance and duration
-        const route = directionsResult.routes[0];
-        if (route && route.legs[0]) {
-          const distance = route.legs[0].distance?.text || "Unknown";
-          const duration = route.legs[0].duration?.text || "Unknown";
-        }
       } else {
         console.warn("No routes found between locations");
       }
@@ -79,8 +74,14 @@ const RouteMap: React.FC<RouteMapProps> = ({
       // Create a simple polyline between the two points
       new google.maps.Polyline({
         path: [
-          { lat: pickup.coordinates.latitude, lng: pickup.coordinates.longitude },
-          { lat: dropoff.coordinates.latitude, lng: dropoff.coordinates.longitude },
+          {
+            lat: pickup.coordinates.latitude,
+            lng: pickup.coordinates.longitude,
+          },
+          {
+            lat: dropoff.coordinates.latitude,
+            lng: dropoff.coordinates.longitude,
+          },
         ],
         geodesic: true,
         strokeColor: "#FF0000",
@@ -119,11 +120,11 @@ const RouteMap: React.FC<RouteMapProps> = ({
         // Create map using the service
 
         const newMap = await googleMapsService.createMap(
-          mapContainer.current!,
+          mapContainer?.current,
           {
             center: { lat: 25.2048, lng: 55.2708 }, // Dubai center
             zoom: 10,
-          }
+          },
         );
 
         map.current = newMap;
@@ -160,7 +161,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
         setError(
           error instanceof Error
             ? error.message
-            : "Unknown map initialization error"
+            : "Unknown map initialization error",
         );
         setLoading(false);
       }
@@ -194,7 +195,10 @@ const RouteMap: React.FC<RouteMapProps> = ({
     // Add pickup marker
     if (pickupLocation) {
       const pickupMarker = googleMapsService.createMarker(
-        { lat: pickupLocation.coordinates.latitude, lng: pickupLocation.coordinates.longitude },
+        {
+          lat: pickupLocation.coordinates.latitude,
+          lng: pickupLocation.coordinates.longitude,
+        },
         {
           map: map.current,
           icon: {
@@ -210,7 +214,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
             anchor: new google.maps.Point(20, 20),
           },
           title: `Pickup: ${pickupLocation.name}`,
-        }
+        },
       );
 
       markers.current["pickup"] = pickupMarker;
@@ -223,7 +227,10 @@ const RouteMap: React.FC<RouteMapProps> = ({
     // Add dropoff marker
     if (dropoffLocation) {
       const dropoffMarker = googleMapsService.createMarker(
-        { lat: dropoffLocation.coordinates.latitude, lng: dropoffLocation.coordinates.longitude },
+        {
+          lat: dropoffLocation.coordinates.latitude,
+          lng: dropoffLocation.coordinates.longitude,
+        },
         {
           map: map.current,
           icon: {
@@ -239,7 +246,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
             anchor: new google.maps.Point(20, 20),
           },
           title: `Dropoff: ${dropoffLocation.name}`,
-        }
+        },
       );
 
       markers.current["dropoff"] = dropoffMarker;
@@ -258,8 +265,6 @@ const RouteMap: React.FC<RouteMapProps> = ({
     if (pickupLocation && dropoffLocation) {
       getDirectionsRoute(pickupLocation, dropoffLocation);
     }
-
-    setMarkersAdded(true);
   };
 
   // Update markers when locations change
@@ -280,7 +285,6 @@ const RouteMap: React.FC<RouteMapProps> = ({
     setError(null);
     setLoading(true);
     isMapReady.current = false;
-    setMarkersAdded(false);
 
     // Clear existing map
     if (map.current) {

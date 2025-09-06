@@ -22,6 +22,7 @@ import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
 import { HourlyTour, Location, Transport, Vehicle } from "@/types";
 import { bookingService, transportService, vehicleService } from "@/services";
 import { generateOrderId } from "@/lib/utils";
+import config from "@/config";
 
 // Emirates and their tour options
 const emiratesData: {
@@ -107,7 +108,6 @@ const RentCarForm = () => {
   const [transportTypes, setTransportTypes] = useState<Transport[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Available transport types that have vehicles
   const [availableTransportTypes, setAvailableTransportTypes] = useState<
@@ -116,8 +116,6 @@ const RentCarForm = () => {
 
   // Location states for map integration
   const [selectedPickupLocation, setSelectedPickupLocation] =
-    useState<Location>(undefined);
-  const [selectedDropoffLocation, setSelectedDropoffLocation] =
     useState<Location>(undefined);
 
   // Payment integration states
@@ -359,7 +357,6 @@ const RentCarForm = () => {
         vehicleId: selectedVehicle.id,
         status: "initiated" as const,
         pickupLocation: selectedPickupLocation,
-        dropoffLocation: selectedDropoffLocation,
         hourlyTour: selectedHourlyTourData,
         pickupDate: pickupDateTime,
         amount: totalAmount,
@@ -381,13 +378,6 @@ const RentCarForm = () => {
       }
     }
   };
-
-  // Function to handle receipt download
-  const handleDownloadReceipt = () => {
-    toast.success("Receipt downloaded successfully");
-    // In a real app, this would generate and download a PDF receipt
-  };
-
   // Show loading state
   if (loading) {
     return (
@@ -396,24 +386,6 @@ const RentCarForm = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-600">Loading vehicle options...</p>
         </div>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <div className="text-red-600 mb-4">
-          <p className="font-medium">Failed to load vehicle data</p>
-          <p className="text-sm">{error}</p>
-        </div>
-        <Button
-          onClick={() => window.location.reload()}
-          className="bg-primary hover:bg-primary/90"
-        >
-          Try Again
-        </Button>
       </div>
     );
   }
@@ -480,10 +452,7 @@ const RentCarForm = () => {
 
               {/* Route Map */}
               <div className="mt-2">
-                <RouteMap
-                  pickupLocation={selectedPickupLocation}
-                  dropoffLocation={selectedDropoffLocation}
-                />
+                <RouteMap pickupLocation={selectedPickupLocation} />
               </div>
             </div>
 
@@ -667,7 +636,9 @@ const RentCarForm = () => {
                         <p className="text-xl font-bold text-gray-900">
                           {getVehicleHourPrice(vehicle)}
                         </p>
-                        <p className="text-xs text-gray-500">AED</p>
+                        <p className="text-xs text-gray-500">
+                          {config.currency}
+                        </p>
                       </div>
                     </div>
                   </div>

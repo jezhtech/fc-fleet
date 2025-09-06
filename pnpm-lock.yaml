@@ -185,6 +185,9 @@ importers:
       sonner:
         specifier: ^1.5.0
         version: 1.7.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      swiper:
+        specifier: ^11.2.10
+        version: 11.2.10
       tailwind-merge:
         specifier: ^2.5.2
         version: 2.6.0
@@ -3785,6 +3788,10 @@ packages:
 
   sweepline-intersections@1.5.0:
     resolution: {integrity: sha512-AoVmx72QHpKtItPu72TzFL+kcYjd67BPLDoR0LarIk+xyaRg+pDTMFXndIEvZf9xEKnJv6JdhgRMnocoG0D3AQ==}
+
+  swiper@11.2.10:
+    resolution: {integrity: sha512-RMeVUUjTQH+6N3ckimK93oxz6Sn5la4aDlgPzB+rBrG/smPdCTicXyhxa+woIpopz+jewEloiEE3lKo1h9w2YQ==}
+    engines: {node: '>= 4.7.0'}
 
   tailwind-merge@2.6.0:
     resolution: {integrity: sha512-P+Vu1qXfzediirmHOC3xKGAYeZtPcV9g76X+xg2FD4tYgR71ewMA35Y3sCz3zhiN/dwefRpJX0yBcgwi1fXNQA==}
@@ -8500,6 +8507,8 @@ snapshots:
   sweepline-intersections@1.5.0:
     dependencies:
       tinyqueue: 2.0.3
+
+  swiper@11.2.10: {}
 
   tailwind-merge@2.6.0: {}
 

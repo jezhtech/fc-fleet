@@ -8,4 +8,5 @@ export default {
     "First Class Fleet provides premium chauffeur services across Dubai, Abu Dhabi, and the entire UAE. We specialize in airport transfers, corporate transportation, intercity travel, and hourly",
   country: "UAE",
   city: "Dubai",
+  currency: "AED",
 };

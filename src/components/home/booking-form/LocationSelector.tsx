@@ -4,7 +4,7 @@ import { MapPin, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
 import { googleMapsService, PlaceResult } from "@/services/googleMapsService";
-import {Location} from "@/types"
+import { Location } from "@/types";
 
 interface LocationSelectorProps {
   id: string;
@@ -33,7 +33,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Initialize Google Maps
-  const { token, isInitialized, error: tokenError } = useGoogleMapsToken();
+  const { token } = useGoogleMapsToken();
 
   // Handle outside clicks to close dropdown
   useEffect(() => {
@@ -77,9 +77,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         throw new Error("Google Maps not initialized");
       }
 
-      // Create UAE center location (Dubai)
-      const uaeCenter = new google.maps.LatLng(25.2048, 55.2708);
-
       // Search for places using Google Places API with UAE focus
       const places = await googleMapsService.searchPlaces(query, {
         limit: 10,
@@ -93,7 +90,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         // Remove duplicates based on place_id
         const uniqueData = enhancedData.filter(
           (item, index, self) =>
-            index === self.findIndex((t) => t.place_id === item.place_id)
+            index === self.findIndex((t) => t.place_id === item.place_id),
         );
 
         setSuggestions(uniqueData);

@@ -6,14 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText,
-  Download,
   Calendar,
   Map,
   Clock,
   Car,
   AlertTriangle,
   CheckCircle2,
-  Circle,
   User,
   Phone,
   Car as CarIcon,
@@ -679,7 +677,6 @@ const MyBookings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [useDemoData, setUseDemoData] = useState(false);
   const [showDebugTools, setShowDebugTools] = useState(false);
 
   useEffect(() => {

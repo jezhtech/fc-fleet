@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -16,17 +16,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import CountryCodeSelect, {
   detectCountryCode,
 } from "@/components/CountryCodeSelect";
-import {
-  sendOTP,
-  verifyOTP,
-  checkPhoneNumberRegistered,
-} from "@/lib/authUtils";
+import { sendOTP, verifyOTP } from "@/lib/authUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { auth } from "@/lib/firebase";
 import { RecaptchaVerifier, signOut } from "firebase/auth";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { authService } from "@/services/authService";
-import { userService } from "@/services";
 import { checkUserExists } from "@/services/userService";
 
 const Login = () => {
@@ -81,7 +76,7 @@ const Login = () => {
 
   // Handle phone number change - strip out any country code
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value;
+    const value = e.target.value;
 
     // Remove only leading plus signs, not country codes and it should accept empty
     const regex = /^[0-9]+$|^$/;
@@ -125,7 +120,7 @@ const Login = () => {
     try {
       // Create new recaptcha verifier
       if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = await new RecaptchaVerifier(
+        window.recaptchaVerifier = new RecaptchaVerifier(
           auth,
           "recaptcha-container",
           {
@@ -181,8 +176,6 @@ const Login = () => {
       return;
     }
 
-    const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/^0+/, "")}`;
-
     setVerifying(true);
     setError(null);
 
@@ -207,8 +200,8 @@ const Login = () => {
           userExists = true;
           userData = response.data;
         }
-      } catch (apiError) {
-        console.log("User not found in backend, will create new user");
+      } catch (error) {
+        console.log("User not found in backend, will create new user:", error);
       }
 
       // If user doesn't exist or is admin, create/update user data via services

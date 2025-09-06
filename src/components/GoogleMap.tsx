@@ -57,14 +57,14 @@ const GoogleMap = ({
 
         // Create map using the service
         const newMap = await googleMapsService.createMap(
-          mapContainer.current!,
+          mapContainer?.current,
           {
             center: { lat: initialCoordinates[1], lng: initialCoordinates[0] },
             zoom: initialZoom,
             mapTypeId: simpleStyle
               ? google.maps.MapTypeId.ROADMAP
               : google.maps.MapTypeId.ROADMAP,
-          }
+          },
         );
 
         map.current = newMap;
@@ -88,15 +88,18 @@ const GoogleMap = ({
         setMapError(
           error instanceof Error
             ? error.message
-            : "Unknown map initialization error"
+            : "Unknown map initialization error",
         );
 
         // Retry logic
         if (loadAttempts < 3) {
-          setTimeout(() => {
-            setLoadAttempts((prev) => prev + 1);
-            setMapError(null);
-          }, 1000 * (loadAttempts + 1));
+          setTimeout(
+            () => {
+              setLoadAttempts((prev) => prev + 1);
+              setMapError(null);
+            },
+            1000 * (loadAttempts + 1),
+          );
         }
       }
     };

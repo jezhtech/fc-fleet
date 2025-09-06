@@ -1,18 +1,14 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, Car, BookOpen, Settings, LogOut } from "lucide-react";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import BookTaxiForm from "./home/BookTaxiForm";
-import RentCarForm from "./home/RentCarForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { cn } from "@/lib/utils";

@@ -21,61 +21,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  PlusCircle,
-  Edit2,
-  Trash2,
-  Loader2,
-  Upload,
-  X,
-  Image as ImageIcon,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { PlusCircle, Edit2, Trash2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
 import { vehicleService } from "@/services/vehicleService";
 import { transportService } from "@/services/transportService";
 import { formatCurrency } from "@/utils/currency";
 import type {
   Vehicle,
-  VehicleWithTransport,
   CreateVehicleRequest,
   UpdateVehicleRequest,
   Transport,
 } from "@/types";
-
-// Local interface for display purposes
-interface VehicleTypeDisplay extends Vehicle {
-  taxiTypeId: string; // Add taxiTypeId for display purposes
-  taxiTypeName?: string; // For display purposes
-  images: string[]; // Convert imageUrl to images array for display
-  perHourPrice: number; // Add perHourPrice for display purposes
-}
+import config from "@/config";
 
 const AdminVehicleTypes = () => {
-  const { currentUser } = useAuth();
-  const [vehicleTypes, setVehicleTypes] = useState<VehicleTypeDisplay[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<Vehicle[]>([]);
   const [taxiTypes, setTaxiTypes] = useState<Transport[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [vehicleToDelete, setVehicleToDelete] =
-    useState<VehicleTypeDisplay | null>(null);
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentVehicle, setCurrentVehicle] =
-    useState<VehicleTypeDisplay | null>(null);
-
-  // For image upload
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
-  const [uploadProgress, setUploadProgress] = useState(0);
-
-  // Add state for image carousel
-  const [activeImageIndex, setActiveImageIndex] = useState<{
-    [key: string]: number;
-  }>({});
+  const [currentVehicle, setCurrentVehicle] = useState<Vehicle | null>(null);
 
   // Fetch taxi types and vehicle types using the services
   useEffect(() => {
@@ -95,23 +63,7 @@ const AdminVehicleTypes = () => {
         const vehicleResponse = await vehicleService.getAllVehicles();
         if (vehicleResponse.success) {
           const fetchedVehicleTypes = vehicleResponse.data || [];
-
-          // Convert VehicleWithTransport to VehicleTypeDisplay
-          const vehiclesWithTaxiNames: VehicleTypeDisplay[] =
-            fetchedVehicleTypes.map((vehicle: VehicleWithTransport) => {
-              const taxiType = taxiTypes.find(
-                (taxi: Transport) => taxi.id === vehicle.transportId,
-              );
-              return {
-                ...vehicle,
-                taxiTypeId: vehicle.transportId || "",
-                taxiTypeName: taxiType?.name || "Unknown",
-                images: vehicle.imageUrl ? [vehicle.imageUrl] : [], // Convert single imageUrl to images array
-                perHourPrice: vehicle.perHourPrice, // Map perHourPrice to perHourPrice for display
-              };
-            });
-
-          setVehicleTypes(vehiclesWithTaxiNames);
+          setVehicleTypes(fetchedVehicleTypes);
         } else {
           throw new Error(
             vehicleResponse.error || "Failed to fetch vehicle types",
@@ -128,30 +80,18 @@ const AdminVehicleTypes = () => {
     fetchData();
   }, []);
 
-  const handleAddEdit = (vehicle: VehicleTypeDisplay | null) => {
-    if (vehicle) {
-      // When editing, set the current images as preview URLs
-      setImagePreviewUrls(vehicle.images);
-      setImageFiles([]);
-    } else {
-      // When adding, reset the images
-      setImagePreviewUrls([]);
-      setImageFiles([]);
-    }
-
+  const handleAddEdit = (vehicle: Vehicle | null) => {
     setCurrentVehicle(
       vehicle || {
         id: "",
-        taxiTypeId: "",
+        transportId: "",
         name: "",
         description: "",
         basePrice: 0,
         perKmPrice: 0,
         perHourPrice: 0,
         capacity: 4,
-        images: [],
         imageUrl: "",
-        perHourPrice: 0,
         createdAt: "",
         updatedAt: "",
       },
@@ -160,7 +100,7 @@ const AdminVehicleTypes = () => {
     setIsDialogOpen(true);
   };
 
-  const confirmDelete = (vehicle: VehicleTypeDisplay) => {
+  const confirmDelete = (vehicle: Vehicle) => {
     setVehicleToDelete(vehicle);
     setIsDeleteDialogOpen(true);
   };
@@ -191,82 +131,24 @@ const AdminVehicleTypes = () => {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const totalImages = imageFiles.length + imagePreviewUrls.length;
-
-    // Check if adding these files would exceed the limit
-    if (totalImages + files.length > 5) {
-      toast.error("Maximum 5 images allowed");
-      return;
-    }
-
-    const newFiles = Array.from(files);
-    setImageFiles((prev) => [...prev, ...newFiles]);
-
-    // Create preview URLs for the new files
-    newFiles.forEach((file) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreviewUrls((prev) => [...prev, reader.result as string]);
+        setCurrentVehicle((curr) =>
+          curr ? { ...curr, imageUrl: reader.result as string } : null,
+        );
       };
       reader.readAsDataURL(file);
-    });
-  };
-
-  const removeImage = (index: number) => {
-    // If this is a file that's been added
-    if (index < imageFiles.length) {
-      setImageFiles((prev) => prev.filter((_, i) => i !== index));
-      setImagePreviewUrls((prev) => prev.filter((_, i) => i !== index));
     }
-    // If this is an existing image URL
-    else {
-      const urlIndex = index - imageFiles.length;
-      const newCurrentVehicle = { ...currentVehicle };
-      if (newCurrentVehicle && newCurrentVehicle.images) {
-        newCurrentVehicle.images = newCurrentVehicle.images.filter(
-          (_, i) => i !== urlIndex,
-        );
-        setCurrentVehicle(newCurrentVehicle);
-      }
-      setImagePreviewUrls((prev) => prev.filter((_, i) => i !== index));
-    }
-  };
-
-  // For now, we'll use base64 images. In production, you'd want to implement proper image upload
-  const processImages = async (): Promise<string[]> => {
-    if (imageFiles.length === 0) {
-      // If no new images were added, return the existing ones
-      return currentVehicle?.images || [];
-    }
-
-    // Convert files to base64 for demo purposes
-    // In production, you'd upload to a CDN or storage service
-    const imagePromises = imageFiles.map((file) => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          resolve(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      });
-    });
-
-    const newImageUrls = await Promise.all(imagePromises);
-
-    // Combine with existing images that weren't removed
-    const existingImages = currentVehicle?.images || [];
-    return [...existingImages, ...newImageUrls];
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentVehicle) return;
 
-    if (!currentVehicle.taxiTypeId) {
+    if (!currentVehicle.transportId) {
       toast.error("Please select a taxi type");
       return;
     }
@@ -274,9 +156,6 @@ const AdminVehicleTypes = () => {
     setIsSubmitting(true);
 
     try {
-      // Process images first
-      const imageUrls = await processImages();
-
       // Prepare vehicle data for backend API
       const vehicleData: CreateVehicleRequest | UpdateVehicleRequest = {
         name: currentVehicle.name,
@@ -285,11 +164,11 @@ const AdminVehicleTypes = () => {
         perKmPrice: currentVehicle.perKmPrice,
         perHourPrice: currentVehicle.perHourPrice, // Map back to perHourPrice
         capacity: currentVehicle.capacity,
-        imageUrl: imageUrls[0] || "", // Use first image as imageUrl for backend
-        transportId: currentVehicle.taxiTypeId,
+        imageUrl: currentVehicle.imageUrl,
+        transportId: currentVehicle.transportId,
       };
 
-      let savedVehicle: VehicleTypeDisplay;
+      let savedVehicle: Vehicle;
 
       if (currentVehicle.id) {
         // Update existing vehicle type using vehicle service
@@ -299,18 +178,11 @@ const AdminVehicleTypes = () => {
         );
 
         if (response.success) {
-          // Get the taxi type name
-          const taxiType = taxiTypes.find(
-            (taxi) => taxi.id === currentVehicle.taxiTypeId,
-          );
-
           // Update local state
           savedVehicle = {
-            ...response.data!,
-            taxiTypeId: currentVehicle.taxiTypeId,
-            taxiTypeName: taxiType?.name || "Unknown",
-            images: imageUrls,
-            perHourPrice: response.data!.perHourPrice, // Map perHourPrice to perHourPrice for display
+            ...response?.data,
+            transportId: currentVehicle.transportId,
+            perHourPrice: response?.data.perHourPrice, // Map perHourPrice to perHourPrice for display
           };
 
           setVehicleTypes(
@@ -330,18 +202,9 @@ const AdminVehicleTypes = () => {
         );
 
         if (response.success) {
-          // Get the taxi type name
-          const taxiType = taxiTypes.find(
-            (taxi) => taxi.id === currentVehicle.taxiTypeId,
-          );
-
           // Update local state with the new ID from backend
           savedVehicle = {
-            ...response.data!,
-            taxiTypeId: currentVehicle.taxiTypeId,
-            taxiTypeName: taxiType?.name || "Unknown",
-            images: imageUrls,
-            perHourPrice: response.data!.perHourPrice, // Map perHourPrice to perHourPrice for display
+            ...response?.data,
           };
 
           setVehicleTypes([...vehicleTypes, savedVehicle]);
@@ -360,54 +223,6 @@ const AdminVehicleTypes = () => {
       setIsSubmitting(false);
     }
   };
-
-  const renderImagePreviews = () => {
-    return (
-      <div className="flex flex-wrap gap-2 mt-2">
-        {imagePreviewUrls.map((url, index) => (
-          <div key={index} className="relative w-16 h-16 border rounded">
-            <img
-              src={url}
-              alt={`Preview ${index}`}
-              className="w-full h-full object-cover rounded"
-            />
-            <button
-              type="button"
-              className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5 transform translate-x-1/2 -translate-y-1/2"
-              onClick={() => removeImage(index)}
-            >
-              <X size={12} />
-            </button>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // Function to handle next image
-  const handleNextImage = (vehicleId: string, imagesLength: number) => {
-    setActiveImageIndex((prev) => ({
-      ...prev,
-      [vehicleId]: (prev[vehicleId] + 1) % imagesLength,
-    }));
-  };
-
-  // Function to handle previous image
-  const handlePrevImage = (vehicleId: string, imagesLength: number) => {
-    setActiveImageIndex((prev) => ({
-      ...prev,
-      [vehicleId]: (prev[vehicleId] - 1 + imagesLength) % imagesLength,
-    }));
-  };
-
-  // Initialize active image indices when vehicle types are loaded
-  useEffect(() => {
-    const initialIndices: { [key: string]: number } = {};
-    vehicleTypes.forEach((vehicle) => {
-      initialIndices[vehicle.id] = 0;
-    });
-    setActiveImageIndex(initialIndices);
-  }, [vehicleTypes]);
 
   return (
     <DashboardLayout userType="admin">
@@ -438,10 +253,10 @@ const AdminVehicleTypes = () => {
               <div className="space-y-2">
                 <Label htmlFor="taxiType">Taxi Type</Label>
                 <Select
-                  value={currentVehicle?.taxiTypeId || ""}
+                  value={currentVehicle?.transportId || ""}
                   onValueChange={(value) =>
                     setCurrentVehicle((curr) =>
-                      curr ? { ...curr, taxiTypeId: value } : null,
+                      curr ? { ...curr, transportId: value } : null,
                     )
                   }
                 >
@@ -456,11 +271,9 @@ const AdminVehicleTypes = () => {
                         className="px-2"
                       >
                         <div className="flex items-center">
-                          <img
-                            src={type.imageUrl}
-                            alt={type.name}
-                            className="h-8 w-12 mr-2 object-contain"
-                          />
+                          <span className="h-full w-fit mr-2 object-contain">
+                            {type.emoji}
+                          </span>
                           {type.name}
                         </div>
                       </SelectItem>
@@ -499,36 +312,11 @@ const AdminVehicleTypes = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Vehicle Images (Max 5)</Label>
-                <div className="flex items-center gap-2">
-                  <Label
-                    htmlFor="images"
-                    className="flex items-center justify-center h-16 w-16 border-2 border-dashed rounded cursor-pointer hover:bg-gray-50"
-                  >
-                    <Upload size={20} className="text-gray-400" />
-                    <span className="sr-only">Upload images</span>
-                  </Label>
-                  <Input
-                    id="images"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleImageUpload}
-                    disabled={imagePreviewUrls.length >= 5}
-                  />
-                  {renderImagePreviews()}
-                </div>
-                <p className="text-xs text-gray-500">
-                  {imagePreviewUrls.length}/5 images selected. Click + to add
-                  more.
-                </p>
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="basePrice">Base Price (AED)</Label>
+                  <Label htmlFor="basePrice">
+                    Base Price ({config.currency})
+                  </Label>
                   <Input
                     id="basePrice"
                     type="number"
@@ -546,7 +334,9 @@ const AdminVehicleTypes = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="perKmPrice">Per KM Price (AED)</Label>
+                  <Label htmlFor="perKmPrice">
+                    Per KM Price ({config.currency})
+                  </Label>
                   <Input
                     id="perKmPrice"
                     type="number"
@@ -567,7 +357,9 @@ const AdminVehicleTypes = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="perHourPrice">Per Hour Price (AED)</Label>
+                  <Label htmlFor="perHourPrice">
+                    Per Hour Price ({config.currency})
+                  </Label>
                   <Input
                     id="perHourPrice"
                     type="number"
@@ -603,6 +395,39 @@ const AdminVehicleTypes = () => {
                     required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="imageUrl">Vehicle Image</Label>
+                {currentVehicle?.imageUrl ? (
+                  <div className="relative">
+                    <img
+                      src={currentVehicle.imageUrl}
+                      alt="Vehicle"
+                      className="w-full h-32 object-contain border rounded-md"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-6 w-6"
+                      onClick={() =>
+                        setCurrentVehicle((curr) =>
+                          curr ? { ...curr, imageUrl: "" } : null,
+                        )
+                      }
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Input
+                    id="imageUrl"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+                )}
               </div>
 
               <DialogFooter className="pt-4">
@@ -687,72 +512,16 @@ const AdminVehicleTypes = () => {
             vehicleTypes.map((vehicle) => (
               <Card key={vehicle.id} className="overflow-hidden">
                 <div className="aspect-video w-full bg-gray-100 relative">
-                  {vehicle.images && vehicle.images.length > 0 ? (
-                    <>
-                      <img
-                        src={vehicle.images[activeImageIndex[vehicle.id] || 0]}
-                        alt={vehicle.name}
-                        className="w-full h-full object-cover transition-opacity duration-300"
-                      />
-
-                      {/* Image navigation buttons */}
-                      {vehicle.images.length > 1 && (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePrevImage(
-                                vehicle.id,
-                                vehicle.images.length,
-                              );
-                            }}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
-                          >
-                            <ChevronLeft size={20} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleNextImage(
-                                vehicle.id,
-                                vehicle.images.length,
-                              );
-                            }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
-                          >
-                            <ChevronRight size={20} />
-                          </button>
-
-                          {/* Image indicators */}
-                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
-                            {vehicle.images.map((_, index) => (
-                              <button
-                                key={index}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveImageIndex((prev) => ({
-                                    ...prev,
-                                    [vehicle.id]: index,
-                                  }));
-                                }}
-                                className={`w-2 h-2 rounded-full ${
-                                  index === (activeImageIndex[vehicle.id] || 0)
-                                    ? "bg-white"
-                                    : "bg-white/50"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon size={48} className="text-gray-300" />
-                    </div>
-                  )}
+                  <img
+                    src={vehicle.imageUrl}
+                    alt={vehicle.name}
+                    className="w-full h-full object-contain transition-opacity duration-300"
+                  />
                   <div className="absolute top-2 left-2 bg-white/80 backdrop-blur-sm rounded px-2 py-1 text-xs font-medium flex items-center">
-                    <span className="mr-1">{vehicle.taxiTypeName}</span>
+                    <span className="mr-1">
+                      {taxiTypes.find((t) => t.id === vehicle.transportId)
+                        ?.name || "Unknown"}
+                    </span>
                   </div>
                 </div>
                 <CardHeader className="pb-2">

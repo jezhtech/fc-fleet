@@ -1,4 +1,4 @@
-import { FareRule, Zone } from "./firebaseModels";
+import { FareRule, Zone } from "@/types";
 import * as turf from "@turf/turf";
 
 /**
@@ -23,7 +23,6 @@ export const calculateFare = (
   taxiTypeId: string,
   fareRules: FareRule[],
   zones: Zone[],
-  isNightTime = false,
   isPeakHour = false,
 ) => {
   // Create GeoJSON Point for pickup and dropoff
@@ -133,7 +132,7 @@ export const findApplicableFareRule = (
     const zoneRule = fareRules.find(
       (rule) =>
         rule.taxiTypeIds.includes(taxiTypeId) &&
-        rule.applicableZoneIds.includes(zoneId!),
+        rule.applicableZoneIds.includes(zoneId),
     );
 
     if (zoneRule) return zoneRule;
