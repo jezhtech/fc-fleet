@@ -81,7 +81,7 @@ export const NavProfile = ({
     if (userData?.firstName) {
       return `${userData.firstName} ${userData.lastName || ""}`.trim();
     }
-    return userData?.name || "User";
+    return userData?.firstName || "User";
   };
 
   // Get user role display
