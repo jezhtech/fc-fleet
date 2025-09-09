@@ -236,7 +236,7 @@ const DriverRides = () => {
                               </div>
                             </td>
                             <td className="p-4 font-medium">
-                              {ride.amount || "0.00"} {config.currency}
+                              {ride.amount || "0.00"} {config.currencySymbol}
                             </td>
                             <td className="p-4">
                               <Badge
@@ -334,7 +334,7 @@ const DriverRides = () => {
                                       </p>
                                       <p className="text-xl font-bold">
                                         {ride.amount || "0.00"}{" "}
-                                        {config.currency}
+                                        {config.currencySymbol}
                                       </p>
                                     </div>
 

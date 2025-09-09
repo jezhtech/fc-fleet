@@ -278,22 +278,22 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div>Base Price:</div>
                     <div className="font-medium">
-                      {rule.basePrice.toFixed(2)} {config.currency}
+                      {rule.basePrice.toFixed(2)} {config.currencySymbol}
                     </div>
 
                     <div>Per KM Price:</div>
                     <div className="font-medium">
-                      {rule.perKmPrice.toFixed(2)} {config.currency}
+                      {rule.perKmPrice.toFixed(2)} {config.currencySymbol}
                     </div>
 
                     <div>Per Hour Price:</div>
                     <div className="font-medium">
-                      {rule.perHourPrice.toFixed(2)} {config.currency}
+                      {rule.perHourPrice.toFixed(2)} {config.currencySymbol}
                     </div>
 
                     <div>Minimum Fare:</div>
                     <div className="font-medium">
-                      {rule.minFare.toFixed(2)} {config.currency}
+                      {rule.minFare.toFixed(2)} {config.currencySymbol}
                     </div>
 
                     <div>Surge Multiplier:</div>
@@ -400,7 +400,7 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="basePrice">
-                  Base Price ({config.currency})
+                  Base Price ({config.currencySymbol})
                 </Label>
                 <Input
                   id="basePrice"
@@ -419,7 +419,7 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="perKmPrice">
-                  Per KM Price ({config.currency})
+                  Per KM Price ({config.currencySymbol})
                 </Label>
                 <Input
                   id="perKmPrice"
@@ -441,7 +441,7 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="perHourPrice">
-                  Per Hour Price ({config.currency})
+                  Per Hour Price ({config.currencySymbol})
                 </Label>
                 <Input
                   id="perHourPrice"
@@ -463,7 +463,7 @@ const FareRulesManager = ({ taxiTypes, zones }: FareRulesManagerProps) => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="minFare">
-                  Minimum Fare ({config.currency})
+                  Minimum Fare ({config.currencySymbol})
                 </Label>
                 <Input
                   id="minFare"

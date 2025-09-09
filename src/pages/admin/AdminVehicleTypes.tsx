@@ -315,7 +315,7 @@ const AdminVehicleTypes = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="basePrice">
-                    Base Price ({config.currency})
+                    Base Price ({config.currencySymbol})
                   </Label>
                   <Input
                     id="basePrice"
@@ -335,7 +335,7 @@ const AdminVehicleTypes = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="perKmPrice">
-                    Per KM Price ({config.currency})
+                    Per KM Price ({config.currencySymbol})
                   </Label>
                   <Input
                     id="perKmPrice"
@@ -358,7 +358,7 @@ const AdminVehicleTypes = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="perHourPrice">
-                    Per Hour Price ({config.currency})
+                    Per Hour Price ({config.currencySymbol})
                   </Label>
                   <Input
                     id="perHourPrice"

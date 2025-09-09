@@ -173,7 +173,7 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
                 <p className="text-xl font-bold text-gray-900">
                   {getEstimatedPrice(car)}
                 </p>
-                <p className="text-xs text-gray-500">{config.currency}</p>
+                <p className="text-xs text-gray-500">{config.currencySymbol}</p>
               </div>
             </div>
           </div>

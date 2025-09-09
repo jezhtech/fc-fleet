@@ -463,7 +463,7 @@ const SimpleMapSection = () => {
           distance: distanceKm,
           duration: durationMinutes * 60, // Convert to seconds for consistency
           price: roundedFare,
-          currency: config.currency,
+          currency: config.currencySymbol,
           breakdown: {
             baseFare: baseFare,
             distanceFare: distanceFare,

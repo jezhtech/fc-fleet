@@ -145,7 +145,7 @@ const AdminBookings = () => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-AE", {
       style: "currency",
-      currency: config.currency,
+      currency: config.currencySymbol,
     }).format(amount);
   };
 

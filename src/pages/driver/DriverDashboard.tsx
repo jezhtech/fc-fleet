@@ -160,7 +160,7 @@ const DriverDashboard = () => {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">
-                  {stats.earnings.toFixed(2)} {config.currency}
+                  {stats.earnings.toFixed(2)} {config.currencySymbol}
                 </div>
                 <p className="text-sm text-gray-500">Total Earnings</p>
               </CardContent>

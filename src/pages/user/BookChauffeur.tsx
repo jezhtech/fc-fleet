@@ -311,7 +311,7 @@ const BookChauffeur = () => {
                       <strong>
                         {parseFloat(bookingData.amount.toString()).toFixed(2) ||
                           "0.00"}{" "}
-                        {config.currency}
+                        {config.currencySymbol}
                       </strong>{" "}
                       - Please have exact change ready when your driver arrives.
                     </p>
@@ -344,7 +344,7 @@ const BookChauffeur = () => {
                   <p className="text-2xl font-bold text-primary">
                     {parseFloat(bookingData.amount.toString())?.toFixed(2) ||
                       "0.00"}{" "}
-                    {config.currency}
+                    {config.currencySymbol}
                   </p>
                 </div>
               </div>

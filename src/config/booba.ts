@@ -9,4 +9,5 @@ export default {
   country: "India",
   city: "Kanyakumari",
   currency: "Rs",
+  currencySymbol: "₹",
 };

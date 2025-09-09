@@ -893,7 +893,7 @@ const DriverStartRide = () => {
                 <div className="pt-2 border-t">
                   <p className="text-sm text-gray-500">Fare</p>
                   <p className="text-xl font-bold text-primary">
-                    {rideDetails.fare} {config.currency}
+                    {rideDetails.fare} {config.currencySymbol}
                   </p>
                 </div>
               </CardContent>

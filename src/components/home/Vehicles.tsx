@@ -332,7 +332,7 @@ const Vehicles = () => {
                         <h3 className="text-xl font-bold">{vehicle.name}</h3>
                         <div className="text-lg font-bold text-primary">
                           {Number(vehicle.perHourPrice).toFixed(0)}{" "}
-                          {config.currency}/hr
+                          {config.currencySymbol}/hr
                         </div>
                       </div>
                       <p className="text-gray-600 text-sm md:text-base mb-3 line-clamp-2 flex-grow">

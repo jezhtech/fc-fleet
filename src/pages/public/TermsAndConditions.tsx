@@ -229,8 +229,8 @@ const TermsAndConditions = () => {
                     <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                       <span className="text-2xl mr-3">🇦🇪</span>
                       <span className="text-gray-700">
-                        All payments processed in UAE Dirhams ({config.currency}
-                        )
+                        All payments processed in UAE Dirhams (
+                        {config.currencySymbol})
                       </span>
                     </div>
 

@@ -9,4 +9,5 @@ export default {
   country: "UAE",
   city: "Dubai",
   currency: "AED",
+  currencySymbol: "\u200F\u062F.\u0625",
 };

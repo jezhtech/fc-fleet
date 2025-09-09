@@ -124,7 +124,7 @@ const DriverEarnings = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(driverData?.earnings || 0).toFixed(2)} {config.currency}
+              {(driverData?.earnings || 0).toFixed(2)} {config.currencySymbol}
             </div>
             <p className="text-xs text-green-600 flex items-center">
               <span>↑</span> 8% from yesterday

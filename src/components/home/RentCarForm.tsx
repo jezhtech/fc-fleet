@@ -636,7 +636,7 @@ const RentCarForm = () => {
                           {getVehicleHourPrice(vehicle)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {config.currency}
+                          {config.currencySymbol}
                         </p>
                       </div>
                     </div>

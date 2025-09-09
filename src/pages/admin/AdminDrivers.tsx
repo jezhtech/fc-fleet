@@ -469,7 +469,7 @@ const AdminDrivers = () => {
                             </td>
                             <td className="p-4">{0}</td>
                             <td className="p-4">
-                              {0} {config.currency}
+                              {0} {config.currencySymbol}
                             </td>
                             <td className="p-4">
                               <Badge
@@ -873,7 +873,7 @@ const AdminDrivers = () => {
                 <div className="text-center">
                   <p className="text-sm text-gray-500">Earnings</p>
                   <p className="font-medium mt-1">
-                    {0} {config.currency}
+                    {0} {config.currencySymbol}
                   </p>
                 </div>
               </div>

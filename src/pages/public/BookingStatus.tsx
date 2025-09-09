@@ -216,7 +216,7 @@ const BookingStatus = () => {
               <span className="text-gray-600">Amount Paid</span>
               <span className="font-medium">
                 {displayBookingDetails?.amount?.toFixed(2) || "68.00"}{" "}
-                {config.currency}
+                {config.currencySymbol}
               </span>
             </div>
 
