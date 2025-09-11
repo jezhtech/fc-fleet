@@ -19,10 +19,20 @@ import {
 } from "./booking-form";
 import { useAuth } from "@/contexts/AuthContext";
 import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
-import { HourlyTour, Location, Transport, Vehicle } from "@/types";
+import {
+  FareRule,
+  FareRuleWithRelations,
+  HourlyTour,
+  Location,
+  Transport,
+  TransportWithVehicles,
+  Vehicle,
+} from "@/types";
 import { bookingService, transportService, vehicleService } from "@/services";
 import { generateOrderId } from "@/lib/utils";
 import config from "@/config";
+import { isPointInPolygon } from "@/lib/mapUtils";
+import { fareRulesService } from "@/services/fareRulesService";
 
 // Emirates and their tour options
 const emiratesData: {
@@ -105,7 +115,9 @@ const RentCarForm = () => {
   });
 
   // Firebase data states - matching BookTaxiForm pattern
-  const [transportTypes, setTransportTypes] = useState<Transport[]>([]);
+  const [transportTypes, setTransportTypes] = useState<TransportWithVehicles[]>(
+    [],
+  );
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -162,16 +174,8 @@ const RentCarForm = () => {
   };
 
   useEffect(() => {
-    if (step === 2) {
-      fetchTransportTypes();
-    }
-  }, [step]);
-
-  useEffect(() => {
-    if (step === 3) {
-      fetchVehicles(selectedCategory);
-    }
-  }, [step, selectedCategory]);
+    fetchTransportTypes();
+  }, []);
 
   const fetchTransportTypes = async () => {
     setLoading(true);
@@ -181,6 +185,7 @@ const RentCarForm = () => {
 
       if (transportTypesData.length > 0 && !selectedCategory) {
         setSelectedCategory(transportTypesData[0].id);
+        setVehicles(transportTypesData[0].vehicles);
       }
       setTransportTypes(transportTypesData);
 
@@ -188,31 +193,6 @@ const RentCarForm = () => {
       await checkTransportTypeAvailability(transportTypesData);
     } catch (err) {
       console.error("Error fetching data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch vehicles based on selected transport type
-  const fetchVehicles = async (taxiTypeId: string) => {
-    setLoading(true);
-    try {
-      const vehicleResponse =
-        await vehicleService.getVehiclesByTransport(taxiTypeId);
-      const vehiclesData = vehicleResponse.data.map((v) => ({
-        ...v,
-        basePrice: parseFloat(v.basePrice.toString()),
-        perHourPrice: parseFloat(v.perHourPrice.toString()),
-      }));
-
-      if (vehiclesData.length > 0) {
-        setVehicles(vehiclesData);
-      } else {
-        setVehicles([]);
-      }
-    } catch (error) {
-      console.error("Error fetching vehicles:", error);
-      setVehicles([]);
     } finally {
       setLoading(false);
     }
@@ -262,6 +242,24 @@ const RentCarForm = () => {
   const handlePickupLocationSelect = (location: Location) => {
     setSelectedPickupLocation(location);
     setFormData((prev) => ({ ...prev, pickupLocation: location.name }));
+  };
+
+  // Handler for transport type selection
+  const handleTransportTypeSelect = (typeId: string) => {
+    // Only allow selection if the type is available
+    if (availableTransportTypes.includes(typeId)) {
+      setSelectedCategory(typeId);
+
+      setVehicles(
+        transportTypes
+          .find((t) => t.id === typeId)
+          .vehicles.map((v) => ({
+            ...v,
+            basePrice: parseFloat(v.basePrice.toString()),
+            perKmPrice: parseFloat(v.perKmPrice.toString()),
+          })) || [],
+      );
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -320,7 +318,6 @@ const RentCarForm = () => {
         return;
       }
 
-      await fetchVehicles(selectedCategory);
       setStep(3);
     } else if (step === 3) {
       if (!selectedCarModel) {
@@ -535,9 +532,7 @@ const RentCarForm = () => {
             <TransportTypeSelector
               transportTypes={transportTypes}
               selectedTaxiType={selectedCategory}
-              onSelect={(typeId: string) => {
-                setSelectedCategory(typeId);
-              }}
+              onSelect={handleTransportTypeSelect}
               loading={loading}
               availableTypes={availableTransportTypes}
             />

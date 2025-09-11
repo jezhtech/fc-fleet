@@ -9,6 +9,7 @@ import {
   FareRuleWithRelations,
   Location,
   Transport,
+  TransportWithVehicles,
   Vehicle,
 } from "@/types";
 import { transportService, vehicleService, bookingService } from "@/services";
@@ -66,6 +67,7 @@ const BookTaxiForm = () => {
   // Transport selections
   const [selectedTaxiType, setSelectedTaxiType] = useState("");
   const [selectedCarModel, setSelectedCarModel] = useState("");
+  const [fareRules, setFareRules] = useState<FareRuleWithRelations[]>([]);
 
   // Location data
   const [selectedPickupLocation, setSelectedPickupLocation] = useState<
@@ -76,7 +78,9 @@ const BookTaxiForm = () => {
   >(undefined);
 
   // Lists for selection components
-  const [transportTypes, setTransportTypes] = useState<Transport[]>([]);
+  const [transportTypes, setTransportTypes] = useState<TransportWithVehicles[]>(
+    [],
+  );
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
   // Available transport types that have vehicles
@@ -95,26 +99,32 @@ const BookTaxiForm = () => {
   const [orderId, setOrderId] = useState<string>("");
 
   useEffect(() => {
-    if (step === 2) {
-      fetchTransportTypes();
-    }
-  }, [step]);
+    fetchTransportTypes();
+    fetchFareRules();
+  }, []);
 
-  useEffect(() => {
-    if (step === 3) {
-      fetchVehicles(selectedTaxiType);
+  const fetchFareRules = async () => {
+    try {
+      const fareRulesResponse = await fareRulesService.list();
+      const fareRulesData = fareRulesResponse.data;
+      setFareRules(fareRulesData);
+    } catch (err) {
+      console.error("Error fetching data:", err);
     }
-  }, [step, selectedTaxiType]);
+  };
 
   const fetchTransportTypes = async () => {
     setLoading((prev) => ({ ...prev, transportTypes: true }));
+
     try {
       const transportResponse = await transportService.getAllTransports();
       const transportTypesData = transportResponse.data;
 
       if (transportTypesData.length > 0 && !selectedTaxiType) {
         setSelectedTaxiType(transportTypesData[0].id);
+        setVehicles(transportTypesData[0].vehicles);
       }
+
       setTransportTypes(transportTypesData);
 
       // Check which transport types have available vehicles
@@ -123,63 +133,6 @@ const BookTaxiForm = () => {
       console.error("Error fetching data:", err);
     } finally {
       setLoading((prev) => ({ ...prev, transportTypes: false }));
-    }
-  };
-
-  // Fetch vehicles based on selected transport type
-  const fetchVehicles = async (taxiTypeId: string) => {
-    setLoading((prev) => ({ ...prev, vehicles: true }));
-
-    let fareRules: FareRuleWithRelations[] = [];
-
-    try {
-      const response = await fareRulesService.list();
-      fareRules = response.data;
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    }
-
-    let extraFare: FareRule | undefined;
-
-    for (const rule of fareRules) {
-      const applicableZones = rule.zones;
-      for (const zone of applicableZones) {
-        const isInside = isPointInPolygon(zone.coordinates, {
-          lat: selectedPickupLocation.coordinates.latitude,
-          lng: selectedPickupLocation.coordinates.longitude,
-        });
-
-        if (isInside && rule.taxiTypes.some((type) => type.id === taxiTypeId)) {
-          extraFare = rule;
-          break;
-        }
-      }
-    }
-
-    try {
-      const vehicleResponse =
-        await vehicleService.getVehiclesByTransport(taxiTypeId);
-      const vehiclesData = vehicleResponse.data.map((v) => ({
-        ...v,
-        basePrice: parseFloat(v.basePrice.toString()),
-        perKmPrice: parseFloat(v.perKmPrice.toString()),
-      }));
-      if (vehiclesData.length > 0) {
-        if (extraFare) {
-          vehiclesData.forEach((vehicle) => {
-            vehicle.basePrice += extraFare.basePrice;
-            vehicle.perKmPrice += extraFare.perKmPrice;
-          });
-        }
-        setVehicles(vehiclesData);
-      } else {
-        setVehicles([]);
-      }
-    } catch (error) {
-      console.error("Error fetching vehicles:", error);
-      setVehicles([]);
-    } finally {
-      setLoading((prev) => ({ ...prev, vehicles: false }));
     }
   };
 
@@ -237,6 +190,40 @@ const BookTaxiForm = () => {
     // Only allow selection if the type is available
     if (availableTransportTypes.includes(typeId)) {
       setSelectedTaxiType(typeId);
+
+      let extraFare: FareRule | undefined;
+
+      for (const rule of fareRules) {
+        const applicableZones = rule.zones;
+        for (const zone of applicableZones) {
+          const isInside = isPointInPolygon(zone.coordinates, {
+            lat: selectedPickupLocation.coordinates.latitude,
+            lng: selectedPickupLocation.coordinates.longitude,
+          });
+
+          if (
+            isInside &&
+            rule.taxiTypes.some((type) => type.id === selectedTaxiType)
+          ) {
+            extraFare = rule;
+            break;
+          }
+        }
+      }
+
+      setVehicles(
+        transportTypes
+          .find((t) => t.id === typeId)
+          .vehicles.map((v) => ({
+            ...v,
+            basePrice: extraFare
+              ? parseFloat(v.basePrice.toString()) + extraFare.basePrice
+              : parseFloat(v.basePrice.toString()),
+            perKmPrice: extraFare
+              ? parseFloat(v.perKmPrice.toString()) + extraFare.perKmPrice
+              : parseFloat(v.perKmPrice.toString()),
+          })) || [],
+      );
     }
   };
 

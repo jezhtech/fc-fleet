@@ -183,17 +183,7 @@ export interface Transport {
 }
 
 export interface TransportWithVehicles extends Transport {
-  vehicles: Array<{
-    id: string;
-    name: string;
-    imageUrl: string;
-    description: string;
-    basePrice: number;
-    perKmPrice: number;
-    perHourPrice: number;
-    capacity: number;
-  }>;
-  vehicleCount: number;
+  vehicles: Vehicle[];
 }
 
 export interface TransportStats {

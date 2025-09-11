@@ -15,9 +15,12 @@ class TransportService {
    * Get all transports with optional filtering
    */
   async getAllTransports(
-    filters?: TransportFilters
-  ): Promise<ApiResponse<Transport[]>> {
-    return apiClient.get<Transport[]>(`${API_ENDPOINTS.TRANSPORTS.BASE}/all`, filters);
+    filters?: TransportFilters,
+  ): Promise<ApiResponse<TransportWithVehicles[]>> {
+    return apiClient.get<TransportWithVehicles[]>(
+      `${API_ENDPOINTS.TRANSPORTS.BASE}/all`,
+      filters,
+    );
   }
 
   /**
@@ -31,7 +34,7 @@ class TransportService {
    * Create a new transport
    */
   async createTransport(
-    data: CreateTransportRequest
+    data: CreateTransportRequest,
   ): Promise<ApiResponse<Transport>> {
     return apiClient.post<Transport>(API_ENDPOINTS.TRANSPORTS.BASE, data);
   }
@@ -41,11 +44,11 @@ class TransportService {
    */
   async updateTransport(
     id: string,
-    data: UpdateTransportRequest
+    data: UpdateTransportRequest,
   ): Promise<ApiResponse<Transport>> {
     return apiClient.put<Transport>(
       `${API_ENDPOINTS.TRANSPORTS.BASE}/${id}`,
-      data
+      data,
     );
   }
 
@@ -54,7 +57,7 @@ class TransportService {
    */
   async deleteTransport(id: string): Promise<ApiResponse<{ message: string }>> {
     return apiClient.delete<{ message: string }>(
-      `${API_ENDPOINTS.TRANSPORTS.BASE}/${id}`
+      `${API_ENDPOINTS.TRANSPORTS.BASE}/${id}`,
     );
   }
 
@@ -62,10 +65,10 @@ class TransportService {
    * Get transport with vehicles
    */
   async getTransportWithVehicles(
-    id: string
+    id: string,
   ): Promise<ApiResponse<TransportWithVehicles>> {
     return apiClient.get<TransportWithVehicles>(
-      `${API_ENDPOINTS.TRANSPORTS.WITH_VEHICLES}/${id}`
+      `${API_ENDPOINTS.TRANSPORTS.WITH_VEHICLES}/${id}`,
     );
   }
 
@@ -81,12 +84,12 @@ class TransportService {
    */
   async searchTransports(
     query: string,
-    filters?: TransportFilters
+    filters?: TransportFilters,
   ): Promise<ApiResponse<Transport[]>> {
     const searchFilters = { ...filters, search: query };
     return apiClient.get<Transport[]>(
       API_ENDPOINTS.TRANSPORTS.BASE,
-      searchFilters
+      searchFilters,
     );
   }
 
@@ -94,7 +97,7 @@ class TransportService {
    * Get transports with minimum vehicle count
    */
   async getTransportsWithMinVehicles(
-    minCount: number
+    minCount: number,
   ): Promise<ApiResponse<Transport[]>> {
     return apiClient.get<Transport[]>(API_ENDPOINTS.TRANSPORTS.BASE, {
       minVehicleCount: minCount,
@@ -114,11 +117,11 @@ class TransportService {
    * Update transport order
    */
   async updateTransportOrder(
-    transports: Array<{ id: string; order: number }>
+    transports: Array<{ id: string; order: number }>,
   ): Promise<ApiResponse<{ message: string }>> {
     return apiClient.put<{ message: string }>(
       `${API_ENDPOINTS.TRANSPORTS.BASE}/order`,
-      { transports }
+      { transports },
     );
   }
 
@@ -127,11 +130,11 @@ class TransportService {
    */
   async toggleTransportStatus(
     id: string,
-    isActive: boolean
+    isActive: boolean,
   ): Promise<ApiResponse<Transport>> {
     return apiClient.patch<Transport>(
       `${API_ENDPOINTS.TRANSPORTS.BASE}/${id}/status`,
-      { isActive }
+      { isActive },
     );
   }
 
@@ -139,7 +142,7 @@ class TransportService {
    * Get transports by popularity (based on vehicle count)
    */
   async getTransportsByPopularity(
-    limit?: number
+    limit?: number,
   ): Promise<ApiResponse<Transport[]>> {
     const params = limit
       ? { limit, sortBy: "vehicleCount", sortOrder: "desc" }

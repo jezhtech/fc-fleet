@@ -82,13 +82,9 @@ const AdminDashboard = () => {
       const fetchedUsers = usersRes.data || [];
       const fetchedDrivers = driversRes.data || [];
 
-      console.log("User: ", fetchedUsers);
-
       setAllBookings(fetchedBookings);
       setAllUsers(fetchedUsers);
       setAllDrivers(fetchedDrivers);
-
-      console.log("Bookings: ", fetchedBookings);
 
       // Calculate dashboard statistics
       const now = new Date();

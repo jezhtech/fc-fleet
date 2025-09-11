@@ -137,7 +137,6 @@ const CCavenueCheckout: React.FC<CCavenueCheckoutProps> = ({
         },
         token,
       });
-      console.log(result);
       if (result.success && result.encRequest && result.access_code) {
         // Create and submit form to CCAvenue
         submitToCCavenue(

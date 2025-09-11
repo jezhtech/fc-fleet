@@ -201,7 +201,10 @@ const Login = () => {
           userData = response.data;
         }
       } catch (error) {
-        console.log("User not found in backend, will create new user:", error);
+        console.error(
+          "User not found in backend, will create new user:",
+          error,
+        );
       }
 
       // If user doesn't exist or is admin, create/update user data via services
