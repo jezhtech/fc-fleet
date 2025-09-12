@@ -194,7 +194,10 @@ const DriverStartRide = () => {
 
     try {
       // Initialize Google Maps service
-      await googleMapsService.initialize({ apiKey: token });
+      await googleMapsService.initialize({ 
+        apiKey: token,
+        libraries: ["geometry", "drawing"] // Include drawing library for potential future use
+      });
 
       // Create map
       const map = await googleMapsService.createMap(mapContainerRef.current, {

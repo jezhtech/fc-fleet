@@ -142,12 +142,6 @@ const AdminBookings = () => {
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-AE", {
-      style: "currency",
-      currency: config.currencySymbol,
-    }).format(amount);
-  };
 
   const openDialog = (
     booking: AdminBooking,
@@ -292,7 +286,7 @@ const AdminBookings = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">
-              {formatCurrency(totalRevenue)}
+              {totalRevenue} {config.currencySymbol}
             </div>
             <p className="text-sm text-gray-500">Total Revenue</p>
           </CardContent>
@@ -469,7 +463,7 @@ const AdminBookings = () => {
                               )}
                             </td>
                             <td className="p-3 font-medium">
-                              {formatCurrency(booking.amount || 0)}
+                              {booking.amount || 0} {config.currencySymbol}
                             </td>
                             <td className="p-3">
                               <Badge
@@ -599,9 +593,7 @@ const AdminBookings = () => {
                                             Amount
                                           </p>
                                           <p className="font-medium">
-                                            {formatCurrency(
-                                              booking.paymentInfo?.amount || 0,
-                                            )}
+                                            {booking.paymentInfo?.amount || 0 }{config.currencySymbol}
                                           </p>
                                         </div>
                                         <div>
@@ -713,7 +705,7 @@ const AdminBookings = () => {
                                 formatDate(booking.createdAt)}
                             </td>
                             <td className="p-3 font-medium">
-                              {formatCurrency(booking.paymentInfo?.amount || 0)}
+                              {booking.paymentInfo?.amount || 0} {config.currencySymbol}
                             </td>
                             <td className="p-3">
                               <Badge
@@ -799,7 +791,7 @@ const AdminBookings = () => {
                                 formatDate(booking.createdAt)}
                             </td>
                             <td className="p-3 font-medium">
-                              {formatCurrency(booking.paymentInfo?.amount || 0)}
+                              {booking.paymentInfo?.amount || 0} {config.currencySymbol}
                             </td>
                             <td className="p-3">
                               <Badge

@@ -70,7 +70,10 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     try {
       // Initialize Google Maps if not already done
       if (!googleMapsService.isReady() && token) {
-        await googleMapsService.initialize({ apiKey: token });
+        await googleMapsService.initialize({ 
+          apiKey: token,
+          libraries: ["geometry", "drawing"] // Include drawing library for potential future use
+        });
       }
 
       if (!googleMapsService.isReady()) {

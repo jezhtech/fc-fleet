@@ -71,7 +71,7 @@ export const Offer: React.FC = () => {
                 <CardTitle className="text-left">{offer.title}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground text-left">
+                <p className={cn("text-left", index === 0 ? "text-gray-300" : "text-muted-foreground")}>
                   {offer.description}
                 </p>
               </CardContent>

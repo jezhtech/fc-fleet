@@ -16,6 +16,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminDrivers from "./pages/admin/AdminDrivers";
 import AdminBookings from "./pages/admin/AdminBookings";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminApplications from "./pages/admin/AdminApplications";
 import DriverDashboard from "./pages/driver/DriverDashboard";
 import DriverBankDetails from "./pages/driver/DriverBankDetails";
 import DriverProfile from "./pages/driver/DriverProfile";
@@ -150,6 +151,7 @@ const App = () => {
                     />
                     <Route path="geofencing" element={<AdminGeofencing />} />
                     <Route path="bookings" element={<AdminBookings />} />
+                    <Route path="applications" element={<AdminApplications />} />
                     <Route
                       path="payment-settings"
                       element={<AdminPaymentSettings />}

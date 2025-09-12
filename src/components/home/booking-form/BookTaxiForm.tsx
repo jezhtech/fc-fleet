@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,7 +21,12 @@ import {
   TransportWithVehicles,
   Vehicle,
 } from "@/types";
-import { transportService, vehicleService, bookingService } from "@/services";
+import {
+  transportService,
+  vehicleService,
+  bookingService,
+  userService,
+} from "@/services";
 import { Clock, AlertTriangle } from "lucide-react";
 import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
 import LocationSelector from "./LocationSelector";
@@ -23,6 +37,10 @@ import VehicleSelector from "./VehicleSelector";
 import { generateOrderId } from "@/lib/utils";
 import { fareRulesService } from "@/services/fareRulesService";
 import { isPointInPolygon } from "@/lib/mapUtils";
+import { sendOTP, verifyOTP } from "@/lib/authUtils";
+import { RecaptchaVerifier } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import CountryCodeSelect, { detectCountryCode } from "@/components/CountryCodeSelect";
 
 const BookTaxiForm = () => {
   const navigate = useNavigate();
@@ -30,6 +48,23 @@ const BookTaxiForm = () => {
 
   // Form steps state
   const [step, setStep] = useState(1);
+
+  // Authentication states
+  const [authStep, setAuthStep] = useState<
+    "phone" | "otp" | "register" | "complete"
+  >("phone");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [countryCode, setCountryCode] = useState("+971");
+  const [otp, setOtp] = useState("");
+  const [userExists, setUserExists] = useState(false);
+  const [registrationData, setRegistrationData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+  });
+  const [authLoading, setAuthLoading] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Form data states
   const [pickupDate, setPickupDate] = useState<Date | undefined>(() => {
@@ -39,7 +74,7 @@ const BookTaxiForm = () => {
     const initialDate = new Date(
       fourHoursFromNow.getFullYear(),
       fourHoursFromNow.getMonth(),
-      fourHoursFromNow.getDate(),
+      fourHoursFromNow.getDate()
     );
     return initialDate;
   });
@@ -79,7 +114,7 @@ const BookTaxiForm = () => {
 
   // Lists for selection components
   const [transportTypes, setTransportTypes] = useState<TransportWithVehicles[]>(
-    [],
+    []
   );
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
@@ -102,6 +137,245 @@ const BookTaxiForm = () => {
     fetchTransportTypes();
     fetchFareRules();
   }, []);
+
+  useEffect(() => {
+    window.recaptchaVerifier = null;
+  }, []);
+
+  // Format phone number for display and validation
+  const formatPhoneNumber = (
+    phoneNumber: string,
+    countryCode: string,
+  ): string => {
+    // Remove any non-digit characters
+    const cleanNumber = phoneNumber.replace(/\D/g, "");
+
+    // Remove leading zeros
+    const numberWithoutLeadingZeros = cleanNumber.replace(/^0+/, "");
+
+    // Combine with country code
+    return `${countryCode}${numberWithoutLeadingZeros}`;
+  };
+
+  // Handle phone number change - clean the input
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+
+    // Remove all non-digit characters except for the first character
+    value = value.replace(/[^\d]/g, "");
+
+    setPhoneNumber(value);
+    setAuthError(null);
+  };
+
+  // Authentication handlers
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phoneNumber.trim() || phoneNumber.length < 7) {
+      setAuthError("Please enter a valid phone number");
+      return;
+    }
+
+    // Format full phone number with country code
+    const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
+
+    setAuthLoading(true);
+    setAuthError(null);
+
+    try {
+      // Check if user exists using userService
+      await userService.checkUserExists(fullPhoneNumber);
+      setUserExists(true);
+
+      // Initialize reCAPTCHA only when needed
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container-auth",
+          {
+            size: "invisible",
+          },
+        );
+      }
+
+      // Send OTP
+      await sendOTP(fullPhoneNumber);
+      setAuthStep("otp");
+      toast.success("OTP sent to your phone number");
+    } catch (error: any) {
+      console.error("Error sending verification code:", error);
+
+      // Provide more specific error messages
+      let errorMessage = "Error sending verification code. Please try again.";
+
+      if (error.code === "auth/invalid-phone-number") {
+        errorMessage =
+          "Invalid phone number format. Please check your phone number.";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many attempts. Please try again later.";
+      } else if (error.code === "auth/quota-exceeded") {
+        errorMessage = "SMS quota exceeded. Please try again later.";
+      } else if (error.code === "auth/invalid-app-credential") {
+        errorMessage =
+          "reCAPTCHA configuration error. Please refresh the page and try again.";
+      } else if (error.code === "auth/captcha-check-failed") {
+        errorMessage =
+          "reCAPTCHA verification failed. Please refresh the page and try again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setAuthError(errorMessage);
+      
+      // If user doesn't exist, go to registration
+      if (!userExists) {
+        setAuthStep("register");
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleOTPSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp.trim() || otp.length < 6) {
+      setAuthError("Please enter a valid 6-digit verification code");
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthError(null);
+
+    try {
+      // Verify OTP
+      const userCredential = await verifyOTP(otp);
+
+      // Get Firebase ID token for API authentication
+      const idToken = await userCredential.getIdToken();
+
+      // Store token in localStorage for API calls
+      localStorage.setItem("firebaseToken", idToken);
+      localStorage.setItem("authToken", idToken);
+
+      if (userExists) {
+        // Login existing user
+        toast.success("Login successful!");
+      } else {
+        // Register new user
+        const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
+        
+        try {
+          const response = await userService.createUser({
+            firstName: registrationData.firstName,
+            lastName: registrationData.lastName,
+            email: registrationData.email,
+            phone: fullPhoneNumber,
+          });
+
+          if (!response.success) {
+            throw new Error(response.error || "Failed to create user account");
+          }
+
+          toast.success("Registration successful!");
+        } catch (apiError: any) {
+          console.error("Error creating user in backend:", apiError);
+          toast.success("Registration successful!");
+        }
+      }
+
+      setAuthStep("complete");
+      setShowAuthDialog(false);
+      // Refresh auth context
+      // window.location.reload();
+    } catch (error: any) {
+      console.error("Error verifying OTP:", error);
+
+      // Provide more specific error messages
+      let errorMessage = "Error verifying code. Please try again.";
+
+      if (error.code === "auth/invalid-verification-code") {
+        errorMessage = "Invalid verification code. Please check and try again.";
+      } else if (error.code === "auth/code-expired") {
+        errorMessage =
+          "Verification code has expired. Please request a new one.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setAuthError(errorMessage);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleRegistrationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !registrationData.firstName.trim() ||
+      !registrationData.lastName.trim() ||
+      !registrationData.email.trim()
+    ) {
+      setAuthError("All fields are required");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(registrationData.email)) {
+      setAuthError("Please enter a valid email address");
+      return;
+    }
+
+    // Format full phone number with country code
+    const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
+
+    setAuthLoading(true);
+    setAuthError(null);
+
+    try {
+      // Initialize reCAPTCHA only when needed
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container-auth",
+          {
+            size: "invisible",
+          },
+        );
+      }
+
+      // Send OTP for new user registration
+      await sendOTP(fullPhoneNumber);
+      setAuthStep("otp");
+      toast.success("OTP sent to your phone number");
+    } catch (error: any) {
+      console.error("Error sending verification code:", error);
+
+      // Provide more specific error messages
+      let errorMessage = "Error sending verification code. Please try again.";
+
+      if (error.code === "auth/invalid-phone-number") {
+        errorMessage =
+          "Invalid phone number format. Please check your phone number.";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many attempts. Please try again later.";
+      } else if (error.code === "auth/quota-exceeded") {
+        errorMessage = "SMS quota exceeded. Please try again later.";
+      } else if (error.code === "auth/invalid-app-credential") {
+        errorMessage =
+          "reCAPTCHA configuration error. Please refresh the page and try again.";
+      } else if (error.code === "auth/captcha-check-failed") {
+        errorMessage =
+          "reCAPTCHA verification failed. Please refresh the page and try again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setAuthError(errorMessage);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   const fetchFareRules = async () => {
     try {
@@ -222,7 +496,7 @@ const BookTaxiForm = () => {
             perKmPrice: extraFare
               ? parseFloat(v.perKmPrice.toString()) + extraFare.perKmPrice
               : parseFloat(v.perKmPrice.toString()),
-          })) || [],
+          })) || []
       );
     }
   };
@@ -249,7 +523,7 @@ const BookTaxiForm = () => {
       pickupCoords.latitude,
       pickupCoords.longitude,
       dropoffCoords.latitude,
-      dropoffCoords.longitude,
+      dropoffCoords.longitude
     );
 
     // Calculate total fare
@@ -271,7 +545,7 @@ const BookTaxiForm = () => {
     lat1: number,
     lon1: number,
     lat2: number,
-    lon2: number,
+    lon2: number
   ): number => {
     const R = 6371; // Radius of the Earth in km
     const dLat = deg2rad(lat2 - lat1);
@@ -346,8 +620,8 @@ const BookTaxiForm = () => {
     if (hoursDifference < 4) {
       toast.error(
         `Bookings must be made at least 4 hours in advance. Current time: ${now.toLocaleTimeString()}, Selected time: ${selectedDateTime.toLocaleTimeString()}, Difference: ${hoursDifference.toFixed(
-          2,
-        )} hours`,
+          2
+        )} hours`
       );
       return false;
     }
@@ -361,15 +635,7 @@ const BookTaxiForm = () => {
 
     // Check if user is authenticated
     if (!currentUser) {
-      toast.error("Please login to book a chauffeur");
-      navigate("/login", {
-        state: {
-          from: {
-            pathname: window.location.pathname,
-            search: window.location.search,
-          },
-        },
-      });
+      setShowAuthDialog(true);
       return;
     }
 
@@ -456,22 +722,6 @@ const BookTaxiForm = () => {
 
   return (
     <div className="space-y-3">
-      {/* Login notice for unauthenticated users */}
-      {!currentUser && step === 1 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-3">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-medium text-amber-800">Login Required</p>
-              <p className="text-amber-700 mt-1">
-                Please login to book a chauffeur. You'll be redirected to the
-                login page when you click "Book Chauffeur".
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {step === 1 && (
         <form onSubmit={handleSubmit}>
           <div className="space-y-3">
@@ -537,9 +787,7 @@ const BookTaxiForm = () => {
           >
             {loading.transportTypes || loading.checkingAvailability
               ? "Loading..."
-              : !currentUser
-                ? "Login to Book Chauffeur"
-                : "Book Chauffeur"}
+              : "Book Chauffeur"}
           </Button>
         </form>
       )}
@@ -652,6 +900,175 @@ const BookTaxiForm = () => {
           </div>
         </>
       )}
+
+      {/* Authentication Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Quick Authentication</DialogTitle>
+          </DialogHeader>
+
+          {authError && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+              <p className="text-sm text-red-700">{authError}</p>
+            </div>
+          )}
+
+          {authStep === "phone" && (
+            <form onSubmit={handlePhoneSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <div className="flex space-x-2">
+                  <CountryCodeSelect
+                    value={countryCode}
+                    onChange={setCountryCode}
+                  />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="50 123 4567"
+                    value={phoneNumber}
+                    onChange={handlePhoneNumberChange}
+                    disabled={authLoading}
+                    className="flex-1"
+                    maxLength={10}
+                    required
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  We'll send a verification code to this number
+                </p>
+                {phoneNumber && (
+                  <p className="text-xs text-gray-400">
+                    Full number: {formatPhoneNumber(phoneNumber, countryCode)}
+                  </p>
+                )}
+              </div>
+              
+              <div id="recaptcha-container-auth"></div>
+              
+              <Button type="submit" className="w-full" disabled={authLoading}>
+                {authLoading ? "Sending..." : "Send verification code"}
+              </Button>
+            </form>
+          )}
+
+          {authStep === "register" && (
+            <form onSubmit={handleRegistrationSubmit} className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-sm text-gray-600">
+                  We need a few details to create your account
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="First name"
+                    value={registrationData.firstName}
+                    onChange={(e) =>
+                      setRegistrationData((prev) => ({
+                        ...prev,
+                        firstName: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Last name"
+                    value={registrationData.lastName}
+                    onChange={(e) =>
+                      setRegistrationData((prev) => ({
+                        ...prev,
+                        lastName: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={registrationData.email}
+                  onChange={(e) =>
+                    setRegistrationData((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setAuthStep("phone")}
+                >
+                  Back
+                </Button>
+                <Button type="submit" className="flex-1" disabled={authLoading}>
+                  {authLoading ? "Sending OTP..." : "Send OTP"}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {authStep === "otp" && (
+            <form onSubmit={handleOTPSubmit} className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-sm text-gray-600">
+                  Enter the verification code sent to{" "}
+                  {formatPhoneNumber(phoneNumber, countryCode)}
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="otp">Verification Code</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  value={otp}
+                  onChange={(e) =>
+                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  disabled={authLoading}
+                  className="text-center text-lg tracking-widest"
+                  maxLength={6}
+                  inputMode="numeric"
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setAuthStep(userExists ? "phone" : "register")}
+                  disabled={authLoading}
+                >
+                  Back
+                </Button>
+                <Button type="submit" className="flex-1" disabled={authLoading}>
+                  {authLoading ? "Verifying..." : "Verify Code"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

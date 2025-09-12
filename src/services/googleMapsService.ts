@@ -90,6 +90,8 @@ class GoogleMapsService {
   private initializationPromise: Promise<void> | null = null;
   private apiKey: string = "";
   private baseUrl = "https://places.googleapis.com/v1";
+  private loadedLibraries: string[] = [];
+  private requestedLibraries: Set<string> = new Set();
 
   private constructor() {}
 
@@ -101,8 +103,30 @@ class GoogleMapsService {
   }
 
   public async initialize(options: GoogleMapsServiceOptions): Promise<void> {
-    if (this.isInitialized) {
+    const requiredLibraries = options.libraries || ["geometry"];
+    
+    // Add requested libraries to our set
+    requiredLibraries.forEach(lib => this.requestedLibraries.add(lib));
+    
+    // If already initialized with the same API key, check if we have all required libraries
+    if (this.isInitialized && this.apiKey === options.apiKey) {
+      const hasAllLibraries = requiredLibraries.every(lib => this.loadedLibraries.includes(lib));
+      if (hasAllLibraries) {
+        return; // Already initialized with all required libraries
+      }
+      
+      // If we need additional libraries, we can't reinitialize the loader
+      // This is a limitation of the Google Maps Loader API
+      console.warn("Google Maps already initialized. Cannot add additional libraries:", 
+        requiredLibraries.filter(lib => !this.loadedLibraries.includes(lib)));
+      console.warn("Please ensure all required libraries are loaded during the first initialization.");
       return;
+    }
+
+    // If we need to initialize with different API key or not initialized at all
+    if (this.isInitialized && this.apiKey !== options.apiKey) {
+      console.log("Reinitializing Google Maps with different API key");
+      this.reset();
     }
 
     if (this.initializationPromise) {
@@ -110,7 +134,12 @@ class GoogleMapsService {
     }
 
     this.apiKey = options.apiKey;
-    this.initializationPromise = this.performInitialization(options);
+    // Initialize with all requested libraries to avoid future conflicts
+    const allLibraries = Array.from(this.requestedLibraries);
+    this.initializationPromise = this.performInitialization({
+      ...options,
+      libraries: allLibraries
+    });
     return this.initializationPromise;
   }
 
@@ -118,16 +147,18 @@ class GoogleMapsService {
     options: GoogleMapsServiceOptions,
   ): Promise<void> {
     try {
+      const libraries = options.libraries || ["geometry"];
+      
       this.loader = new Loader({
         apiKey: options.apiKey,
         version: "weekly",
-        libraries: options.libraries || (["geometry"] as any), // Remove 'places' as we're using the new API
+        libraries: libraries as any,
         language: "en",
         region: "AE", // UAE region
       });
 
       this.google = await this.loader.load();
-
+      this.loadedLibraries = [...libraries];
       this.isInitialized = true;
     } catch (error) {
       console.error("Google Maps initialization error:", error);
@@ -458,8 +489,32 @@ class GoogleMapsService {
     return this.isInitialized && this.google !== null;
   }
 
+  public hasLibrary(library: string): boolean {
+    return this.loadedLibraries.includes(library);
+  }
+
+  public getLoadedLibraries(): string[] {
+    return [...this.loadedLibraries];
+  }
+
   public getGoogle(): typeof google | null {
     return this.google;
+  }
+
+  public reset(): void {
+    this.isInitialized = false;
+    this.initializationPromise = null;
+    this.google = null;
+    this.loader = null;
+    this.loadedLibraries = [];
+    this.requestedLibraries.clear();
+  }
+
+  private arraysEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((val, index) => val === sortedB[index]);
   }
 }
 

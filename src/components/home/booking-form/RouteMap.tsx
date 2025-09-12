@@ -113,9 +113,11 @@ const RouteMap: React.FC<RouteMapProps> = ({
           }
         }, 10000); // 10 second timeout
 
-        // Initialize Google Maps service
-
-        await googleMapsService.initialize({ apiKey: token });
+        // Initialize Google Maps service with all required libraries
+        await googleMapsService.initialize({ 
+          apiKey: token,
+          libraries: ["geometry", "drawing"] // Include drawing library for potential future use
+        });
 
         // Create map using the service
 

@@ -274,6 +274,108 @@ class AuthService {
   }
 
   /**
+   * Check if user exists by phone number
+   */
+  async checkUserExists(phone: string): Promise<ApiResponse<{ exists: boolean }>> {
+    try {
+      const response = await apiClient.post<{ exists: boolean }>(
+        "/auth/check",
+        { phone }
+      );
+      return response;
+    } catch (error) {
+      console.error("Check user exists error:", error);
+      return {
+        success: false,
+        message: "Failed to check user",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  /**
+   * Send OTP to phone number
+   */
+  async sendOTP(phone: string): Promise<ApiResponse<{ message: string }>> {
+    try {
+      const response = await apiClient.post<{ message: string }>(
+        "/auth/send-otp",
+        { phone }
+      );
+      return response;
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      return {
+        success: false,
+        message: "Failed to send OTP",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  /**
+   * Verify OTP for login
+   */
+  async verifyOTP(phone: string, otp: string): Promise<ApiResponse<AuthResponse>> {
+    try {
+      const response = await apiClient.post<AuthResponse>(
+        "/auth/verify-otp",
+        { phone, otp }
+      );
+
+      if (response.success && response.data?.token) {
+        // Store tokens in localStorage
+        this.storeTokens(response.data.token, response.data.refreshToken);
+        // Store user data
+        this.storeUserData(response.data.user);
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Verify OTP error:", error);
+      return {
+        success: false,
+        message: "Failed to verify OTP",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  /**
+   * Register with OTP
+   */
+  async registerWithOTP(data: {
+    phone: string;
+    otp: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  }): Promise<ApiResponse<AuthResponse>> {
+    try {
+      const response = await apiClient.post<AuthResponse>(
+        "/auth/register-otp",
+        data
+      );
+
+      if (response.success && response.data?.token) {
+        // Store tokens in localStorage
+        this.storeTokens(response.data.token, response.data.refreshToken);
+        // Store user data
+        this.storeUserData(response.data.user);
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Register with OTP error:", error);
+      return {
+        success: false,
+        message: "Registration failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  /**
    * Initialize authentication state
    */
   initializeAuth(): void {

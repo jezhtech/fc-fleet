@@ -16,6 +16,7 @@ import {
   Users,
   LogOut,
   AlertCircle,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -71,6 +72,7 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
           },
           { name: "Geofencing", href: "/admin/geofencing", icon: Map },
           { name: "Bookings", href: "/admin/bookings", icon: Bell },
+          { name: "Applications", href: "/admin/applications", icon: FileText },
           {
             name: "Payment Settings",
             href: "/admin/payment-settings",

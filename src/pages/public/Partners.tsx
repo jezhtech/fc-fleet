@@ -1,10 +1,13 @@
 import Vehicles from "@/components/home/Vehicles";
 import Layout from "@/components/Layout";
 import Meta from "@/components/Meta";
+import { ApplicationForm } from "@/components/partners/ApplicationForm";
 import { Checklist } from "@/components/partners/Checklist";
+import { ContactUs } from "@/components/partners/ContactUs";
 import { FAQ } from "@/components/partners/Faq";
 import { HeroSection } from "@/components/partners/HeroSection";
 import { Offer } from "@/components/partners/Offer";
+import { Start } from "@/components/partners/Start";
 import * as React from "react";
 
 const Partners: React.FC = () => {
@@ -21,7 +24,10 @@ const Partners: React.FC = () => {
       <Offer />
       <Vehicles />
       <Checklist />
+      <Start />
       <FAQ />
+      <ContactUs/>
+      <ApplicationForm/>
     </Layout>
   );
 };

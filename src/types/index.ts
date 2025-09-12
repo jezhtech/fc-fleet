@@ -416,7 +416,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   role?: "customer" | "driver" | "admin";
-  driverDetails?: Driver;
+  driverDetails?: DriverDetails;
 }
 
 export interface AdminDriver {
@@ -582,4 +582,18 @@ export interface TimePeriod {
   days: number[]; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   multiplier: number;
   isActive: boolean;
+}
+
+export interface NewApplication{
+  companyName: string;
+  email: string;
+  phone: string;
+  country: string;
+  operatingRegion: string;
+}
+
+export interface Application extends NewApplication{
+  id: string;
+  createdAt: number;
+  updatedAt: number;
 }

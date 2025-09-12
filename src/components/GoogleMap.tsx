@@ -53,7 +53,10 @@ const GoogleMap = ({
     const initializeMap = async () => {
       try {
         // Initialize Google Maps service
-        await googleMapsService.initialize({ apiKey: token });
+        await googleMapsService.initialize({ 
+          apiKey: token,
+          libraries: ["geometry", "drawing"] // Include drawing library for potential future use
+        });
 
         // Create map using the service
         const newMap = await googleMapsService.createMap(

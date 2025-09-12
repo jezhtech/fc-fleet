@@ -269,6 +269,11 @@ export const API_ENDPOINTS = {
     HISTORY: "/payment/history",
     CASH: "/payment/pay-with-cash",
   },
+
+  // Application
+  APPLICATION: {
+    BASE: "/application"
+  },
 } as const;
 
 export default apiClient;

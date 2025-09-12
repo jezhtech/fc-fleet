@@ -47,7 +47,7 @@ export const HeroSection: React.FC = () => {
           {stats.map((stat, index) => (
             <div key={index} className="py-6 md:py-0 md:px-8 flex-1">
               <p className="text-4xl font-bold text-foreground">{stat.value}</p>
-              <span className=" text-gray-500">{stat.label}</span>
+              <span className={"text-gray-500"}>{stat.label}</span>
             </div>
           ))}
         </div>
