@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -20,12 +20,15 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Zone } from "@/types";
 import { zonesService } from "@/services/zonesService";
 import * as turf from "@turf/turf";
 import ZoneMapEditor from "./SimpleZoneRenderer";
+import { setMaxIdleHTTPParsers } from "node:http";
+import { cn } from "@/lib/utils";
 
 const ZonesManager = () => {
   const [zones, setZones] = useState<Zone[]>([]);
@@ -35,6 +38,7 @@ const ZonesManager = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentZone, setCurrentZone] = useState<Zone | null>(null);
   const [zoneToDelete, setZoneToDelete] = useState<Zone | null>(null);
+  const [dialogMode, setDialogMode] = useState<"view" | "edit">("view");
 
   const fetchZones = async () => {
     try {
@@ -68,7 +72,8 @@ const ZonesManager = () => {
     fetchZones();
   }, []);
 
-  const handleAddEdit = (zone: Zone | null) => {
+  const handleAddEdit = (zone: Zone | null, mode: "view" | "edit" = "edit") => {
+    setDialogMode(mode);
     if (zone) {
       setCurrentZone(zone);
     } else {
@@ -112,19 +117,23 @@ const ZonesManager = () => {
     }
   };
 
-  const handlePolygonComplete = (feature: GeoJSON.Feature<GeoJSON.Polygon>) => {
-    if (!currentZone) return;
+  const handlePolygonComplete = useCallback(
+    (feature: GeoJSON.Feature<GeoJSON.Polygon>) => {
+      const area = turf.area(feature);
+      const areaKm2 = parseFloat((area / 1000000).toFixed(4));
+      setCurrentZone((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          coordinates: feature.geometry,
+          areaKm2: areaKm2,
+        };
+      });
 
-    const area = turf.area(feature);
-    const areaKm2 = parseFloat((area / 1000000).toFixed(4));
-    setCurrentZone((prev) => ({
-      ...prev,
-      coordinates: feature.geometry,
-      areaKm2: areaKm2,
-    }));
-
-    toast.success(`Zone drawn successfully (${areaKm2.toFixed(2)} km²)`);
-  };
+      toast.success(`Zone drawn successfully (${areaKm2.toFixed(2)} km²)`);
+    },
+    [],
+  );
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -275,6 +284,13 @@ const ZonesManager = () => {
                             <Button
                               variant="outline"
                               size="sm"
+                              onClick={() => handleAddEdit(zone, "view")}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => handleAddEdit(zone)}
                             >
                               <Edit2 className="h-4 w-4" />
@@ -319,6 +335,7 @@ const ZonesManager = () => {
                       curr ? { ...curr, name: e.target.value } : null,
                     )
                   }
+                  readOnly={dialogMode === "view"}
                   required
                 />
               </div>
@@ -333,6 +350,7 @@ const ZonesManager = () => {
                       curr ? { ...curr, description: e.target.value } : null,
                     )
                   }
+                  readOnly={dialogMode === "view"}
                 />
               </div>
               <div className="flex items-center space-x-2">
@@ -344,18 +362,22 @@ const ZonesManager = () => {
                       curr ? { ...curr, isActive: checked } : null,
                     )
                   }
+                  disabled={dialogMode === "view"}
                 />
                 <Label htmlFor="isActive">Active</Label>
               </div>
             </div>
             <div className="h-[400px] rounded-lg overflow-hidden">
               <ZoneMapEditor
-                zoneData={currentZone}
-                isDrawing={true}
+                zoneCoordinates={currentZone?.coordinates}
+                zoneColor={currentZone?.color}
+                isDrawing={dialogMode === "edit"}
                 onPolygonComplete={handlePolygonComplete}
               />
             </div>
-            <DialogFooter className="md:col-span-2">
+            <DialogFooter
+              className={cn("md:col-span-2", dialogMode === "view" && "hidden")}
+            >
               <Button
                 type="button"
                 variant="outline"

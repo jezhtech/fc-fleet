@@ -1,17 +1,19 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, memo } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Zone } from "@/types";
 import { useGoogleMapsToken } from "@/hooks/useGoogleMapsToken";
 import { googleMapsService } from "@/services/googleMapsService";
 
 interface ZoneMapEditorProps {
-  zoneData: Zone | null;
+  zoneCoordinates: Zone["coordinates"] | null | undefined;
+  zoneColor: Zone["color"] | null | undefined;
   onPolygonComplete: (polygon: GeoJSON.Feature<GeoJSON.Polygon>) => void;
   isDrawing: boolean;
 }
 
 const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
-  zoneData,
+  zoneCoordinates,
+  zoneColor,
   onPolygonComplete,
   isDrawing,
 }) => {
@@ -59,7 +61,12 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
   }, []);
 
   const initializeMap = useCallback(async () => {
-    if (!mapContainer.current || !token || !isInitialized || isInitializing.current) {
+    if (
+      !mapContainer.current ||
+      !token ||
+      !isInitialized ||
+      isInitializing.current
+    ) {
       return;
     }
 
@@ -72,12 +79,10 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
 
       // Initialize Google Maps service with drawing library
       // Note: If already initialized without drawing library, we'll get a warning but continue
-      console.log("Initializing Google Maps with drawing library...");
       await googleMapsService.initialize({
         apiKey: token,
         libraries: ["drawing", "geometry"], // Include both drawing and geometry libraries
       });
-      console.log("Google Maps initialized with libraries:", googleMapsService.getLoadedLibraries());
 
       // Get the Google Maps instance
       const google = googleMapsService.getGoogle();
@@ -87,7 +92,10 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
 
       // Verify that the drawing library is loaded
       if (!google.maps.drawing) {
-        console.error("Loaded libraries:", googleMapsService.getLoadedLibraries());
+        console.error(
+          "Loaded libraries:",
+          googleMapsService.getLoadedLibraries(),
+        );
         throw new Error("Google Maps drawing library not loaded");
       }
 
@@ -97,7 +105,7 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
         zoom: 10,
         mapTypeId: "roadmap",
       });
-      
+
       map.current = newMap;
 
       // Wait for map to be ready
@@ -165,7 +173,7 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
                 coordinates: [path],
               },
             };
-            
+
             onPolygonComplete(geoJsonFeature);
 
             // Reset drawing mode and remove the temporary polygon
@@ -216,30 +224,30 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
     polygons.current.forEach((p) => p.setMap(null));
     polygons.current = [];
 
-    if (zoneData?.coordinates && zoneData.coordinates.coordinates.length > 0) {
+    if (zoneCoordinates && zoneCoordinates.coordinates.length > 0) {
       const google = googleMapsService.getGoogle();
       if (!google) return;
 
       const bounds = new google.maps.LatLngBounds();
-      const paths = zoneData.coordinates.coordinates[0].map((p) => ({
+      const paths = zoneCoordinates.coordinates[0].map((p) => ({
         lat: p[1],
         lng: p[0],
       }));
-      
+
       paths.forEach((p) => bounds.extend(p));
 
       const polygon = new google.maps.Polygon({
         paths: paths,
-        strokeColor: zoneData.color || "#FF0000",
+        strokeColor: zoneColor || "#FF0000",
         strokeOpacity: 0.8,
         strokeWeight: 2,
-        fillColor: zoneData.color || "#FF0000",
+        fillColor: zoneColor || "#FF0000",
         fillOpacity: 0.35,
         map: map.current,
         clickable: false,
         editable: false,
       });
-      
+
       polygons.current.push(polygon);
 
       // Fit bounds to show the zone
@@ -247,7 +255,7 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
         map.current.fitBounds(bounds);
       }
     }
-  }, [zoneData, isMapReady]);
+  }, [zoneCoordinates, zoneColor, isMapReady]);
 
   if (error) {
     return (
@@ -263,4 +271,4 @@ const ZoneMapEditor: React.FC<ZoneMapEditorProps> = ({
   return <div ref={mapContainer} className="w-full h-full rounded-lg" />;
 };
 
-export default ZoneMapEditor;
+export default memo(ZoneMapEditor);

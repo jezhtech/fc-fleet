@@ -45,12 +45,17 @@ const Footer = () => {
     {
       id: "india",
       name: "India",
-      address: ["Sree Sai Complex", "Nagercoil,", "India – 629001"],
+      address: ["Karungal", "Kanyakumari", "Tamil Nadu, India"],
     },
     {
       id: "china",
       name: "China",
-      address: ["Room 802&803, A1 Building", "Yangtze River Delta Hi-Tech Park,", "No.1 Lane 99 Jiajie Road,", "Qingpu District"],
+      address: [
+        "Room 802&803, A1 Building",
+        "Yangtze River Delta Hi-Tech Park,",
+        "No.1 Lane 99 Jiajie Road,",
+        "Qingpu District",
+      ],
     },
   ];
 

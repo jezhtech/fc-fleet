@@ -21,10 +21,9 @@ import {
   ResponsiveContainer,
   Bar,
 } from "recharts";
-import { formatCurrency } from "@/utils/currency";
-import CurrencyNotice from "@/components/CurrencyNotice";
 import type { User, BookingWithRelations, UserWithDriverDetail } from "@/types";
 import { bookingService, userService } from "@/services";
+import config from "@/config";
 
 // Combined interface for recent bookings with user info
 
@@ -305,7 +304,7 @@ const AdminDashboard = () => {
 
   // Custom formatter for chart tooltip - memoized to prevent recreation on every render
   const currencyFormatter = useCallback(
-    (value: number) => formatCurrency(value),
+    (value: number) => value + config.currencySymbol,
     [],
   );
 
@@ -324,7 +323,6 @@ const AdminDashboard = () => {
     return (
       <DashboardLayout userType="admin">
         <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
-        <CurrencyNotice className="mb-6" />
         <div className="text-center py-12">
           <div className="text-lg text-red-500 mb-4">
             Error loading dashboard data
@@ -344,7 +342,6 @@ const AdminDashboard = () => {
     return (
       <DashboardLayout userType="admin">
         <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
-        <CurrencyNotice className="mb-6" />
         <div className="text-center py-12">
           <div className="text-lg text-gray-500 mb-4">No data available</div>
           <div className="text-sm text-gray-400">
@@ -374,8 +371,6 @@ const AdminDashboard = () => {
         </Button>
       </div>
 
-      <CurrencyNotice className="mb-6" />
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <Card>
           <CardHeader className="pb-2">
@@ -400,10 +395,11 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(stats.totalRevenue)}
+              {stats.totalRevenue?.toFixed(2)} {config.currencySymbol}
             </div>
             <p className="text-xs text-green-600 flex items-center">
-              <span>↑</span> {formatCurrency(stats.monthlyRevenue)} this month
+              <span>↑</span> {stats.monthlyRevenue} {config.currencySymbol} this
+              month
             </p>
           </CardContent>
         </Card>
@@ -471,9 +467,8 @@ const AdminDashboard = () => {
             <CardContent className="pt-4">
               <div className="text-sm text-gray-500">Revenue in Range</div>
               <div className="text-xl font-bold">
-                {formatCurrency(
-                  chartData.reduce((sum, item) => sum + item.revenue, 0),
-                )}
+                {chartData.reduce((sum, item) => sum + item.revenue, 0)}{" "}
+                {config.currencySymbol}
               </div>
             </CardContent>
           </Card>
@@ -490,12 +485,11 @@ const AdminDashboard = () => {
                       : "Month"}
               </div>
               <div className="text-xl font-bold">
-                {formatCurrency(
-                  chartData.length > 0
-                    ? chartData.reduce((sum, item) => sum + item.revenue, 0) /
-                        chartData.length
-                    : 0,
-                )}
+                {chartData.length > 0
+                  ? chartData.reduce((sum, item) => sum + item.revenue, 0) /
+                    chartData.length
+                  : 0}{" "}
+                {config.currencySymbol}
               </div>
             </CardContent>
           </Card>
@@ -626,7 +620,8 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="p-4">
-                            {formatCurrency(booking.paymentInfo?.amount || 0)}
+                            {booking.paymentInfo?.amount.toFixed(2) || 0}{" "}
+                            {config.currencySymbol}
                           </td>
                         </tr>
                       ))

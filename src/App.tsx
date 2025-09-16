@@ -11,11 +11,9 @@ import AdminTaxiTypes from "./pages/admin/AdminTaxiTypes";
 import AdminFareSettings from "./pages/admin/AdminFareSettings";
 import AdminGeofencing from "./pages/admin/AdminGeofencing";
 import AdminVehicleTypes from "./pages/admin/AdminVehicleTypes";
-import AdminPaymentSettings from "./pages/admin/AdminPaymentSettings";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminDrivers from "./pages/admin/AdminDrivers";
 import AdminBookings from "./pages/admin/AdminBookings";
-import AdminSettings from "./pages/admin/AdminSettings";
 import AdminApplications from "./pages/admin/AdminApplications";
 import DriverDashboard from "./pages/driver/DriverDashboard";
 import DriverBankDetails from "./pages/driver/DriverBankDetails";
@@ -39,6 +37,7 @@ import Partners from "./pages/public/Partners";
 import { AuthProvider } from "./contexts/AuthContext";
 import TranslationProvider from "./contexts/TranslationContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ScrollToTop from "./components/ScrollToTop";
 import React, { Component, ErrorInfo } from "react";
 import DriverStartRide from "./pages/driver/DriverStartRide";
 import { ThemeProvider } from "next-themes";
@@ -107,6 +106,7 @@ const App = () => {
               attribute="class"
             >
               <BrowserRouter>
+                <ScrollToTop />
                 <Routes>
                   {/* Fallback Route (will be shown if other components fail) */}
                   <Route path="/fallback" element={<EmergencyFallback />} />
@@ -151,12 +151,10 @@ const App = () => {
                     />
                     <Route path="geofencing" element={<AdminGeofencing />} />
                     <Route path="bookings" element={<AdminBookings />} />
-                    <Route path="applications" element={<AdminApplications />} />
                     <Route
-                      path="payment-settings"
-                      element={<AdminPaymentSettings />}
+                      path="applications"
+                      element={<AdminApplications />}
                     />
-                    <Route path="settings" element={<AdminSettings />} />
                   </Route>
 
                   {/* Driver Routes */}

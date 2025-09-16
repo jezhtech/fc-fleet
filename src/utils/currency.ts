@@ -2,10 +2,12 @@
  * Currency utilities for the application
  */
 
+import config from "@/config";
+
 export const CURRENCY = {
-  code: 'AED',
-  symbol: 'AED', // Using AED text symbol instead of Arabic dirham symbol
-  name: 'UAE Dirham'
+  code: config.currency,
+  symbol: config.currencySymbol,
+  name: "UAE Dirham",
 };
 
 /**
@@ -14,13 +16,20 @@ export const CURRENCY = {
  * @param includeSymbol - Whether to include the AED symbol (defaults to true)
  * @returns Formatted currency string
  */
-export const formatCurrency = (amount: number, includeSymbol: boolean = true): string => {
-  if(typeof amount === "string") amount = parseFloat(amount);
-  
-  if (isNaN(amount)) return includeSymbol ? `${CURRENCY.symbol} 0.00` : '0.00';
-  
-  const formattedAmount = amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return includeSymbol ? `${CURRENCY.symbol} ${formattedAmount}` : formattedAmount;
+export const formatCurrency = (
+  amount: number,
+  includeSymbol: boolean = true,
+): string => {
+  if (typeof amount === "string") amount = parseFloat(amount);
+
+  if (isNaN(amount)) return includeSymbol ? `${CURRENCY.symbol} 0.00` : "0.00";
+
+  const formattedAmount = amount
+    .toFixed(2)
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return includeSymbol
+    ? `${CURRENCY.symbol} ${formattedAmount}`
+    : formattedAmount;
 };
 
 /**
@@ -30,19 +39,9 @@ export const formatCurrency = (amount: number, includeSymbol: boolean = true): s
  */
 export const parseCurrencyToNumber = (amountString: string): number => {
   if (!amountString) return 0;
-  
+
   // Remove currency symbol, commas and whitespace
-  const cleanedString = amountString
-    .replace(/[^\d.-]/g, '')
-    .trim();
-  
+  const cleanedString = amountString.replace(/[^\d.-]/g, "").trim();
+
   return parseFloat(cleanedString);
-}; 
- 
- 
- 
- 
- 
- 
- 
- 
+};

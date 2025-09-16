@@ -116,7 +116,7 @@ const AdminFareSettings = () => {
         </TabsContent>
 
         <TabsContent value="zones">
-          <ZonesManager fareRules={fareRules} />
+          <ZonesManager />
         </TabsContent>
       </Tabs>
     </DashboardLayout>

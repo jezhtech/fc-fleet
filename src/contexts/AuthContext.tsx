@@ -54,7 +54,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showFirebaseError, setShowFirebaseError] = useState(!!firebaseError);
   const [userRole, setUserRole] = useState<
     "customer" | "driver" | "admin" | null
   >(null);

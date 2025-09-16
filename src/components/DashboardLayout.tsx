@@ -73,12 +73,6 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
           { name: "Geofencing", href: "/admin/geofencing", icon: Map },
           { name: "Bookings", href: "/admin/bookings", icon: Bell },
           { name: "Applications", href: "/admin/applications", icon: FileText },
-          {
-            name: "Payment Settings",
-            href: "/admin/payment-settings",
-            icon: CreditCard,
-          },
-          { name: "Settings", href: "/admin/settings", icon: Settings },
         ]
       : [
           { name: "Dashboard", href: "/driver", icon: Home },
@@ -90,7 +84,6 @@ const DashboardLayout = ({ children, userType }: DashboardLayoutProps) => {
             href: "/driver/bank-details",
             icon: CreditCard,
           },
-          { name: "Settings", href: "/driver/settings", icon: Settings },
         ];
 
   // If still loading or user doesn't have the right role, show loading
