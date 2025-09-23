@@ -116,69 +116,73 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
         </p>
       </div>
 
-      {vehicles.map((car) => (
-        <div
-          key={car.id}
-          className={`border rounded-lg p-4 hover:border-primary cursor-pointer transition-all ${
-            selectedCarModel === car.id
-              ? "border-primary bg-primary/5 shadow-sm"
-              : "border-gray-200 bg-white hover:shadow-sm"
-          }`}
-          onClick={() => onSelect(car.id)}
-        >
-          <div className="flex items-center gap-4">
-            {/* Vehicle Image */}
-            <div className="flex-shrink-0">
-              <div className="w-28 h-20 rounded-lg overflow-hidden bg-gray-100">
-                {car.imageUrl ? (
-                  <img
-                    src={car.imageUrl}
-                    alt={car.name}
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon size={24} className="text-gray-400" />
+      {vehicles
+        .sort((a, b) => getEstimatedPrice(a) - getEstimatedPrice(b))
+        .map((car) => (
+          <div
+            key={car.id}
+            className={`border rounded-lg p-4 hover:border-primary cursor-pointer transition-all ${
+              selectedCarModel === car.id
+                ? "border-primary bg-primary/5 shadow-sm"
+                : "border-gray-200 bg-white hover:shadow-sm"
+            }`}
+            onClick={() => onSelect(car.id)}
+          >
+            <div className="flex items-center gap-4">
+              {/* Vehicle Image */}
+              <div className="flex-shrink-0">
+                <div className="w-28 h-20 rounded-lg overflow-hidden bg-gray-100">
+                  {car.imageUrl ? (
+                    <img
+                      src={car.imageUrl}
+                      alt={car.name}
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon size={24} className="text-gray-400" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Vehicle Details */}
+              <div className="flex-1 space-y-2">
+                {/* Vehicle Class Name */}
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {car.name}
+                </h3>
+
+                {/* Capacity Icons */}
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    <span>{car.capacity}</span>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Vehicle Details */}
-            <div className="flex-1 space-y-2">
-              {/* Vehicle Class Name */}
-              <h3 className="text-lg font-semibold text-gray-900">
-                {car.name}
-              </h3>
-
-              {/* Capacity Icons */}
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  <span>{car.capacity}</span>
+                  <div className="flex items-center gap-1">
+                    <Briefcase className="h-4 w-4" />
+                    <span>{Math.min(car.capacity - 1, 5)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Briefcase className="h-4 w-4" />
-                  <span>{Math.min(car.capacity - 1, 5)}</span>
-                </div>
+
+                {/* Description/Model */}
+                <p className="text-sm text-gray-500">{car.description}</p>
               </div>
 
-              {/* Description/Model */}
-              <p className="text-sm text-gray-500">{car.description}</p>
-            </div>
-
-            {/* Price and Chevron */}
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <p className="text-xl font-bold text-gray-900">
-                  {getEstimatedPrice(car)}
-                </p>
-                <p className="text-xs text-gray-500">{config.currencySymbol}</p>
+              {/* Price and Chevron */}
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <p className="text-xl font-bold text-gray-900">
+                    {getEstimatedPrice(car)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {config.currencySymbol}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
     </div>
   );
 };

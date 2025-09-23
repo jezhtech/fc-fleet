@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +26,7 @@ import {
   bookingService,
   userService,
 } from "@/services";
-import { Clock, AlertTriangle } from "lucide-react";
+import { Clock } from "lucide-react";
 import CCavenueCheckout from "@/components/checkout/CCavenueCheckout";
 import LocationSelector from "./LocationSelector";
 import RouteMap from "./RouteMap";
@@ -40,10 +39,9 @@ import { isPointInPolygon } from "@/lib/mapUtils";
 import { sendOTP, verifyOTP } from "@/lib/authUtils";
 import { RecaptchaVerifier } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import CountryCodeSelect, { detectCountryCode } from "@/components/CountryCodeSelect";
+import CountryCodeSelect from "@/components/CountryCodeSelect";
 
 const BookTaxiForm = () => {
-  const navigate = useNavigate();
   const { currentUser, userData } = useAuth();
 
   // Form steps state
@@ -74,7 +72,7 @@ const BookTaxiForm = () => {
     const initialDate = new Date(
       fourHoursFromNow.getFullYear(),
       fourHoursFromNow.getMonth(),
-      fourHoursFromNow.getDate()
+      fourHoursFromNow.getDate(),
     );
     return initialDate;
   });
@@ -114,7 +112,7 @@ const BookTaxiForm = () => {
 
   // Lists for selection components
   const [transportTypes, setTransportTypes] = useState<TransportWithVehicles[]>(
-    []
+    [],
   );
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
@@ -226,7 +224,7 @@ const BookTaxiForm = () => {
       }
 
       setAuthError(errorMessage);
-      
+
       // If user doesn't exist, go to registration
       if (!userExists) {
         setAuthStep("register");
@@ -263,7 +261,7 @@ const BookTaxiForm = () => {
       } else {
         // Register new user
         const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
-        
+
         try {
           const response = await userService.createUser({
             firstName: registrationData.firstName,
@@ -496,7 +494,7 @@ const BookTaxiForm = () => {
             perKmPrice: extraFare
               ? parseFloat(v.perKmPrice.toString()) + extraFare.perKmPrice
               : parseFloat(v.perKmPrice.toString()),
-          })) || []
+          })) || [],
       );
     }
   };
@@ -523,7 +521,7 @@ const BookTaxiForm = () => {
       pickupCoords.latitude,
       pickupCoords.longitude,
       dropoffCoords.latitude,
-      dropoffCoords.longitude
+      dropoffCoords.longitude,
     );
 
     // Calculate total fare
@@ -545,7 +543,7 @@ const BookTaxiForm = () => {
     lat1: number,
     lon1: number,
     lat2: number,
-    lon2: number
+    lon2: number,
   ): number => {
     const R = 6371; // Radius of the Earth in km
     const dLat = deg2rad(lat2 - lat1);
@@ -620,8 +618,8 @@ const BookTaxiForm = () => {
     if (hoursDifference < 4) {
       toast.error(
         `Bookings must be made at least 4 hours in advance. Current time: ${now.toLocaleTimeString()}, Selected time: ${selectedDateTime.toLocaleTimeString()}, Difference: ${hoursDifference.toFixed(
-          2
-        )} hours`
+          2,
+        )} hours`,
       );
       return false;
     }
@@ -944,9 +942,9 @@ const BookTaxiForm = () => {
                   </p>
                 )}
               </div>
-              
+
               <div id="recaptcha-container-auth"></div>
-              
+
               <Button type="submit" className="w-full" disabled={authLoading}>
                 {authLoading ? "Sending..." : "Send verification code"}
               </Button>
