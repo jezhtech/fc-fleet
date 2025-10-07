@@ -101,403 +101,402 @@ const BookTaxiForm = () => {
   const [selectedTaxiType, setSelectedTaxiType] = useState("");
   const [selectedCarModel, setSelectedCarModel] = useState("");
   const [fareRules, setFareRules] = useState<FareRuleWithRelations[]>([]);
+  const [extraFareRule, setExtraFareRule] = useState<FareRule>();
 
-  // Location data
-  const [selectedPickupLocation, setSelectedPickupLocation] = useState<
-    Location | undefined
-  >(undefined);
-  const [selectedDropoffLocation, setSelectedDropoffLocation] = useState<
-    Location | undefined
-  >(undefined);
+	// Location data
+	const [selectedPickupLocation, setSelectedPickupLocation] = useState<
+		Location | undefined
+	>(undefined);
+	const [selectedDropoffLocation, setSelectedDropoffLocation] = useState<
+		Location | undefined
+	>(undefined);
 
-  // Lists for selection components
-  const [transportTypes, setTransportTypes] = useState<TransportWithVehicles[]>(
+	// Lists for selection components
+	const [transportTypes, setTransportTypes] = useState<TransportWithVehicles[]>(
     [],
-  );
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+	);
+	const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
-  // Available transport types that have vehicles
-  const [availableTransportTypes, setAvailableTransportTypes] = useState<
-    string[]
-  >([]);
+	// Available transport types that have vehicles
+	const [availableTransportTypes, setAvailableTransportTypes] = useState<
+		string[]
+	>([]);
 
-  // Loading states
-  const [loading, setLoading] = useState({
-    transportTypes: false,
-    vehicles: false,
-    checkingAvailability: false,
-    savingBooking: false,
-  });
+	// Loading states
+	const [loading, setLoading] = useState({
+		transportTypes: false,
+		vehicles: false,
+		checkingAvailability: false,
+		savingBooking: false,
+	});
 
-  const [orderId, setOrderId] = useState<string>("");
+	const [orderId, setOrderId] = useState<string>("");
 
-  useEffect(() => {
-    fetchTransportTypes();
-    fetchFareRules();
-  }, []);
+	useEffect(() => {
+		fetchTransportTypes();
+		fetchFareRules();
+	}, []);
 
-  useEffect(() => {
-    window.recaptchaVerifier = null;
-  }, []);
+	useEffect(() => {
+		window.recaptchaVerifier = null;
+	}, []);
 
-  // Format phone number for display and validation
-  const formatPhoneNumber = (
-    phoneNumber: string,
+	// Format phone number for display and validation
+	const formatPhoneNumber = (
+		phoneNumber: string,
     countryCode: string,
-  ): string => {
-    // Remove any non-digit characters
-    const cleanNumber = phoneNumber.replace(/\D/g, "");
+	): string => {
+		// Remove any non-digit characters
+		const cleanNumber = phoneNumber.replace(/\D/g, "");
 
-    // Remove leading zeros
-    const numberWithoutLeadingZeros = cleanNumber.replace(/^0+/, "");
+		// Remove leading zeros
+		const numberWithoutLeadingZeros = cleanNumber.replace(/^0+/, "");
 
-    // Combine with country code
-    return `${countryCode}${numberWithoutLeadingZeros}`;
-  };
+		// Combine with country code
+		return `${countryCode}${numberWithoutLeadingZeros}`;
+	};
 
-  // Handle phone number change - clean the input
-  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value;
+	// Handle phone number change - clean the input
+	const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		let value = e.target.value;
 
-    // Remove all non-digit characters except for the first character
-    value = value.replace(/[^\d]/g, "");
+		// Remove all non-digit characters except for the first character
+		value = value.replace(/[^\d]/g, "");
 
-    setPhoneNumber(value);
-    setAuthError(null);
-  };
+		setPhoneNumber(value);
+		setAuthError(null);
+	};
 
-  // Authentication handlers
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phoneNumber.trim() || phoneNumber.length < 7) {
-      setAuthError("Please enter a valid phone number");
-      return;
-    }
+	// Authentication handlers
+	const handlePhoneSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!phoneNumber.trim() || phoneNumber.length < 7) {
+			setAuthError("Please enter a valid phone number");
+			return;
+		}
 
-    // Format full phone number with country code
-    const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
+		// Format full phone number with country code
+		const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
 
-    setAuthLoading(true);
-    setAuthError(null);
+		setAuthLoading(true);
+		setAuthError(null);
 
-    try {
-      // Check if user exists using userService
-      await userService.checkUserExists(fullPhoneNumber);
-      setUserExists(true);
+		try {
+			// Check if user exists using userService
+			await userService.checkUserExists(fullPhoneNumber);
+			setUserExists(true);
 
-      // Initialize reCAPTCHA only when needed
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(
-          auth,
-          "recaptcha-container-auth",
-          {
-            size: "invisible",
+			// Initialize reCAPTCHA only when needed
+			if (!window.recaptchaVerifier) {
+				window.recaptchaVerifier = new RecaptchaVerifier(
+					auth,
+					"recaptcha-container-auth",
+					{
+						size: "invisible",
           },
-        );
-      }
+				);
+			}
 
-      // Send OTP
-      await sendOTP(fullPhoneNumber);
-      setAuthStep("otp");
-      toast.success("OTP sent to your phone number");
-    } catch (error: any) {
-      console.error("Error sending verification code:", error);
+			// Send OTP
+			await sendOTP(fullPhoneNumber);
+			setAuthStep("otp");
+			toast.success("OTP sent to your phone number");
+		} catch (error: any) {
+			console.error("Error sending verification code:", error);
 
-      // Provide more specific error messages
-      let errorMessage = "Error sending verification code. Please try again.";
+			// Provide more specific error messages
+			let errorMessage = "Error sending verification code. Please try again.";
 
-      if (error.code === "auth/invalid-phone-number") {
-        errorMessage =
-          "Invalid phone number format. Please check your phone number.";
-      } else if (error.code === "auth/too-many-requests") {
-        errorMessage = "Too many attempts. Please try again later.";
-      } else if (error.code === "auth/quota-exceeded") {
-        errorMessage = "SMS quota exceeded. Please try again later.";
-      } else if (error.code === "auth/invalid-app-credential") {
-        errorMessage =
-          "reCAPTCHA configuration error. Please refresh the page and try again.";
-      } else if (error.code === "auth/captcha-check-failed") {
-        errorMessage =
-          "reCAPTCHA verification failed. Please refresh the page and try again.";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
+			if (error.code === "auth/invalid-phone-number") {
+				errorMessage =
+					"Invalid phone number format. Please check your phone number.";
+			} else if (error.code === "auth/too-many-requests") {
+				errorMessage = "Too many attempts. Please try again later.";
+			} else if (error.code === "auth/quota-exceeded") {
+				errorMessage = "SMS quota exceeded. Please try again later.";
+			} else if (error.code === "auth/invalid-app-credential") {
+				errorMessage =
+					"reCAPTCHA configuration error. Please refresh the page and try again.";
+			} else if (error.code === "auth/captcha-check-failed") {
+				errorMessage =
+					"reCAPTCHA verification failed. Please refresh the page and try again.";
+			} else if (error.message) {
+				errorMessage = error.message;
+			}
 
-      setAuthError(errorMessage);
+			setAuthError(errorMessage);
 
-      // If user doesn't exist, go to registration
-      if (!userExists) {
-        setAuthStep("register");
-      }
-    } finally {
-      setAuthLoading(false);
-    }
-  };
+			// If user doesn't exist, go to registration
+			if (!userExists) {
+				setAuthStep("register");
+			}
+		} finally {
+			setAuthLoading(false);
+		}
+	};
 
-  const handleOTPSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otp.trim() || otp.length < 6) {
-      setAuthError("Please enter a valid 6-digit verification code");
-      return;
-    }
+	const handleOTPSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!otp.trim() || otp.length < 6) {
+			setAuthError("Please enter a valid 6-digit verification code");
+			return;
+		}
 
-    setAuthLoading(true);
-    setAuthError(null);
+		setAuthLoading(true);
+		setAuthError(null);
 
-    try {
-      // Verify OTP
-      const userCredential = await verifyOTP(otp);
+		try {
+			// Verify OTP
+			const userCredential = await verifyOTP(otp);
 
-      // Get Firebase ID token for API authentication
-      const idToken = await userCredential.getIdToken();
+			// Get Firebase ID token for API authentication
+			const idToken = await userCredential.getIdToken();
 
-      // Store token in localStorage for API calls
-      localStorage.setItem("firebaseToken", idToken);
-      localStorage.setItem("authToken", idToken);
+			// Store token in localStorage for API calls
+			localStorage.setItem("firebaseToken", idToken);
+			localStorage.setItem("authToken", idToken);
 
-      if (userExists) {
-        // Login existing user
-        toast.success("Login successful!");
-      } else {
-        // Register new user
-        const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
+			if (userExists) {
+				// Login existing user
+				toast.success("Login successful!");
+			} else {
+				// Register new user
+				const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
 
-        try {
-          const response = await userService.createUser({
-            firstName: registrationData.firstName,
-            lastName: registrationData.lastName,
-            email: registrationData.email,
-            phone: fullPhoneNumber,
-          });
+				try {
+					const response = await userService.createUser({
+						firstName: registrationData.firstName,
+						lastName: registrationData.lastName,
+						email: registrationData.email,
+						phone: fullPhoneNumber,
+					});
 
-          if (!response.success) {
-            throw new Error(response.error || "Failed to create user account");
-          }
+					if (!response.success) {
+						throw new Error(response.error || "Failed to create user account");
+					}
 
-          toast.success("Registration successful!");
-        } catch (apiError: any) {
-          console.error("Error creating user in backend:", apiError);
-          toast.success("Registration successful!");
-        }
-      }
+					toast.success("Registration successful!");
+				} catch (apiError: any) {
+					console.error("Error creating user in backend:", apiError);
+					toast.success("Registration successful!");
+				}
+			}
 
-      setAuthStep("complete");
-      setShowAuthDialog(false);
-      // Refresh auth context
-      // window.location.reload();
-    } catch (error: any) {
-      console.error("Error verifying OTP:", error);
+			setAuthStep("complete");
+			setShowAuthDialog(false);
+			// Refresh auth context
+			// window.location.reload();
+		} catch (error: any) {
+			console.error("Error verifying OTP:", error);
 
-      // Provide more specific error messages
-      let errorMessage = "Error verifying code. Please try again.";
+			// Provide more specific error messages
+			let errorMessage = "Error verifying code. Please try again.";
 
-      if (error.code === "auth/invalid-verification-code") {
-        errorMessage = "Invalid verification code. Please check and try again.";
-      } else if (error.code === "auth/code-expired") {
-        errorMessage =
-          "Verification code has expired. Please request a new one.";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
+			if (error.code === "auth/invalid-verification-code") {
+				errorMessage = "Invalid verification code. Please check and try again.";
+			} else if (error.code === "auth/code-expired") {
+				errorMessage =
+					"Verification code has expired. Please request a new one.";
+			} else if (error.message) {
+				errorMessage = error.message;
+			}
 
-      setAuthError(errorMessage);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
+			setAuthError(errorMessage);
+		} finally {
+			setAuthLoading(false);
+		}
+	};
 
-  const handleRegistrationSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      !registrationData.firstName.trim() ||
-      !registrationData.lastName.trim() ||
-      !registrationData.email.trim()
-    ) {
-      setAuthError("All fields are required");
-      return;
-    }
+	const handleRegistrationSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (
+			!registrationData.firstName.trim() ||
+			!registrationData.lastName.trim() ||
+			!registrationData.email.trim()
+		) {
+			setAuthError("All fields are required");
+			return;
+		}
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(registrationData.email)) {
-      setAuthError("Please enter a valid email address");
-      return;
-    }
+		// Validate email format
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(registrationData.email)) {
+			setAuthError("Please enter a valid email address");
+			return;
+		}
 
-    // Format full phone number with country code
-    const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
+		// Format full phone number with country code
+		const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
 
-    setAuthLoading(true);
-    setAuthError(null);
+		setAuthLoading(true);
+		setAuthError(null);
 
-    try {
-      // Initialize reCAPTCHA only when needed
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(
-          auth,
-          "recaptcha-container-auth",
-          {
-            size: "invisible",
+		try {
+			// Initialize reCAPTCHA only when needed
+			if (!window.recaptchaVerifier) {
+				window.recaptchaVerifier = new RecaptchaVerifier(
+					auth,
+					"recaptcha-container-auth",
+					{
+						size: "invisible",
           },
-        );
-      }
+				);
+			}
 
-      // Send OTP for new user registration
-      await sendOTP(fullPhoneNumber);
-      setAuthStep("otp");
-      toast.success("OTP sent to your phone number");
-    } catch (error: any) {
-      console.error("Error sending verification code:", error);
+			// Send OTP for new user registration
+			await sendOTP(fullPhoneNumber);
+			setAuthStep("otp");
+			toast.success("OTP sent to your phone number");
+		} catch (error: any) {
+			console.error("Error sending verification code:", error);
 
-      // Provide more specific error messages
-      let errorMessage = "Error sending verification code. Please try again.";
+			// Provide more specific error messages
+			let errorMessage = "Error sending verification code. Please try again.";
 
-      if (error.code === "auth/invalid-phone-number") {
-        errorMessage =
-          "Invalid phone number format. Please check your phone number.";
-      } else if (error.code === "auth/too-many-requests") {
-        errorMessage = "Too many attempts. Please try again later.";
-      } else if (error.code === "auth/quota-exceeded") {
-        errorMessage = "SMS quota exceeded. Please try again later.";
-      } else if (error.code === "auth/invalid-app-credential") {
-        errorMessage =
-          "reCAPTCHA configuration error. Please refresh the page and try again.";
-      } else if (error.code === "auth/captcha-check-failed") {
-        errorMessage =
-          "reCAPTCHA verification failed. Please refresh the page and try again.";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
+			if (error.code === "auth/invalid-phone-number") {
+				errorMessage =
+					"Invalid phone number format. Please check your phone number.";
+			} else if (error.code === "auth/too-many-requests") {
+				errorMessage = "Too many attempts. Please try again later.";
+			} else if (error.code === "auth/quota-exceeded") {
+				errorMessage = "SMS quota exceeded. Please try again later.";
+			} else if (error.code === "auth/invalid-app-credential") {
+				errorMessage =
+					"reCAPTCHA configuration error. Please refresh the page and try again.";
+			} else if (error.code === "auth/captcha-check-failed") {
+				errorMessage =
+					"reCAPTCHA verification failed. Please refresh the page and try again.";
+			} else if (error.message) {
+				errorMessage = error.message;
+			}
 
-      setAuthError(errorMessage);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
+			setAuthError(errorMessage);
+		} finally {
+			setAuthLoading(false);
+		}
+	};
 
-  const fetchFareRules = async () => {
-    try {
-      const fareRulesResponse = await fareRulesService.list();
-      const fareRulesData = fareRulesResponse.data;
-      setFareRules(fareRulesData);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    }
-  };
+	const fetchFareRules = async () => {
+		try {
+			const fareRulesResponse = await fareRulesService.list();
+			const fareRulesData = fareRulesResponse.data;
+			setFareRules(fareRulesData);
+		} catch (err) {
+			console.error("Error fetching data:", err);
+		}
+	};
 
-  const fetchTransportTypes = async () => {
-    setLoading((prev) => ({ ...prev, transportTypes: true }));
+	const fetchTransportTypes = async () => {
+		setLoading((prev) => ({ ...prev, transportTypes: true }));
 
-    try {
-      const transportResponse = await transportService.getAllTransports();
-      const transportTypesData = transportResponse.data;
+		try {
+			const transportResponse = await transportService.getAllTransports();
+			const transportTypesData = transportResponse.data;
 
-      if (transportTypesData.length > 0 && !selectedTaxiType) {
-        setSelectedTaxiType(transportTypesData[0].id);
-        setVehicles(transportTypesData[0].vehicles);
-      }
+			if (transportTypesData.length > 0 && !selectedTaxiType) {
+				setSelectedTaxiType(transportTypesData[0].id);
+				setVehicles(transportTypesData[0].vehicles);
+			}
 
-      setTransportTypes(transportTypesData);
+			setTransportTypes(transportTypesData);
 
-      // Check which transport types have available vehicles
-      await checkTransportTypeAvailability(transportTypesData);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    } finally {
-      setLoading((prev) => ({ ...prev, transportTypes: false }));
-    }
-  };
+			// Check which transport types have available vehicles
+			await checkTransportTypeAvailability(transportTypesData);
+		} catch (err) {
+			console.error("Error fetching data:", err);
+		} finally {
+			setLoading((prev) => ({ ...prev, transportTypes: false }));
+		}
+	};
 
-  // Handler for pickup location selection
-  const handlePickupLocationSelect = (location: Location) => {
-    setSelectedPickupLocation(location);
-    setBookingDetails((prev) => ({ ...prev, pickup: location.name }));
-  };
+	// Handler for pickup location selection
+	const handlePickupLocationSelect = (location: Location) => {
+		setSelectedPickupLocation(location);
+		setBookingDetails((prev) => ({ ...prev, pickup: location.name }));
+	};
 
-  // Handler for dropoff location selection
-  const handleDropoffLocationSelect = (location: Location) => {
-    setSelectedDropoffLocation(location);
-    setBookingDetails((prev) => ({ ...prev, dropoff: location.name }));
-  };
+	// Handler for dropoff location selection
+	const handleDropoffLocationSelect = (location: Location) => {
+		setSelectedDropoffLocation(location);
+		setBookingDetails((prev) => ({ ...prev, dropoff: location.name }));
+	};
 
-  // Check which transport types have available vehicles
-  const checkTransportTypeAvailability = async (types: Transport[]) => {
-    try {
-      setLoading((prev) => ({ ...prev, checkingAvailability: true }));
-      const availableTypeIds: string[] = [];
+	// Check which transport types have available vehicles
+	const checkTransportTypeAvailability = async (types: Transport[]) => {
+		try {
+			setLoading((prev) => ({ ...prev, checkingAvailability: true }));
+			const availableTypeIds: string[] = [];
 
-      // Check each transport type for available vehicles
-      for (const type of types) {
-        const response = await vehicleService.getVehiclesByTransport(type.id);
+			// Check each transport type for available vehicles
+			for (const type of types) {
+				const response = await vehicleService.getVehiclesByTransport(type.id);
 
-        if (response.success && response.data && response.data.length > 0) {
-          availableTypeIds.push(type.id);
-        }
-      }
+				if (response.success && response.data && response.data.length > 0) {
+					availableTypeIds.push(type.id);
+				}
+			}
 
-      setAvailableTransportTypes(availableTypeIds);
+			setAvailableTransportTypes(availableTypeIds);
 
-      // If there are no available types, show a message
-      if (availableTypeIds.length === 0) {
-        toast.error("No vehicles available for any transport type");
-      }
+			// If there are no available types, show a message
+			if (availableTypeIds.length === 0) {
+				toast.error("No vehicles available for any transport type");
+			}
 
-      // If selectedTaxiType is no longer available, reset it
-      if (selectedTaxiType && !availableTypeIds.includes(selectedTaxiType)) {
-        setSelectedTaxiType(availableTypeIds[0] || "");
-      }
+			// If selectedTaxiType is no longer available, reset it
+			if (selectedTaxiType && !availableTypeIds.includes(selectedTaxiType)) {
+				setSelectedTaxiType(availableTypeIds[0] || "");
+			}
 
-      return availableTypeIds;
-    } catch (error) {
-      console.error("Error checking transport type availability:", error);
-      toast.error("Failed to check vehicle availability");
-      return [];
-    } finally {
-      setLoading((prev) => ({ ...prev, checkingAvailability: false }));
-    }
-  };
+			return availableTypeIds;
+		} catch (error) {
+			console.error("Error checking transport type availability:", error);
+			toast.error("Failed to check vehicle availability");
+			return [];
+		} finally {
+			setLoading((prev) => ({ ...prev, checkingAvailability: false }));
+		}
+	};
 
-  // Handler for transport type selection
-  const handleTransportTypeSelect = (typeId: string) => {
-    // Only allow selection if the type is available
-    if (availableTransportTypes.includes(typeId)) {
-      setSelectedTaxiType(typeId);
+	// Handler for transport type selection
+	const handleTransportTypeSelect = (typeId: string) => {
+		// Only allow selection if the type is available
+		if (availableTransportTypes.includes(typeId)) {
+			setSelectedTaxiType(typeId);
 
-      let extraFare: FareRule | undefined;
+			for (const rule of fareRules) {
+				const applicableZones = rule.zones;
+				for (const zone of applicableZones) {
+					const isInside = isPointInPolygon(zone.coordinates, {
+						lat: selectedPickupLocation.coordinates.latitude,
+						lng: selectedPickupLocation.coordinates.longitude,
+					});
 
-      for (const rule of fareRules) {
-        const applicableZones = rule.zones;
-        for (const zone of applicableZones) {
-          const isInside = isPointInPolygon(zone.coordinates, {
-            lat: selectedPickupLocation.coordinates.latitude,
-            lng: selectedPickupLocation.coordinates.longitude,
-          });
+					if (
+						isInside &&
+						rule.taxiTypes.some((type) => type.id === selectedTaxiType)
+					) {
+						setExtraFareRule(rule);
+						break;
+					}
+				}
+			}
 
-          if (
-            isInside &&
-            rule.taxiTypes.some((type) => type.id === selectedTaxiType)
-          ) {
-            extraFare = rule;
-            break;
-          }
-        }
-      }
-
-      setVehicles(
-        transportTypes
-          .find((t) => t.id === typeId)
-          .vehicles.map((v) => ({
-            ...v,
-            basePrice: extraFare
-              ? parseFloat(v.basePrice.toString()) + extraFare.basePrice
-              : parseFloat(v.basePrice.toString()),
-            perKmPrice: extraFare
-              ? parseFloat(v.perKmPrice.toString()) + extraFare.perKmPrice
-              : parseFloat(v.perKmPrice.toString()),
+			setVehicles(
+				transportTypes
+					.find((t) => t.id === typeId)
+					.vehicles.map((v) => ({
+						...v,
+						basePrice: extraFareRule
+							? parseFloat(v.basePrice.toString()) + extraFareRule.basePrice
+							: parseFloat(v.basePrice.toString()),
+						perKmPrice: extraFareRule
+							? parseFloat(v.perKmPrice.toString()) + extraFareRule.perKmPrice
+							: parseFloat(v.perKmPrice.toString()),
           })) || [],
-      );
-    }
-  };
+			);
+		}
+	};
 
   // Calculate estimated fare based on vehicle and distance
   const calculateEstimatedFare = () => {
@@ -525,11 +524,18 @@ const BookTaxiForm = () => {
     );
 
     // Calculate total fare
-    let totalFare =
-      selectedVehicle.basePrice + distanceKm * selectedVehicle.perKmPrice;
+    let basePrice = extraFareRule
+							? parseFloat(selectedVehicle.basePrice.toString()) + extraFareRule.basePrice
+      : parseFloat(selectedVehicle.basePrice.toString())
+    
+    let perKmPrice = extraFareRule
+							? parseFloat(selectedVehicle.perKmPrice.toString()) + extraFareRule.perKmPrice
+							: parseFloat(selectedVehicle.perKmPrice.toString())
+    let totalFare = basePrice + distanceKm * perKmPrice;
+    
 
     // Ensure minimum fare
-    const minFare = 5; // Minimum fare
+    const minFare = extraFareRule ? 5 + extraFareRule.minFare : 5; // Minimum fare
     if (totalFare < minFare) {
       totalFare = minFare;
     }
