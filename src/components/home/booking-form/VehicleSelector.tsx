@@ -66,7 +66,7 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
     if (totalPrice < minFare) {
       totalPrice = minFare;
     }
-
+    console.log(`Estimated fare: Base Price = ${vehicle.basePrice}, Distance = ${distanceKm.toFixed(2)} km, Per Km Price = ${vehicle.perKmPrice}, Total Fare = ${totalPrice.toFixed(2)}`);
     // Round to 2 decimal places
     return Math.round(totalPrice * 100) / 100;
   };
@@ -89,6 +89,7 @@ const VehicleSelector: React.FC<VehicleSelectorProps> = ({
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c; // Distance in km
+    console.log(`Calculated distance: ${distance.toFixed(2)} km`);
     return distance;
   };
 

@@ -289,7 +289,7 @@ const RentCarForm = () => {
       }
 
       setAuthError(errorMessage);
-      
+
       // If user doesn't exist, go to registration
       if (!userExists) {
         setAuthStep('register');
@@ -326,7 +326,7 @@ const RentCarForm = () => {
       } else {
         // Register new user
         const fullPhoneNumber = formatPhoneNumber(phoneNumber, countryCode);
-        
+
         try {
           const response = await userService.createUser({
             firstName: registrationData.firstName,
@@ -943,7 +943,7 @@ const RentCarForm = () => {
               <p className="text-sm text-red-700">{authError}</p>
             </div>
           )}
-          
+
           {authStep === 'phone' && (
             <form onSubmit={handlePhoneSubmit} className="space-y-4">
               <div>
@@ -974,11 +974,11 @@ const RentCarForm = () => {
                   </p>
                 )}
               </div>
-              
+
               <div id="recaptcha-container-auth"></div>
-              
-              <Button 
-                type="submit" 
+
+              <Button
+                type="submit"
                 className="w-full"
                 disabled={authLoading}
               >
@@ -1030,7 +1030,7 @@ const RentCarForm = () => {
                 />
               </div>
               <div className="flex gap-2">
-                <Button 
+                <Button
                   type="button"
                   variant="outline"
                   className="flex-1"
@@ -1038,8 +1038,8 @@ const RentCarForm = () => {
                 >
                   Back
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="flex-1"
                   disabled={authLoading}
                 >
@@ -1075,7 +1075,7 @@ const RentCarForm = () => {
                 />
               </div>
               <div className="flex gap-2">
-                <Button 
+                <Button
                   type="button"
                   variant="outline"
                   className="flex-1"
@@ -1084,8 +1084,8 @@ const RentCarForm = () => {
                 >
                   Back
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="flex-1"
                   disabled={authLoading}
                 >

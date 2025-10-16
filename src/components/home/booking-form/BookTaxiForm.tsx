@@ -72,7 +72,7 @@ const BookTaxiForm = () => {
     const initialDate = new Date(
       fourHoursFromNow.getFullYear(),
       fourHoursFromNow.getMonth(),
-      fourHoursFromNow.getDate(),
+      fourHoursFromNow.getDate()
     );
     return initialDate;
   });
@@ -112,7 +112,7 @@ const BookTaxiForm = () => {
 
   // Lists for selection components
   const [transportTypes, setTransportTypes] = useState<TransportWithVehicles[]>(
-    [],
+    []
   );
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
@@ -140,10 +140,18 @@ const BookTaxiForm = () => {
     window.recaptchaVerifier = null;
   }, []);
 
+
+  useEffect(() => {
+  if (selectedTaxiType && selectedPickupLocation) {
+    handleTransportTypeSelect(selectedTaxiType);
+  }
+}, [selectedPickupLocation]);
+
+
   // Format phone number for display and validation
   const formatPhoneNumber = (
     phoneNumber: string,
-    countryCode: string,
+    countryCode: string
   ): string => {
     // Remove any non-digit characters
     const cleanNumber = phoneNumber.replace(/\D/g, "");
@@ -192,7 +200,7 @@ const BookTaxiForm = () => {
           "recaptcha-container-auth",
           {
             size: "invisible",
-          },
+          }
         );
       }
 
@@ -338,7 +346,7 @@ const BookTaxiForm = () => {
           "recaptcha-container-auth",
           {
             size: "invisible",
-          },
+          }
         );
       }
 
@@ -459,34 +467,33 @@ const BookTaxiForm = () => {
 
   // Handler for transport type selection
   const handleTransportTypeSelect = (typeId: string) => {
-    // Only allow selection if the type is available
     if (availableTransportTypes.includes(typeId)) {
       setSelectedTaxiType(typeId);
 
       let extraFare: FareRule | undefined;
 
       for (const rule of fareRules) {
-        const applicableZones = rule.zones;
-        for (const zone of applicableZones) {
+        for (const zone of rule.zones) {
           const isInside = isPointInPolygon(zone.coordinates, {
             lat: selectedPickupLocation.coordinates.latitude,
             lng: selectedPickupLocation.coordinates.longitude,
           });
 
-          if (
-            isInside &&
-            rule.taxiTypes.some((type) => type.id === selectedTaxiType)
-          ) {
+          // ✅ Use typeId instead of selectedTaxiType here
+          if (isInside && rule.taxiTypes.some((type) => type.id === typeId)) {
             extraFare = rule;
+            console.log("✅ Applicable fare rule found:", rule);
             break;
           }
         }
+        if (extraFare) break; // stop after finding one rule
       }
 
-      setVehicles(
-        transportTypes
-          .find((t) => t.id === typeId)
-          .vehicles.map((v) => ({
+      const selectedType = transportTypes.find((t) => t.id === typeId);
+
+      if (selectedType) {
+        setVehicles(
+          selectedType.vehicles.map((v) => ({
             ...v,
             basePrice: extraFare
               ? parseFloat(v.basePrice.toString()) + extraFare.basePrice
@@ -494,8 +501,9 @@ const BookTaxiForm = () => {
             perKmPrice: extraFare
               ? parseFloat(v.perKmPrice.toString()) + extraFare.perKmPrice
               : parseFloat(v.perKmPrice.toString()),
-          })) || [],
-      );
+          }))
+        );
+      }
     }
   };
 
@@ -521,7 +529,7 @@ const BookTaxiForm = () => {
       pickupCoords.latitude,
       pickupCoords.longitude,
       dropoffCoords.latitude,
-      dropoffCoords.longitude,
+      dropoffCoords.longitude
     );
 
     // Calculate total fare
@@ -533,7 +541,13 @@ const BookTaxiForm = () => {
     if (totalFare < minFare) {
       totalFare = minFare;
     }
-
+    console.log(
+      `Estimated fare: Base Price = ${
+        selectedVehicle.basePrice
+      }, Distance = ${distanceKm.toFixed(2)} km, Per Km Price = ${
+        selectedVehicle.perKmPrice
+      }, Total Fare = ${totalFare.toFixed(2)}`
+    );
     // Round to 2 decimal places
     return Math.round(totalFare * 100) / 100;
   };
@@ -543,7 +557,7 @@ const BookTaxiForm = () => {
     lat1: number,
     lon1: number,
     lat2: number,
-    lon2: number,
+    lon2: number
   ): number => {
     const R = 6371; // Radius of the Earth in km
     const dLat = deg2rad(lat2 - lat1);
@@ -556,6 +570,7 @@ const BookTaxiForm = () => {
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c; // Distance in km
+    console.log(`Calculated distance: ${distance.toFixed(2)} km`);
     return distance;
   };
 
@@ -618,8 +633,8 @@ const BookTaxiForm = () => {
     if (hoursDifference < 4) {
       toast.error(
         `Bookings must be made at least 4 hours in advance. Current time: ${now.toLocaleTimeString()}, Selected time: ${selectedDateTime.toLocaleTimeString()}, Difference: ${hoursDifference.toFixed(
-          2,
-        )} hours`,
+          2
+        )} hours`
       );
       return false;
     }
